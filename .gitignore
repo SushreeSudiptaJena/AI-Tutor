@@ -29,3 +29,7 @@ Thumbs.db
 
 # claude code local settings
 .claude/settings.local.json
+
+# frontend build artefacts
+frontend/tsconfig.tsbuildinfo
+frontend/dist/

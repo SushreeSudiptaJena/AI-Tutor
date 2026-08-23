@@ -50,7 +50,7 @@
       "area": "infra",
       "title": "Green baseline — requirements.txt, package.json, ./init.sh passes",
       "user_visible_behavior": "A teammate clones the repo, runs ./init.sh, and gets a passing verification plus the start command.",
-      "status": "not_started",
+      "status": "passing",
       "depends_on": [
         "infra-001"
       ],
@@ -60,8 +60,8 @@
         "Exits 0 and prints 'Verification passed.'",
         "RUN_START_COMMAND=1 ./init.sh boots uvicorn and GET /health returns 200."
       ],
-      "evidence": null,
-      "notes": "Until this passes, the 'fix the baseline first' rule in CLAUDE.md is unenforceable. Needs at least one trivial pytest so the suite is non-empty."
+      "evidence": "evidence/infra-002/verification.txt",
+      "notes": "Until this passes, the 'fix the baseline first' rule in CLAUDE.md is unenforceable. Needs at least one trivial pytest so the suite is non-empty. PASSING 2026-08-23: verified on a genuinely clean clone (fresh .venv, fresh node_modules), not just in-place. Baseline = 4 pytest tests that need no database and no network, plus the frontend production build. Two bugs fixed while proving it: init.sh printed a literal \"$PY\" instead of the interpreter path, and tsc failed on import.meta.env until vite-env.d.ts was added."
     },
     {
       "id": "infra-003",
@@ -69,7 +69,7 @@
       "area": "infra",
       "title": "Frozen API contract (docs/api-contract.md)",
       "user_visible_behavior": "Not user visible. Five frontend people build against this file with mocks while the backend catches up.",
-      "status": "in_progress",
+      "status": "blocked",
       "depends_on": [],
       "demo_mode": "live",
       "verification": [

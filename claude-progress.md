@@ -13,10 +13,10 @@ Every session **reads this first** and **writes to it last**.
 | **Repository root** | the directory containing this file (every path in this repo is relative to it) |
 | **Standard startup path** | `./init.sh` (then `RUN_START_COMMAND=1 ./init.sh` to launch backend) |
 | **Standard verification path** | `python -m pytest backend/tests -q && npm --prefix frontend run build` |
-| **Highest priority unfinished feature** | `infra-002` — green baseline (`package.json`, `backend/tests`, `/health`). `infra-001` and `infra-003` both await a teammate. |
-| **Current blocker** | Two features need a second person: `infra-001` (teammate runs `check_db.py --write`) and `infra-003` (teammate builds one page against the mock). Neither blocks new work. |
+| **Highest priority unfinished feature** | `infra-004` — LLM/translation provider interface + disk cache + fallback + mock |
+| **Current blocker** | None for new work. `infra-001` and `infra-003` each need a second person to finish verifying; neither blocks anything downstream. |
 | **Golden path status** | Not started |
-| **Last verified** | 2026-08-23 — DB reachable: PostgreSQL 18.6, pgvector 0.8.6, distance operator exercised. `init.sh` still not green (no `package.json` / `backend/tests`). |
+| **Last verified** | 2026-08-23 — `./init.sh` green on a clean clone (exit 0). 4 pytest tests pass, frontend builds, `/health` returns 200 with `db: ok` against the live database. |
 
 ### Environment facts
 
@@ -31,6 +31,18 @@ Every session **reads this first** and **writes to it last**.
 ## Session Record
 
 *Newest entry at the top. One entry per session.*
+
+### Session 004 — 2026-08-23 — infra-002 PASSING
+
+| | |
+|---|---|
+| **Goal** | Get `./init.sh` green so the "fix the baseline first" rule becomes enforceable. |
+| **Completed** | `backend/app/{config,db,main}.py` — sync FastAPI, lazy engine so the app imports without a DB. `/health`, `/meta/provider-status`, `/languages`, and the contract's 404 error envelope. `pytest.ini` + 4 baseline tests that need no DB and no network. Full Vite + React + TS + Tailwind v4 frontend that builds. `frontend/src/lib/api.ts` with the contract's types, including `TutorResponse` as a discriminated union. `.gitattributes` LF enforcement. |
+| **Verification run** | Both steps verbatim. (1) Clean clone into a scratch dir with only `.env` copied: fresh venv, fresh `node_modules`, `./init.sh` exit 0, "Verification passed." (2) `RUN_START_COMMAND=1 ./init.sh` booted uvicorn; `GET /health` → 200 `{"status":"ok","db":"ok"}`. |
+| **Evidence recorded** | `evidence/infra-002/verification.txt` |
+| **Commits** | Squashed into one `infra-002` commit. |
+| **Known risks** | `pgvector` and `PyMuPDF` are not in `requirements.txt` yet — they arrive with `ingest-001`, and PyMuPDF is the one most likely to need a wheel fallback. The `/health` DB check hits the network on every call; if the free tier throttles, add a short cache. |
+| **Next best action** | `infra-004` — provider interface with disk cache, Gemini/Groq fallbacks, and `MockProvider`. It has no dependency on the blocked features and is the demo's insurance policy. |
 
 ### Session 003 — 2026-08-23 — infra-003 API contract
 

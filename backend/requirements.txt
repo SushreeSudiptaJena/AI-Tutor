@@ -5,3 +5,11 @@ SQLAlchemy>=2.0.30
 psycopg[binary]>=3.1.18      # binary wheel: no local libpq build on Windows
 pgvector>=0.2.5
 python-dotenv>=1.0.1
+
+# --- infra-002: API baseline ---
+fastapi>=0.115.0
+uvicorn[standard]>=0.30.0
+
+# --- infra-002: verification ---
+pytest>=8.0.0
+httpx>=0.27.0                # required by fastapi.testclient

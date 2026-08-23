@@ -72,6 +72,7 @@ CLAUDE.md              operating rules — read this first
 claude-progress.md     where the project stands right now
 feature_list.json      all 32 features, their status and how to verify each
 init.sh                install + verify + print start command
+pytest.ini             test config (pythonpath = backend)
 .env.example           copy to .env, fill in (.env is gitignored)
 
 docs/
@@ -80,14 +81,19 @@ docs/
 
 prompts/               LLM prompt templates as plain .md files
 backend/
+  app/main.py          FastAPI app: CORS, /health, /languages
+  app/config.py        reads .env
+  app/db.py            engine + session (sync)
   app/routers/         one file per dashboard
   app/services/        ingestion, retrieval, evidence check, guardrails
   app/providers/       LLM + translation behind one interface, with cache
   scripts/             check_db.py, seed.py, ingest_pdfs.py
   data/                source PDFs and the seeded dump
+  tests/               baseline + feature tests
 frontend/src/
-  lib/api.ts           every fetch lives here
+  lib/api.ts           every fetch lives here, plus contract types
   pages/{admin,student,teacher}/
+  components/ui/       shadcn components
 evidence/              proof that features actually work
 ```
 

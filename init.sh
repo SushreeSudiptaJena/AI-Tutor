@@ -24,9 +24,9 @@ fi
 # ---------------------------------------------------------------------------
 INSTALL_CMD='"$PY" -m pip install -q -r backend/requirements.txt && npm --prefix frontend install --no-fund --no-audit'
 VERIFY_CMD='"$PY" -m pytest backend/tests -q && npm --prefix frontend run build'
-START_CMD='cloudflared tunnel --url http://localhost:8000   # terminal 1
-"$PY" -m uvicorn app.main:app --reload --port 8000 --app-dir backend   # terminal 2
-npm --prefix frontend run dev                                           # terminal 3'
+START_CMD="cloudflared tunnel --url http://localhost:8000   # terminal 1 (backend owner only)
+$PY -m uvicorn app.main:app --reload --port 8000 --app-dir backend   # terminal 2
+npm --prefix frontend run dev                                        # terminal 3"
 # ---------------------------------------------------------------------------
 
 BOLD=$'\033[1m'; RED=$'\033[31m'; GREEN=$'\033[32m'; YELLOW=$'\033[33m'; OFF=$'\033[0m'

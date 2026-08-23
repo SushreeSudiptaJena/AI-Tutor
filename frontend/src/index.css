@@ -1,0 +1,10 @@
+@import "tailwindcss";
+
+:root {
+  color-scheme: light dark;
+}
+
+/* a11y-001 hooks: the toggles set these classes on <html>. */
+html.text-lg-mode { font-size: 18px; }
+html.text-xl-mode { font-size: 21px; }
+html.high-contrast { filter: contrast(1.35); }

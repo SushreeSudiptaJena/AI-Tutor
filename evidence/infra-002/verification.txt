@@ -1,0 +1,26 @@
+infra-002 verification - green baseline
+=======================================
+date: 2026-08-23
+
+STEP 1: on a clean clone, ./init.sh exits 0 and prints 'Verification passed.'
+  clean clone of HEAD into a scratch dir, only .env copied in (never committed)
+  fresh .venv created, deps installed, 86 npm packages installed
+  Verification passed.
+  exit code: 0
+
+STEP 2: RUN_START_COMMAND=1 ./init.sh boots uvicorn and GET /health returns 200
+  INFO:     Uvicorn running on http://127.0.0.1:8000 (Press CTRL+C to quit)
+  INFO:     Started server process [18020]
+  $ curl http://127.0.0.1:8000/health
+  {"status":"ok","db":"ok"}
+  HTTP 200
+
+SUPPORTING: pytest suite (runs with no database and no network)
+  4 passed - test_baseline.py
+SUPPORTING: frontend production build
+  tsc -b && vite build -> 32 modules transformed, built ok
+SUPPORTING: CORS preflight from a tunnel origin
+  Origin: https://abc-def.trycloudflare.com
+  access-control-allow-origin: https://abc-def.trycloudflare.com
+
+RESULT: PASS

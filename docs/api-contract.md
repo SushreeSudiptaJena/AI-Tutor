@@ -160,11 +160,16 @@ Every tutor-generated response uses this shape. **Frontend must branch on `outco
 
 | Method | Path | Feature | Returns |
 |---|---|---|---|
-| `GET` | `/health` | infra-002 | `{ "status": "ok", "db": "ok" }` |
+| `GET` | `/health` | infra-002 | `{ "status": "ok", "db": "ok" }` — see note |
 | `GET` | `/meta/provider-status` | infra-004 | `{ "active": "glm", "fallbacks_available": ["gemini","groq"], "cache_enabled": true }` |
 | `GET` | `/languages` | i18n-001 | `{ "items": [ { "code": "en", "label": "English" }, { "code": "hi", "label": "हिन्दी" } ] }` |
 
 `/meta/provider-status` exists so the demo can prove on screen which provider is live and that the cache is on.
+
+**`/health` is always 200 while the process is up.** If the database is unreachable it returns
+`{ "status": "degraded", "db": "<ErrorType>" }` rather than a 5xx, so a dropped free-tier
+connection reads as "database down", not "app dead". Treat `status != "ok"` as a warning banner,
+never as a fatal error.
 
 ---
 
@@ -465,3 +470,4 @@ Every shape above is final enough to mock. Suggested order, matching `feature_li
 | When | Change |
 |---|---|
 | 2026-08-23 | Initial draft covering all 32 features. |
+| 2026-08-23 | `/health` documented as always-200 with a `degraded` state; implemented in `infra-002`. |
