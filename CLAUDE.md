@@ -73,7 +73,7 @@ never `passing`. **Do not mark something passing because it looks correct.**
 | API | FastAPI | **Sync `def` endpoints.** See Async policy below. No channels, no Celery. |
 | DB | Neon Postgres + pgvector | Shared remote DB. One instance for the whole team. |
 | ORM | SQLAlchemy 2.0 **sync** | **No Alembic**, **no AsyncSession/asyncpg.** `create_all()` + `scripts/reset_db.py`. |
-| Embeddings | `bge-small-en-v1.5` (384-dim) | Only Sushree's machine installs torch. Output ships as `backend/data/dump.sql`. |
+| Embeddings | `bge-small-en-v1.5` (384-dim) via **fastembed** | ONNX, no PyTorch. Apply the BGE query prefix to QUERIES only, never to stored documents. |
 | Ingestion | PyMuPDF | Must capture `(doc_id, page_no, char_span)` per chunk — citations depend on it. |
 | LLM | GLM, behind `providers/base.py` | Fallback provider + `MockProvider` required. All calls disk-cached on `sha256(model+prompt)`. |
 | Translation | Sarvam (Mayuri) | Same provider interface, same cache. |
@@ -98,6 +98,16 @@ never `passing`. **Do not mark something passing because it looks correct.**
 - The alignment score needs the *complete* answer, so a streamed response can
   only show its badge after the stream ends. The golden path contains no
   free-form chat -- **streaming is polish, build non-streaming first.**
+
+**Refusal threshold:** `ALIGNMENT_REFUSAL_THRESHOLD` is **0.68**, not a round
+guess. Embedding similarity has a high floor - unrelated text still scores
+~0.4-0.5 - so a low threshold never refuses and the whole `rag-003` feature
+silently never fires. Re-calibrate against the real corpus with
+`backend/scripts/calibrate_threshold.py` once the demo PDFs are ingested.
+
+**Similarity alone cannot carry the refusal.** A near-domain off-topic question
+scores within ~0.05 of a covered one, so the entailment half of the evidence
+check is load-bearing. Do not simplify `evidence.py` down to top-similarity.
 
 **Language pipeline:** query → Sarvam translate to English → retrieve → answer in
 English → Sarvam translate back. The vector space is English-only. This is why

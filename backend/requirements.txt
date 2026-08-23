@@ -13,3 +13,6 @@ uvicorn[standard]>=0.30.0
 # --- infra-002: verification ---
 pytest>=8.0.0
 httpx>=0.27.0                # required by fastapi.testclient
+
+# --- embeddings (verified: 384-dim, unit-norm, no PyTorch) ---
+fastembed>=0.4.0             # ONNX runtime, ~150MB instead of torch's ~2.5GB

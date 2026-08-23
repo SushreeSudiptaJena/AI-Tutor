@@ -1,0 +1,24 @@
+Embedding threshold calibration - bge-small-en-v1.5 via fastembed
+====================================================================
+date: 2026-08-23   dims: 384   vectors are unit-norm (cosine == dot)
+
+kind          plain  prefixed   question
+--------------------------------------------------------------------
+COVERED      0.7773    0.7479   Why does a block moving at constant sp
+COVERED      0.7277    0.7028   How do I split a vector into component
+OFF-TOPIC    0.7158    0.6529   Explain Lagrangian mechanics and the p
+OFF-TOPIC    0.5385    0.5108   What is photosynthesis in plant cells?
+OFF-TOPIC    0.3963    0.3861   Who won the football world cup in 2018
+
+plain    margin: +0.0118
+prefixed margin: +0.0499   (4x better separation)
+
+FINDINGS
+ 1. Similarity floor is high: unrelated text still scores ~0.39-0.54.
+    A threshold of 0.35 would NEVER refuse. Original .env value was wrong.
+ 2. Use the BGE query prefix on QUERIES only, never on stored documents.
+ 3. Even prefixed, the margin is only 0.05, and a near-domain off-topic
+    question (Lagrangian mechanics) nearly matches a covered one.
+    => the entailment half of the evidence check is load-bearing,
+       not a nice-to-have. Similarity alone cannot carry the refusal.
+ 4. fastembed runs this with no PyTorch: ~150MB instead of ~2.5GB.

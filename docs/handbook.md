@@ -189,6 +189,8 @@ Step 2 — open `.env` in any text editor and fill in the real values. You need:
 
 Get these from the team channel. **Never commit this file.** It is gitignored, and the repository is public.
 
+Everything installs from `backend/requirements.txt`, including the embedding model runtime (`fastembed`, which uses ONNX — about 150 MB, and **no PyTorch**). The model files themselves download on first use.
+
 Step 3 — run the setup script:
 
 ```
@@ -492,6 +494,33 @@ similarity = 1 - distance
 
 **This one line is the most common source of a silent bug in this project.** Invert it by accident and the tutor confidently retrieves the *least* relevant chunks and reports a high alignment score while doing so. Everything still runs; the numbers are just wrong. Test it against one question you know is covered and one you know is not, and confirm the numbers go the right way.
 
+**The similarity floor — measured, not assumed.** Two texts about completely unrelated subjects do *not* score near zero. Measured against this model:
+
+| Question | Top similarity |
+|---|---|
+| covered: "why does a block at constant speed need no net force?" | 0.78 |
+| covered: "how do I split a vector into components?" | 0.73 |
+| off-topic, nearby field: "explain Lagrangian mechanics" | 0.72 |
+| off-topic: "what is photosynthesis?" | 0.54 |
+| off-topic: "who won the 2018 World Cup?" | 0.40 |
+
+Two consequences, and both are easy to get wrong:
+
+1. **A low refusal threshold never refuses.** Set it at 0.35 and even the World Cup question passes. The `rag-003` feature would silently never fire, and nobody would notice because nothing errors. Our threshold is **0.68**, and `backend/scripts/calibrate_threshold.py` re-derives it against the real corpus once the demo PDFs are ingested.
+2. **Similarity alone cannot carry the refusal.** Look at rows 2 and 3: an off-topic question from a nearby field (0.72) outranks a genuinely covered one (0.73) by 0.01. That is why the evidence check has a second signal — the entailment call is load-bearing, not decoration.
+
+**The query prefix.** BGE models are trained so that *queries* carry a prefix and *documents* do not:
+
+```python
+QUERY_PREFIX = "Represent this sentence for searching relevant passages: "
+embed_query(q)    -> embed(QUERY_PREFIX + q)     # questions
+embed_document(d) -> embed(d)                    # chunks, no prefix
+```
+
+Measured effect: the gap between the worst covered question and the best off-topic one widens from **+0.012 to +0.050** — four times the separation, for one string concatenation. Applying the prefix to stored documents too would undo the benefit.
+
+**Vectors come out unit-normalised** (length exactly 1.0), so cosine similarity equals the dot product. Useful to know when reading the numbers.
+
 **Every chunk is embedded once, at ingestion.** The vectors are stored in the `chunks.embedding` column. A question is embedded once per ask. That asymmetry is why retrieval is fast — the expensive work happened up front.
 
 ---
@@ -572,6 +601,8 @@ percent = round(score * 100)                 # what the student sees
 ```
 
 The weighting is a judgement call, not a law. Retrieval is weighted higher because it is objective; entailment is a model's opinion, useful but softer.
+
+**Do not be tempted to drop the entailment call to save time or tokens.** Section 6.3 shows why: an off-topic question from a neighbouring field scores within 0.01 of a covered one on retrieval similarity alone. Signal 1 catches the World Cup question. Only signal 2 catches "explain Lagrangian mechanics" — and that second kind is exactly what a judge will try.
 
 **The output object drives three different behaviours:**
 

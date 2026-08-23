@@ -1,6 +1,6 @@
 # AI / ML Guide
 
-For whoever owns the tutor engine. You write plain Python functions in `backend/app/services/` and prompt files in `prompts/`. The backend owner wraps them in HTTP routes.
+For whoever owns the tutor engine - on this team that is the same person who owns the backend. The engine lives as plain Python functions in `backend/app/services/` and prompt files in `prompts/`, kept separate from the HTTP routes so the two can be built and tested independently.
 
 You own: retrieval, the alignment score, the refusal rule, the graded-work guardrail, the misconception matcher, prompts, and the provider layer.
 
@@ -63,6 +63,31 @@ def alignment(chunks, answer_text) -> EvidenceReport:
     )
 ```
 
+### Calibrating the threshold - do this, do not guess
+
+Embedding similarity has a high floor. Measured on bge-small-en-v1.5:
+
+    covered   "why no net force at constant speed?"   0.78
+    covered   "how do I split a vector?"              0.73
+    OFF-TOPIC "explain Lagrangian mechanics"          0.72   <-- nearly identical
+    OFF-TOPIC "what is photosynthesis?"               0.54
+    OFF-TOPIC "who won the 2018 world cup?"           0.40
+
+Two things follow. A threshold of 0.35 would never refuse anything - the feature
+would silently never fire. And retrieval similarity **alone cannot separate** a
+near-domain off-topic question from a covered one; that is what the entailment
+call is for. Do not simplify it away.
+
+Also apply the BGE query prefix to queries only:
+
+    QUERY_PREFIX = "Represent this sentence for searching relevant passages: "
+
+That widens the covered/off-topic margin from +0.012 to +0.050 - four times the
+separation for one concatenation. Never prefix stored documents.
+
+Run `backend/scripts/calibrate_threshold.py` after ingesting the real corpus and
+use the number it recommends.
+
 Remember `cosine_distance` returns **distance**, so similarity is `1 - distance`. Getting this backwards inverts the score silently. Test it on a question you know is covered and one you know is not.
 
 ### 2. Refuse when there is no evidence
@@ -112,7 +137,20 @@ def search(db, query: str, *, limit=5, kinds=None):
 
 Note the default excludes assignments - they are matchable but never quotable.
 
-Embeddings are `bge-small-en-v1.5`, 384 dimensions. **Only the backend owner's machine installs torch.** You consume the shared database. If you genuinely need to re-embed, coordinate first.
+Embeddings are `bge-small-en-v1.5`, 384 dimensions, run through **fastembed** (ONNX, ~150MB, no PyTorch). Model files download on first use.
+
+Use the query prefix on questions and never on stored chunks:
+
+```python
+QUERY_PREFIX = "Represent this sentence for searching relevant passages: "
+
+def embed_query(q):     return _embed(QUERY_PREFIX + q)
+def embed_document(d):  return _embed(d)
+```
+
+Vectors come out unit-normalised, so cosine similarity equals the dot product.
+
+Re-embedding rewrites the shared database for everyone - announce it first.
 
 ## The provider layer
 
