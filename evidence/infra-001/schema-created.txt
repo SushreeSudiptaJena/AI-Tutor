@@ -1,0 +1,26 @@
+schema created on the shared database
+tables: 21
+  attempts
+  audit_log
+  chunks
+  concepts
+  course_prerequisites
+  courses
+  departments
+  diagnostic_items
+  gaps
+  mastery
+  materials
+  misconception_diagnoses
+  misconceptions
+  practice_items
+  practice_sets
+  reteach_units
+  sessions
+  sourced_content
+  topics
+  uncertainty_flags
+  users
+
+chunks.embedding type: vector
+pgvector version    : 0.8.6

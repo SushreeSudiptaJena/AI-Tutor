@@ -238,8 +238,8 @@
       "id": "rag-004",
       "priority": 12,
       "area": "rag",
-      "title": "Graded-work guardrail",
-      "user_visible_behavior": "Asked to solve a graded assignment question, the tutor declines and offers scaffolded hints instead of the answer.",
+      "title": "Graded-work guardrail (free-form chat only, intent-gated)",
+      "user_visible_behavior": "Asked in chat to SOLVE a graded assignment question, the tutor declines and offers scaffolded hints. Asked to EXPLAIN the same question, it answers fully. Gap lessons are never guardrailed.",
       "status": "not_started",
       "depends_on": [
         "rag-001",
@@ -247,12 +247,13 @@
       ],
       "demo_mode": "live",
       "verification": [
-        "Paste a seeded assignment question verbatim; the tutor refuses to produce the final answer.",
-        "It returns hints/scaffolding instead.",
-        "A normal conceptual question on the same topic is still answered fully."
+        "In /tutor/ask, paste a seeded assignment question with 'solve this' -> refuses, returns hints, no final answer.",
+        "In /tutor/ask, ask 'why does this problem use conservation of momentum?' about the SAME question -> answers fully with citations.",
+        "Open a gap lesson whose concept overlaps that assignment -> answers normally, never returns graded_work_refused.",
+        "Ask a general conceptual question on the topic -> answered fully."
       ],
       "evidence": null,
-      "notes": "RUBRIC FEATURE. Guard prompt + rule: if the query matches an assignment chunk in the KB, refuse."
+      "notes": "RUBRIC FEATURE. Refuse only when BOTH hold: assignment similarity > 0.80 AND an intent check says 'solve' rather than 'understand'. Run the cheap vector match first so the intent LLM call only happens on a match. Guardrail is scoped to /tutor/ask ONLY - gap lessons and practice are driven by concepts, not typed text, so a refusal there is always a false positive. The solve-vs-explain contrast on the same question is the strongest way to demo this."
     },
     {
       "id": "student-001",

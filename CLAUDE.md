@@ -131,8 +131,13 @@ a ChatGPT wrapper, and they map directly to the problem statement.
 2. **Refusal on no evidence** — if top-1 similarity < threshold, refuse to answer
    *and* write a row to `uncertainty_flags`. This auto-populates the teacher
    dashboard's Uncertainty Flags panel. One feature, two dashboards.
-3. **Graded-work guardrail** — if the query matches an assignment/quiz chunk in
-   the knowledge base, refuse and offer scaffolded hints instead of the answer.
+3. **Graded-work guardrail** — **`/tutor/ask` only.** Refuse when the message
+   matches assignment material (similarity > 0.80) **AND** an intent check says
+   the student is asking for the solution rather than for understanding. Cheap
+   vector match first; the intent call only runs on a match. Never guardrail
+   `/student/gaps/{id}/lesson` or practice — those are concept-driven, so any
+   refusal there is a false positive. Wanting to *understand* a homework problem
+   is legitimate tutoring and must be answered.
 
 ## Ownership
 

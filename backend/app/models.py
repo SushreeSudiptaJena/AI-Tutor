@@ -1,0 +1,426 @@
+"""Every database table, in one file.
+
+Decided early and then frozen -- after the freeze, changes go through the backend
+owner. Sync SQLAlchemy 2.0 only; see the async policy in CLAUDE.md.
+
+Four deliberate absences, all taken straight from the problem statement. Do not
+"helpfully" add them back:
+
+  * No score / grade / percentage column anywhere. The diagnostic produces a gap
+    list, not a grade.
+  * No time-on-task or last-seen column. Teacher dashboards are about
+    misconceptions, not surveillance.
+  * UncertaintyFlag has no user_id. You cannot leak what you never stored.
+  * MisconceptionDiagnosis.confirmed is three-state, and only True is counted.
+"""
+
+from datetime import datetime
+
+from pgvector.sqlalchemy import Vector
+from sqlalchemy import (
+    JSON,
+    Boolean,
+    Column,
+    DateTime,
+    Float,
+    ForeignKey,
+    Integer,
+    String,
+    Table,
+    Text,
+    UniqueConstraint,
+    func,
+)
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
+
+EMBEDDING_DIM = 384  # bge-small-en-v1.5
+
+
+class Base(DeclarativeBase):
+    pass
+
+
+def _now() -> Mapped[datetime]:
+    return mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+# ---------------------------------------------------------------------------
+# Institution structure  (admin-002)
+# ---------------------------------------------------------------------------
+
+course_prerequisites = Table(
+    "course_prerequisites",
+    Base.metadata,
+    Column("course_id", ForeignKey("courses.id", ondelete="CASCADE"), primary_key=True),
+    Column("prerequisite_id", ForeignKey("courses.id", ondelete="CASCADE"), primary_key=True),
+)
+
+
+class Department(Base):
+    __tablename__ = "departments"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    name: Mapped[str] = mapped_column(String(200), unique=True)
+
+
+class Course(Base):
+    __tablename__ = "courses"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    code: Mapped[str] = mapped_column(String(20), unique=True, index=True)
+    title: Mapped[str] = mapped_column(String(200))
+    department_id: Mapped[int | None] = mapped_column(ForeignKey("departments.id"))
+
+    department: Mapped["Department | None"] = relationship()
+
+    # Which courses must a student have done before this one. This is what lets
+    # gap detection name the correct prior course.
+    prerequisites: Mapped[list["Course"]] = relationship(
+        "Course",
+        secondary=course_prerequisites,
+        primaryjoin=id == course_prerequisites.c.course_id,
+        secondaryjoin=id == course_prerequisites.c.prerequisite_id,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Users and sessions  (auth-001)
+# ---------------------------------------------------------------------------
+
+ROLES = ("student", "teacher", "admin")
+
+
+class User(Base):
+    __tablename__ = "users"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    email: Mapped[str] = mapped_column(String(255), unique=True, index=True)
+    password_hash: Mapped[str] = mapped_column(String(255))
+    full_name: Mapped[str] = mapped_column(String(200))
+    role: Mapped[str] = mapped_column(String(20))
+    course_id: Mapped[int | None] = mapped_column(ForeignKey("courses.id"))
+    preferred_language: Mapped[str] = mapped_column(String(8), default="en")
+    created_at: Mapped[datetime] = _now()
+
+    course: Mapped["Course | None"] = relationship()
+
+
+class Session(Base):
+    """Opaque login token. Deliberately not a JWT -- logout deletes the row."""
+
+    __tablename__ = "sessions"
+
+    token: Mapped[str] = mapped_column(String(64), primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    created_at: Mapped[datetime] = _now()
+
+    user: Mapped["User"] = relationship()
+
+
+# ---------------------------------------------------------------------------
+# Curriculum  (admin-001, ingest-001)
+# ---------------------------------------------------------------------------
+
+MATERIAL_KINDS = ("syllabus", "textbook", "notes", "assignment")
+
+
+class Material(Base):
+    __tablename__ = "materials"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    course_id: Mapped[int] = mapped_column(ForeignKey("courses.id"), index=True)
+    title: Mapped[str] = mapped_column(String(300))
+    kind: Mapped[str] = mapped_column(String(20), index=True)
+    version: Mapped[int] = mapped_column(Integer, default=1)
+    status: Mapped[str] = mapped_column(String(20), default="active")  # active|archived
+    page_count: Mapped[int] = mapped_column(Integer, default=0)
+    source_path: Mapped[str | None] = mapped_column(String(500))
+    uploaded_by_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"))
+    uploaded_at: Mapped[datetime] = _now()
+    ingest_status: Mapped[str] = mapped_column(String(20), default="queued")
+    chunk_count: Mapped[int] = mapped_column(Integer, default=0)
+
+    course: Mapped["Course"] = relationship()
+    chunks: Mapped[list["Chunk"]] = relationship(back_populates="material",
+                                                 cascade="all, delete-orphan")
+
+
+class Chunk(Base):
+    """A piece of a source document, anchored to the page it came from.
+
+    page_no is the field the whole citation story rests on. It is captured at
+    ingestion and carried unchanged all the way to the UI -- no model is ever
+    asked where a passage came from, which is why our citations cannot
+    hallucinate.
+    """
+
+    __tablename__ = "chunks"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    material_id: Mapped[int] = mapped_column(
+        ForeignKey("materials.id", ondelete="CASCADE"), index=True
+    )
+    page_no: Mapped[int] = mapped_column(Integer, index=True)
+    chapter: Mapped[str | None] = mapped_column(String(300))
+    char_start: Mapped[int] = mapped_column(Integer, default=0)
+    char_end: Mapped[int] = mapped_column(Integer, default=0)
+    text: Mapped[str] = mapped_column(Text)
+    embedding: Mapped[list[float]] = mapped_column(Vector(EMBEDDING_DIM))
+
+    material: Mapped["Material"] = relationship(back_populates="chunks")
+
+
+# ---------------------------------------------------------------------------
+# Curriculum map
+# ---------------------------------------------------------------------------
+
+class Topic(Base):
+    __tablename__ = "topics"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    course_id: Mapped[int] = mapped_column(ForeignKey("courses.id"), index=True)
+    slug: Mapped[str] = mapped_column(String(80), index=True)
+    name: Mapped[str] = mapped_column(String(200))
+
+    __table_args__ = (UniqueConstraint("course_id", "slug"),)
+
+
+class Concept(Base):
+    __tablename__ = "concepts"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    topic_id: Mapped[int] = mapped_column(ForeignKey("topics.id"), index=True)
+    slug: Mapped[str] = mapped_column(String(80), unique=True, index=True)
+    name: Mapped[str] = mapped_column(String(200))
+    # Which earlier course this concept should have been learned in.
+    prerequisite_course_id: Mapped[int | None] = mapped_column(ForeignKey("courses.id"))
+
+    topic: Mapped["Topic"] = relationship()
+    prerequisite_course: Mapped["Course | None"] = relationship()
+
+
+# ---------------------------------------------------------------------------
+# Diagnostic, gaps, mastery  (student-002, student-007)
+# ---------------------------------------------------------------------------
+
+ITEM_KINDS = ("mcq", "numeric", "short_text")
+
+
+class DiagnosticItem(Base):
+    __tablename__ = "diagnostic_items"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    course_id: Mapped[int] = mapped_column(ForeignKey("courses.id"), index=True)
+    concept_id: Mapped[int] = mapped_column(ForeignKey("concepts.id"))
+    prompt: Mapped[str] = mapped_column(Text)
+    kind: Mapped[str] = mapped_column(String(20), default="mcq")
+    options: Mapped[dict | None] = mapped_column(JSON)
+    # Never serialise this to a client. Strip it in the response schema.
+    correct_answer: Mapped[str] = mapped_column(String(300))
+
+    concept: Mapped["Concept"] = relationship()
+
+
+class Gap(Base):
+    """A prerequisite concept this student is missing.
+
+    Persisted, not ephemeral: written when the diagnostic is submitted and
+    readable forever after, so the dashboard, the mastery view and chat prompt
+    suggestions all read the same rows.
+    """
+
+    __tablename__ = "gaps"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    concept_id: Mapped[int] = mapped_column(ForeignKey("concepts.id"), index=True)
+    detected_from: Mapped[str] = mapped_column(String(30))  # diagnostic|syllabus_upload|practice
+    status: Mapped[str] = mapped_column(String(20), default="open")  # open|improving|closed
+    created_at: Mapped[datetime] = _now()
+
+    concept: Mapped["Concept"] = relationship()
+
+    __table_args__ = (UniqueConstraint("user_id", "concept_id"),)
+
+
+class Mastery(Base):
+    __tablename__ = "mastery"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    concept_id: Mapped[int] = mapped_column(ForeignKey("concepts.id"))
+    state: Mapped[str] = mapped_column(String(20), default="untested")  # solid|shaky|untested
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+    concept: Mapped["Concept"] = relationship()
+
+    __table_args__ = (UniqueConstraint("user_id", "concept_id"),)
+
+
+# ---------------------------------------------------------------------------
+# Practice and attempts  (student-005, student-006)
+# ---------------------------------------------------------------------------
+
+class PracticeSet(Base):
+    __tablename__ = "practice_sets"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    gap_id: Mapped[int | None] = mapped_column(ForeignKey("gaps.id", ondelete="SET NULL"))
+    created_at: Mapped[datetime] = _now()
+
+    items: Mapped[list["PracticeItem"]] = relationship(back_populates="practice_set",
+                                                       cascade="all, delete-orphan")
+
+
+class PracticeItem(Base):
+    __tablename__ = "practice_items"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    practice_set_id: Mapped[int | None] = mapped_column(
+        ForeignKey("practice_sets.id", ondelete="CASCADE"), index=True
+    )
+    concept_id: Mapped[int | None] = mapped_column(ForeignKey("concepts.id"))
+    # The join key to misconceptions. A wrong answer is only matched against
+    # misconceptions carrying the SAME problem_type -- that is what keeps a
+    # diagnosis specific instead of generic.
+    problem_type: Mapped[str] = mapped_column(String(60), index=True)
+    prompt: Mapped[str] = mapped_column(Text)
+    kind: Mapped[str] = mapped_column(String(20), default="mcq")
+    options: Mapped[dict | None] = mapped_column(JSON)
+    correct_answer: Mapped[str] = mapped_column(String(300))  # never sent to a client
+    is_seed: Mapped[bool] = mapped_column(Boolean, default=False)
+
+    practice_set: Mapped["PracticeSet | None"] = relationship(back_populates="items")
+    concept: Mapped["Concept | None"] = relationship()
+
+
+class Attempt(Base):
+    __tablename__ = "attempts"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    practice_item_id: Mapped[int] = mapped_column(ForeignKey("practice_items.id"), index=True)
+    answer: Mapped[str] = mapped_column(String(300))
+    correct: Mapped[bool] = mapped_column(Boolean)
+    at: Mapped[datetime] = _now()
+
+    item: Mapped["PracticeItem"] = relationship()
+
+
+# ---------------------------------------------------------------------------
+# Misconceptions  (student-006, teacher-001, teacher-002)
+# ---------------------------------------------------------------------------
+
+class Misconception(Base):
+    __tablename__ = "misconceptions"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    topic_id: Mapped[int | None] = mapped_column(ForeignKey("topics.id"), index=True)
+    slug: Mapped[str] = mapped_column(String(80), unique=True, index=True)
+    problem_type: Mapped[str] = mapped_column(String(60), index=True)
+    label: Mapped[str] = mapped_column(String(300))
+    description: Mapped[str] = mapped_column(Text, default="")
+    # Seeded signature of the wrong answer this misconception produces.
+    # A match here diagnoses with no LLM call at all -- fast and deterministic.
+    wrong_answer_pattern: Mapped[str | None] = mapped_column(String(300))
+
+    topic: Mapped["Topic | None"] = relationship()
+
+
+class MisconceptionDiagnosis(Base):
+    """confirmed is three-state on purpose.
+
+    None  = the student was asked but has not answered yet
+    True  = the student agreed this was their reasoning
+    False = the student disagreed
+
+    ONLY True is counted in teacher aggregates. Denied diagnoses are kept for
+    honesty but excluded everywhere, which is what makes the teacher's number
+    mean "students who agreed" rather than "the algorithm's guesses".
+    """
+
+    __tablename__ = "misconception_diagnoses"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    attempt_id: Mapped[int] = mapped_column(ForeignKey("attempts.id", ondelete="CASCADE"))
+    misconception_id: Mapped[int] = mapped_column(ForeignKey("misconceptions.id"), index=True)
+    source: Mapped[str] = mapped_column(String(20), default="pattern")  # pattern|llm
+    confirmed: Mapped[bool | None] = mapped_column(Boolean, default=None, index=True)
+    at: Mapped[datetime] = _now()
+
+    attempt: Mapped["Attempt"] = relationship()
+    misconception: Mapped["Misconception"] = relationship()
+
+
+# ---------------------------------------------------------------------------
+# Teacher-facing  (teacher-004, teacher-006, teacher-007, admin-003)
+# ---------------------------------------------------------------------------
+
+class UncertaintyFlag(Base):
+    """Written whenever the tutor refuses for lack of evidence.
+
+    No user_id, by design. Teacher views must be anonymous, and the cheapest
+    guarantee is to never record the link in the first place.
+    """
+
+    __tablename__ = "uncertainty_flags"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    question: Mapped[str] = mapped_column(Text)
+    alignment_score: Mapped[float] = mapped_column(Float)
+    reason: Mapped[str] = mapped_column(String(100))
+    topic_id: Mapped[int | None] = mapped_column(ForeignKey("topics.id"), index=True)
+    course_id: Mapped[int | None] = mapped_column(ForeignKey("courses.id"), index=True)
+    status: Mapped[str] = mapped_column(String(20), default="open", index=True)
+    occurred_at: Mapped[datetime] = _now()
+
+
+class ReteachUnit(Base):
+    __tablename__ = "reteach_units"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    misconception_id: Mapped[int] = mapped_column(ForeignKey("misconceptions.id"), index=True)
+    title: Mapped[str] = mapped_column(String(300))
+    body: Mapped[str] = mapped_column(Text)
+    # draft is invisible to every student query. The approval gate is the
+    # human-in-the-loop story -- never auto-assign.
+    status: Mapped[str] = mapped_column(String(20), default="draft", index=True)
+    approved_by_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"))
+    created_at: Mapped[datetime] = _now()
+
+    misconception: Mapped["Misconception"] = relationship()
+
+
+class SourcedContent(Base):
+    """Material the AI found outside the knowledge base, awaiting teacher approval.
+
+    Seeded for this build -- no live web search is implemented. The queue itself
+    is the feature.
+    """
+
+    __tablename__ = "sourced_content"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    source_url: Mapped[str] = mapped_column(String(500))
+    title: Mapped[str] = mapped_column(String(300))
+    excerpt: Mapped[str] = mapped_column(Text)
+    found_for_gap: Mapped[str] = mapped_column(String(200))
+    status: Mapped[str] = mapped_column(String(20), default="pending", index=True)
+    reject_reason: Mapped[str | None] = mapped_column(String(300))
+    found_at: Mapped[datetime] = _now()
+
+
+class AuditLog(Base):
+    __tablename__ = "audit_log"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    actor_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"))
+    action: Mapped[str] = mapped_column(String(60), index=True)
+    target: Mapped[str] = mapped_column(String(120))
+    detail: Mapped[dict | None] = mapped_column(JSON)
+    at: Mapped[datetime] = _now()
+
+    actor: Mapped["User | None"] = relationship()

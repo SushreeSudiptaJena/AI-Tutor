@@ -92,10 +92,16 @@ The alignment score (`rag-002`) and the refusal decision (`rag-003`) come from o
   "concept": "Vector components",
   "prerequisite_course": "Class 12 Physics",
   "detected_from": "diagnostic",
-  "status": "open"
+  "status": "open",
+  "suggested_prompts": [
+    "Explain vector components to me",
+    "Why do we resolve forces into components?"
+  ]
 }
 ```
 `detected_from`: `diagnostic` | `syllabus_upload` | `practice`. `status`: `open` | `improving` | `closed`.
+
+Gaps are **persisted rows, not a one-off result**. `POST /student/diagnostic/{id}/submit` writes them and returns them in the same transaction so the UI can render immediately, but they remain available from `GET /student/gaps` afterwards — for the dashboard, the mastery view, or as chat prompt suggestions. `suggested_prompts` exists so the chat can offer a starting question without the frontend inventing phrasing.
 
 ### `TutorResponse` — discriminated on `outcome`
 Every tutor-generated response uses this shape. **Frontend must branch on `outcome`.**
@@ -119,6 +125,17 @@ Every tutor-generated response uses this shape. **Frontend must branch on `outco
   "uncertainty_flag_id": 55
 }
 ```
+> **Where the guardrail runs.** `graded_work_refused` can only be returned by
+> **`POST /tutor/ask`**. It is never returned by `/student/gaps/{id}/lesson`,
+> `/student/practice/*`, or any other route — those are driven by a concept or a
+> generated item, not by text the student typed, so a refusal there would only
+> ever be a false positive.
+>
+> Two conditions must **both** hold to refuse: the message matches assignment
+> material (similarity > 0.80), **and** an intent check classifies it as asking
+> for the solution rather than for understanding. "Solve Q3" is refused;
+> "why does Q3 use conservation of momentum?" is answered in full, with citations.
+
 ```json
 {
   "outcome": "graded_work_refused",
@@ -471,3 +488,4 @@ Every shape above is final enough to mock. Suggested order, matching `feature_li
 |---|---|
 | 2026-08-23 | Initial draft covering all 32 features. |
 | 2026-08-23 | `/health` documented as always-200 with a `degraded` state; implemented in `infra-002`. |
+| 2026-08-23 | Guardrail narrowed to `/tutor/ask` only, and now requires intent + assignment match. `Gap` gains `suggested_prompts`. |
