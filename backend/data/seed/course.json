@@ -1,0 +1,11 @@
+{
+  "_readme": "Institution structure. CONTENT LEAD: change codes/titles to your subject.",
+  "departments": [
+    { "name": "Physics" }
+  ],
+  "courses": [
+    { "code": "PH000", "title": "Class 12 Physics", "department": "Physics", "prerequisites": [] },
+    { "code": "PH101", "title": "Mechanics",        "department": "Physics", "prerequisites": ["PH000"] }
+  ],
+  "primary_course": "PH101"
+}

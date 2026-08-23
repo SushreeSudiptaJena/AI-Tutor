@@ -1,0 +1,121 @@
+{
+  "_readme": [
+    "Stand-in knowledge base so retrieval, citations and the guardrail can be built",
+    "and tested before the real PDFs exist. Each passage becomes one chunk with a real",
+    "page number, exactly as PyMuPDF ingestion would produce.",
+    "",
+    "CONTENT LEAD: replace this by dropping real PDFs in backend/data/pdfs/ and running",
+    "ingest_pdfs.py. Once real material is ingested, set 'enabled' to false here so the",
+    "placeholder text stops competing with the real book in search results.",
+    "",
+    "kind='assignment' material is searchable so the guardrail can RECOGNISE homework,",
+    "but is never quoted as a lesson source."
+  ],
+  "enabled": true,
+  "materials": [
+    {
+      "title": "Concepts of Physics, Vol 1",
+      "kind": "textbook",
+      "page_count": 212,
+      "passages": [
+        {
+          "page": 138,
+          "chapter": "5. Newton's Laws of Motion",
+          "text": "Newton's first law states that a body continues in its state of rest, or of uniform motion in a straight line, unless acted upon by a net external force. The key consequence is that motion itself does not require a force. A force is required only to change motion. A body moving at constant velocity therefore has zero net force acting on it, no matter how fast it is moving."
+        },
+        {
+          "page": 141,
+          "chapter": "5. Newton's Laws of Motion",
+          "text": "When a block slides across a rough floor at constant speed, the applied push and the force of kinetic friction are equal in magnitude and opposite in direction. Their vector sum is zero, so the net force is zero and the acceleration is zero. Constant velocity and zero net force always accompany one another."
+        },
+        {
+          "page": 143,
+          "chapter": "5. Newton's Laws of Motion",
+          "text": "Newton's second law relates the net force on a body to its acceleration: F_net = m a. The net force is the vector sum of all forces acting on the body. If a net force of 12 N acts on a mass of 4 kg, the acceleration is 3 metres per second squared, directed along the net force."
+        },
+        {
+          "page": 147,
+          "chapter": "5. Newton's Laws of Motion",
+          "text": "Newton's third law states that if body A exerts a force on body B, then body B exerts an equal and opposite force on body A. The two forces of a third-law pair always act on different bodies. The weight of a book and the normal force from a table are not a third-law pair, because both act on the book; they happen to be equal only because the book is in equilibrium."
+        },
+        {
+          "page": 152,
+          "chapter": "6. Friction",
+          "text": "The force of kinetic friction is proportional to the normal force pressing the surfaces together, f = mu_k N. It does not depend on the apparent area of contact, nor appreciably on the sliding speed. Turning a block onto a larger face does not change the friction force, because the normal force is unchanged."
+        },
+        {
+          "page": 155,
+          "chapter": "6. Friction",
+          "text": "Static friction is not a fixed quantity. It adjusts itself to whatever value is needed to prevent sliding, up to a maximum of mu_s N. If a 20 N horizontal push is applied to a crate that does not move, the static friction force is 20 N, not the maximum value."
+        },
+        {
+          "page": 118,
+          "chapter": "4. Vectors",
+          "text": "A vector may be resolved into two perpendicular components. For a vector of magnitude F directed at an angle theta above the horizontal, the horizontal component is F cos theta and the vertical component is F sin theta. Choosing the wrong trigonometric function is the most common source of error in force problems."
+        },
+        {
+          "page": 121,
+          "chapter": "4. Vectors",
+          "text": "Two perpendicular vectors are added using the Pythagorean theorem, not by arithmetic addition. Forces of 3 N east and 4 N north give a resultant of magnitude 5 N, not 7 N. Only vectors along the same line may have their magnitudes added directly."
+        },
+        {
+          "page": 124,
+          "chapter": "4. Vectors",
+          "text": "A displacement of 20 metres directed 60 degrees north of east has an eastward component of 20 cos 60 = 10 metres and a northward component of 20 sin 60 = 17.3 metres. The components are always smaller in magnitude than the vector itself."
+        },
+        {
+          "page": 160,
+          "chapter": "7. Motion on an Incline",
+          "text": "On a frictionless incline making an angle theta with the horizontal, the weight mg resolves into a component mg sin theta along the slope and mg cos theta perpendicular to it. The normal force equals mg cos theta, which is less than the weight. The normal force equals mg only when the surface is horizontal."
+        },
+        {
+          "page": 96,
+          "chapter": "3. Motion Under Gravity",
+          "text": "In the absence of air resistance all bodies fall with the same acceleration g, independent of their mass. A 1 kg ball and a 5 kg ball released together from the same height reach the ground at the same instant. The heavier body experiences a larger gravitational force but also has proportionally more inertia."
+        },
+        {
+          "page": 99,
+          "chapter": "3. Motion Under Gravity",
+          "text": "A ball thrown vertically upward has only one force acting on it once it leaves the hand: its weight, directed downward. At the highest point the velocity is momentarily zero but the acceleration is still g downward. There is no upward force accompanying the upward motion."
+        },
+        {
+          "page": 88,
+          "chapter": "2. Units and Quantities",
+          "text": "Mass is a measure of the quantity of matter in a body and is the same everywhere. Weight is the gravitational force on that body and changes with the local value of g. An astronaut of mass 70 kg has a mass of 70 kg on the Moon, while the weight falls from about 686 N to about 112 N."
+        },
+        {
+          "page": 133,
+          "chapter": "5. Newton's Laws of Motion",
+          "text": "A free-body diagram shows every force acting on one chosen body, and nothing else. Forces exerted by that body on other objects never appear on its own diagram. A box hanging at rest from a single rope has exactly two forces on it: its weight downward and the rope tension upward."
+        }
+      ]
+    },
+    {
+      "title": "Problem Set 3 - Newton's Laws",
+      "kind": "assignment",
+      "page_count": 2,
+      "passages": [
+        {
+          "page": 1,
+          "chapter": "Problem Set 3",
+          "text": "Q1. A 3 kg block is pulled along a horizontal surface by a rope inclined at 25 degrees above the horizontal with a tension of 18 N. The coefficient of kinetic friction is 0.20. Calculate the acceleration of the block. Show all working."
+        },
+        {
+          "page": 1,
+          "chapter": "Problem Set 3",
+          "text": "Q2. A 1200 kg car travelling at 15 m/s is brought to rest in 4.0 seconds. Determine the average braking force, and state the assumptions you have made. Marks will be awarded for a labelled free-body diagram."
+        },
+        {
+          "page": 2,
+          "chapter": "Problem Set 3",
+          "text": "Q3. Two blocks of mass 2 kg and 3 kg are connected by a light string over a frictionless pulley. Using conservation of momentum where appropriate, find the acceleration of the system and the tension in the string."
+        },
+        {
+          "page": 2,
+          "chapter": "Problem Set 3",
+          "text": "Q4. A crate of mass 25 kg is pushed up a rough incline of 20 degrees at constant velocity. The coefficient of kinetic friction is 0.35. Calculate the applied force parallel to the incline. This question is worth 10 marks."
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,100 @@
+{
+  "_readme": [
+    "Seeded practice questions. Each carries a problem_type, which is how a wrong answer",
+    "is matched against the misconceptions that could explain it.",
+    "",
+    "Every item below has at least one wrong option that matches a misconception's",
+    "wrong_answer_pattern. seed.py verifies this and refuses to seed if an item has no",
+    "diagnosable wrong answer - because that item would silently produce the demo's",
+    "weakest moment: a wrong answer with no diagnosis.",
+    "",
+    "correct_answer is stored but NEVER sent to a client."
+  ],
+  "items": [
+    {
+      "concept": "newtons-first-law",
+      "problem_type": "net-force-constant-velocity",
+      "prompt": "A 2 kg block is pushed across a rough floor and moves at a constant velocity of 3 m/s. What is the net force on the block?",
+      "kind": "mcq",
+      "options": ["0 N", "6 N", "20 N", "24 N"],
+      "correct_answer": "0 N"
+    },
+    {
+      "concept": "vector-components",
+      "problem_type": "resolve-vector-components",
+      "prompt": "A force of 10 N acts at 30 degrees above the horizontal. What is its horizontal component?",
+      "kind": "mcq",
+      "options": ["5 N", "8.66 N", "10 N", "11.5 N"],
+      "correct_answer": "8.66 N"
+    },
+    {
+      "concept": "vector-addition",
+      "problem_type": "add-perpendicular-forces",
+      "prompt": "Two forces act at a point: 3 N due east and 4 N due north. What is the magnitude of the resultant force?",
+      "kind": "mcq",
+      "options": ["1 N", "5 N", "7 N", "12 N"],
+      "correct_answer": "5 N"
+    },
+    {
+      "concept": "free-body-diagrams",
+      "problem_type": "normal-force-incline",
+      "prompt": "A 5 kg block rests on a frictionless incline at 30 degrees to the horizontal. Taking g = 10 m/s^2, what is the normal force on the block?",
+      "kind": "mcq",
+      "options": ["25 N", "43.3 N", "50 N", "58 N"],
+      "correct_answer": "43.3 N"
+    },
+    {
+      "concept": "free-fall",
+      "problem_type": "free-fall-comparison",
+      "prompt": "A 1 kg ball and a 5 kg ball are released from the same height with no air resistance. Which reaches the ground first?",
+      "kind": "mcq",
+      "options": ["The 1 kg ball", "The 5 kg ball", "They land at the same time", "It depends on their size"],
+      "correct_answer": "They land at the same time"
+    },
+    {
+      "concept": "friction",
+      "problem_type": "friction-magnitude",
+      "prompt": "A block slides across a table. It is then turned so that a larger face is in contact with the table, with the same weight and the same materials. The kinetic friction force will:",
+      "kind": "mcq",
+      "options": ["increase", "decrease", "stay the same", "become zero"],
+      "correct_answer": "stay the same"
+    },
+    {
+      "concept": "free-fall",
+      "problem_type": "force-direction-projectile",
+      "prompt": "A ball is thrown vertically upward. Ignoring air resistance, which forces act on it while it is still rising?",
+      "kind": "mcq",
+      "options": ["Gravity only", "Gravity and an upward force", "No forces at all", "An upward force only"],
+      "correct_answer": "Gravity only"
+    },
+    {
+      "concept": "newtons-third-law",
+      "problem_type": "third-law-pair",
+      "prompt": "A book rests on a table. Which two forces form a Newton's third law action-reaction pair?",
+      "kind": "mcq",
+      "options": [
+        "The weight of the book and the normal force on the book",
+        "The book pushes down on the table and the table pushes up on the book",
+        "The weight of the book and the weight of the table",
+        "The normal force and the friction force"
+      ],
+      "correct_answer": "The book pushes down on the table and the table pushes up on the book"
+    },
+    {
+      "concept": "mass-and-weight",
+      "problem_type": "mass-vs-weight",
+      "prompt": "An astronaut has a mass of 70 kg on Earth. On the Moon, where g = 1.6 m/s^2, the astronaut's mass is:",
+      "kind": "mcq",
+      "options": ["70 kg", "11.2 kg", "112 N", "686 N"],
+      "correct_answer": "70 kg"
+    },
+    {
+      "concept": "friction",
+      "problem_type": "static-friction-threshold",
+      "prompt": "A 10 kg crate sits on a floor with a coefficient of static friction of 0.4. Taking g = 10 m/s^2, a horizontal push of 20 N is applied and the crate does not move. What is the friction force on the crate?",
+      "kind": "mcq",
+      "options": ["0 N", "20 N", "40 N", "100 N"],
+      "correct_answer": "20 N"
+    }
+  ]
+}

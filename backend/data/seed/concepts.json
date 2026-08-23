@@ -1,0 +1,23 @@
+{
+  "_readme": [
+    "The curriculum map. Everything else refers to concepts by their slug.",
+    "prerequisite_course is the earlier course a concept SHOULD have been learned in -",
+    "that is what lets a gap say 'you're missing this from Class 12 Physics'."
+  ],
+  "topics": [
+    { "slug": "foundations",    "name": "Units and Quantities" },
+    { "slug": "vectors-forces", "name": "Vectors and Forces" },
+    { "slug": "newtons-laws",   "name": "Newton's Laws of Motion" }
+  ],
+  "concepts": [
+    { "slug": "mass-and-weight",     "name": "Mass and weight",        "topic": "foundations",    "prerequisite_course": "PH000" },
+    { "slug": "vector-components",   "name": "Vector components",      "topic": "vectors-forces", "prerequisite_course": "PH000" },
+    { "slug": "vector-addition",     "name": "Vector addition",        "topic": "vectors-forces", "prerequisite_course": "PH000" },
+    { "slug": "free-body-diagrams",  "name": "Free-body diagrams",     "topic": "newtons-laws",   "prerequisite_course": "PH000" },
+    { "slug": "newtons-first-law",   "name": "Newton's first law",     "topic": "newtons-laws",   "prerequisite_course": "PH000" },
+    { "slug": "newtons-second-law",  "name": "Newton's second law",    "topic": "newtons-laws",   "prerequisite_course": "PH000" },
+    { "slug": "newtons-third-law",   "name": "Newton's third law",     "topic": "newtons-laws",   "prerequisite_course": "PH000" },
+    { "slug": "friction",            "name": "Friction",               "topic": "newtons-laws",   "prerequisite_course": "PH000" },
+    { "slug": "free-fall",           "name": "Motion under gravity",   "topic": "newtons-laws",   "prerequisite_course": "PH000" }
+  ]
+}

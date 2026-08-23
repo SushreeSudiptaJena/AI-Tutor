@@ -1,0 +1,50 @@
+{
+  "_readme": [
+    "Pre-loaded class history so the teacher dashboard is NOT EMPTY on demo day.",
+    "An empty dashboard looks broken even when it is working correctly.",
+    "",
+    "seed.py creates synthetic students, gives them gaps and confirmed misconception",
+    "diagnoses in these proportions, then the live demo adds one more on top - so the",
+    "heatmap has a believable shape AND visibly increments when the student confirms.",
+    "",
+    "Synthetic students are never named in any teacher view; teacher endpoints only",
+    "ever aggregate."
+  ],
+  "synthetic_students": 24,
+  "confirmed_misconceptions": {
+    "velocity-implies-force": 9,
+    "sin-cos-swap": 6,
+    "normal-equals-weight-always": 4,
+    "vector-scalar-addition": 3,
+    "heavier-falls-faster": 2,
+    "action-reaction-same-body": 2
+  },
+  "denied_misconceptions": {
+    "velocity-implies-force": 2,
+    "friction-depends-on-area": 1
+  },
+  "gap_counts": {
+    "vector-components": 11,
+    "free-body-diagrams": 7,
+    "newtons-second-law": 5,
+    "mass-and-weight": 3
+  },
+  "uncertainty_flags": [
+    { "question": "Explain Lagrangian mechanics and the principle of least action", "alignment_score": 0.29, "reason": "no_matching_material", "topic": "newtons-laws" },
+    { "question": "How do I derive the Navier-Stokes equations?",                    "alignment_score": 0.18, "reason": "no_matching_material", "topic": "newtons-laws" },
+    { "question": "What is the Higgs mechanism?",                                    "alignment_score": 0.12, "reason": "no_matching_material", "topic": null }
+  ],
+  "sourced_content": [
+    { "source_url": "https://example.org/lagrangian-intro", "title": "An Introduction to Lagrangian Mechanics",
+      "excerpt": "The Lagrangian formulation recasts Newtonian mechanics in terms of energy rather than force...",
+      "found_for_gap": "Lagrangian mechanics", "status": "pending" },
+    { "source_url": "https://example.org/rotational-dynamics", "title": "Rotational Dynamics Primer",
+      "excerpt": "Torque is the rotational analogue of force, defined as the cross product of position and force...",
+      "found_for_gap": "Rotational motion", "status": "pending" }
+  ],
+  "reteach_units": [
+    { "misconception": "velocity-implies-force", "status": "draft",
+      "title": "Constant velocity means zero net force",
+      "body": "Start from the observation that a puck on ice keeps moving with no push at all. Motion does not need a force; only a CHANGE in motion does. Work through the sliding block at constant speed: the push and friction are equal and opposite, so they sum to zero." }
+  ]
+}

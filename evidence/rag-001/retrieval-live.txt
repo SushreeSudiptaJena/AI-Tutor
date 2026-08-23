@@ -1,0 +1,23 @@
+rag-001 / rag-003 / rag-004 - live retrieval on the shared database
+======================================================================
+corpus: 18 chunks, bge-small-en-v1.5 384-dim, brute-force cosine, no index
+
+COVERED       0.8339  -> Concepts of Physics, Vol 1, p.141
+OFF-SYLLABUS  0.6686  -> below ALIGNMENT_REFUSAL_THRESHOLD 0.68, refuses
+HOMEWORK      0.9247  -> above guardrail 0.80, refuses with hints  (Problem Set 3 - Newton's Laws p.2)
+CONCEPTUAL    0.6929  -> below guardrail 0.80, ANSWERED in full
+
+guardrail separation on the same assignment: +0.2319
+covered vs off-syllabus separation         : +0.1654
+
+material kinds in corpus: ['textbook', 'assignment']
+assignments excluded from default search: verified
+
+teacher heatmap (confirmed only):
+    9  Treats constant velocity as implying a net force
+    6  Uses sine where cosine is required when resolving along th
+    4  Assumes the normal force always equals mg, even on an incl
+    3  Adds perpendicular force magnitudes arithmetically instead
+    2  Believes heavier objects fall faster even without air resi
+    2  Places both action and reaction forces on the same body
+  (3 denied diagnoses stored but excluded from the heatmap)

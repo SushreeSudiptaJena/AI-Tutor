@@ -1,0 +1,100 @@
+{
+  "_readme": [
+    "THE most important file in the project. When a student answers wrong, the tutor",
+    "names the specific wrong mental model behind THAT answer, then asks them to confirm.",
+    "",
+    "Rules:",
+    "  * label must be SPECIFIC. 'Struggles with forces' is worthless. 'Treats constant",
+    "    velocity as implying a net force' is something a teacher recognises instantly.",
+    "  * problem_type is the join key. A wrong answer is only matched against",
+    "    misconceptions sharing the same problem_type as the question.",
+    "  * wrong_answer_pattern is a regex matched against the student's answer. A hit here",
+    "    diagnoses with NO llm call - fast, free and deterministic, which is what you want",
+    "    live on stage.",
+    "  * every practice item must have at least one misconception whose pattern matches",
+    "    one of its wrong options, or the demo's best moment falls back to a guess.",
+    "    scripts/seed.py checks this and refuses to seed if it fails."
+  ],
+  "misconceptions": [
+    {
+      "slug": "velocity-implies-force",
+      "topic": "newtons-laws",
+      "problem_type": "net-force-constant-velocity",
+      "label": "Treats constant velocity as implying a net force",
+      "description": "Believes motion itself requires an ongoing force, so a moving object must have a non-zero net force. This is the single most studied misconception in physics education - it is essentially Aristotelian physics, and it survives instruction remarkably well.",
+      "wrong_answer_pattern": "^(?!0\\s*N).*\\d+\\s*N"
+    },
+    {
+      "slug": "sin-cos-swap",
+      "topic": "vectors-forces",
+      "problem_type": "resolve-vector-components",
+      "label": "Uses sine where cosine is required when resolving along the horizontal",
+      "description": "Applies the trigonometric function by habit rather than by checking which side of the triangle is adjacent to the angle.",
+      "wrong_answer_pattern": "^5(\\.0+)?\\s*N$"
+    },
+    {
+      "slug": "vector-scalar-addition",
+      "topic": "vectors-forces",
+      "problem_type": "add-perpendicular-forces",
+      "label": "Adds perpendicular force magnitudes arithmetically instead of using Pythagoras",
+      "description": "Treats vectors as plain numbers, so 3 N east plus 4 N north becomes 7 N rather than 5 N.",
+      "wrong_answer_pattern": "^7\\s*N$"
+    },
+    {
+      "slug": "normal-equals-weight-always",
+      "topic": "newtons-laws",
+      "problem_type": "normal-force-incline",
+      "label": "Assumes the normal force always equals mg, even on an incline",
+      "description": "Memorised N = mg from horizontal-surface problems and applies it without resolving the weight along and perpendicular to the slope.",
+      "wrong_answer_pattern": "^50\\s*N$"
+    },
+    {
+      "slug": "heavier-falls-faster",
+      "topic": "newtons-laws",
+      "problem_type": "free-fall-comparison",
+      "label": "Believes heavier objects fall faster even without air resistance",
+      "description": "Notices the larger gravitational force on the heavier body but not its proportionally larger inertia.",
+      "wrong_answer_pattern": "5\\s*kg"
+    },
+    {
+      "slug": "friction-depends-on-area",
+      "topic": "newtons-laws",
+      "problem_type": "friction-magnitude",
+      "label": "Believes friction depends on contact area rather than on the normal force",
+      "description": "Intuition from everyday experience: a bigger footprint feels like it should grip more.",
+      "wrong_answer_pattern": "increase"
+    },
+    {
+      "slug": "force-in-direction-of-motion",
+      "topic": "newtons-laws",
+      "problem_type": "force-direction-projectile",
+      "label": "Assumes an upward force acts on a ball while it is moving upward",
+      "description": "Confuses velocity with force, so an object moving up is assumed to have something pushing it up.",
+      "wrong_answer_pattern": "upward force"
+    },
+    {
+      "slug": "action-reaction-same-body",
+      "topic": "newtons-laws",
+      "problem_type": "third-law-pair",
+      "label": "Places both action and reaction forces on the same body",
+      "description": "Picks weight and normal force as a third-law pair because they are equal and opposite, missing that both act on the same object.",
+      "wrong_answer_pattern": "[Ww]eight of (the )?book and (the )?normal"
+    },
+    {
+      "slug": "mass-weight-confusion",
+      "topic": "foundations",
+      "problem_type": "mass-vs-weight",
+      "label": "Uses mass and weight interchangeably",
+      "description": "Applies the change in g to the mass rather than to the weight, so mass appears to shrink on the Moon.",
+      "wrong_answer_pattern": "11\\.2|112"
+    },
+    {
+      "slug": "static-friction-is-fixed",
+      "topic": "newtons-laws",
+      "problem_type": "static-friction-threshold",
+      "label": "Treats static friction as a fixed value rather than as a maximum",
+      "description": "Computes mu_s N and reports it regardless of the applied force, instead of recognising that static friction matches the push up to that limit.",
+      "wrong_answer_pattern": "^40\\s*N$"
+    }
+  ]
+}
