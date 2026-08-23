@@ -1,0 +1,7 @@
+# Grows as features land. Kept minimal on purpose -- every dep is a Windows install risk.
+
+# --- infra-001: database ---
+SQLAlchemy>=2.0.30
+psycopg[binary]>=3.1.18      # binary wheel: no local libpq build on Windows
+pgvector>=0.2.5
+python-dotenv>=1.0.1

@@ -1,0 +1,7 @@
+connected      : PostgreSQL 18.6 (3484359) on aarch64-unknown-linux-gnu
+this machine   : LAPTOP-G395EEVT (Windows)
+pgvector       : 0.8.6
+rows visible   : 1
+  - 2026-08-23T11:48:25+00:00  LAPTOP-G395EEVT (Windows)  (vector op ok, dist=0.0)
+
+INCOMPLETE: only one machine has written so far. Run --write on a second machine, then --read here again.

@@ -1,0 +1,31 @@
+# secrets
+.env
+.env.local
+frontend/.env.local
+
+# python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+
+# node
+node_modules/
+frontend/dist/
+
+# llm response cache (regenerate; do not commit)
+backend/.cache/
+
+# models / large artefacts
+backend/data/*.pdf
+!backend/data/.gitkeep
+*.safetensors
+*.bin
+
+# os
+Thumbs.db
+.DS_Store
+
+# claude code local settings
+.claude/settings.local.json

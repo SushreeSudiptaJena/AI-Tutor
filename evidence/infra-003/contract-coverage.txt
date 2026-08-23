@@ -1,0 +1,7 @@
+infra-003 contract coverage check
+========================================
+features in feature_list.json : 32
+referenced in api-contract.md : 32
+missing                       : none
+distinct endpoints documented : 46
+golden-path features covered  : True (7 features)

@@ -1,0 +1,12 @@
+# Normalize line endings so shell scripts stay runnable on Mac/Linux
+# even though most of the team is on Windows.
+* text=auto eol=lf
+*.sh  text eol=lf
+*.py  text eol=lf
+*.md  text eol=lf
+*.json text eol=lf
+
+*.pdf binary
+*.png binary
+*.jpg binary
+*.sql binary

@@ -1,0 +1,640 @@
+{
+  "project": "AI Tutor — Curriculum-Aligned Adaptive Tutor",
+  "event": "SIH / SOAIDEATHON-S28",
+  "budget_hours": 36,
+  "team_size": 6,
+  "status_rules": {
+    "not_started": "hasn't been touched",
+    "in_progress": "the ONE feature currently being worked on — only one at a time",
+    "blocked": "cannot proceed due to a documented issue; the issue must be in notes",
+    "passing": "verification executed verbatim AND evidence file recorded"
+  },
+  "demo_mode_rules": {
+    "live": "must be fully dynamic end to end — part of the golden path",
+    "seeded": "implement as realistic pre-loaded data, not a live pipeline"
+  },
+  "golden_path": [
+    "auth-001",
+    "student-002",
+    "student-003",
+    "rag-002",
+    "student-005",
+    "student-006",
+    "teacher-001"
+  ],
+  "features": [
+    {
+      "id": "infra-001",
+      "priority": 1,
+      "area": "infra",
+      "title": "Shared Neon Postgres + pgvector",
+      "user_visible_behavior": "Every teammate's backend connects to one shared database; data ingested by one person is visible to all.",
+      "status": "blocked",
+      "depends_on": [],
+      "demo_mode": "live",
+      "verification": [
+        "Create the Postgres project and note the connection string.",
+        "Run in a SQL console: CREATE EXTENSION IF NOT EXISTS vector;",
+        "Put DATABASE_URL in .env on two different machines (never commit .env).",
+        "Machine A: python backend/scripts/check_db.py --write",
+        "Machine B: python backend/scripts/check_db.py --write",
+        "Either machine: python backend/scripts/check_db.py --read -> prints PASS and lists rows from BOTH machines.",
+        "Save that terminal output to evidence/infra-001/two-machine-check.txt"
+      ],
+      "evidence": "evidence/infra-001/two-machine-check.txt",
+      "notes": "Blocks everything. Free tier is enough. Share the connection string in the team channel, never in git. Verified by backend/scripts/check_db.py, which also proves the pgvector extension is live by running a distance operator. BLOCKED 2026-08-23: connectivity confirmed from one machine (PostgreSQL 18.6, pgvector 0.8.6, distance operator exercised). Cannot pass until a second machine runs --write, which is the whole claim of the feature. Unblocks the moment a teammate runs the three setup lines."
+    },
+    {
+      "id": "infra-002",
+      "priority": 2,
+      "area": "infra",
+      "title": "Green baseline — requirements.txt, package.json, ./init.sh passes",
+      "user_visible_behavior": "A teammate clones the repo, runs ./init.sh, and gets a passing verification plus the start command.",
+      "status": "not_started",
+      "depends_on": [
+        "infra-001"
+      ],
+      "demo_mode": "live",
+      "verification": [
+        "On a clean clone: ./init.sh",
+        "Exits 0 and prints 'Verification passed.'",
+        "RUN_START_COMMAND=1 ./init.sh boots uvicorn and GET /health returns 200."
+      ],
+      "evidence": null,
+      "notes": "Until this passes, the 'fix the baseline first' rule in CLAUDE.md is unenforceable. Needs at least one trivial pytest so the suite is non-empty."
+    },
+    {
+      "id": "infra-003",
+      "priority": 3,
+      "area": "infra",
+      "title": "Frozen API contract (docs/api-contract.md)",
+      "user_visible_behavior": "Not user visible. Five frontend people build against this file with mocks while the backend catches up.",
+      "status": "in_progress",
+      "depends_on": [],
+      "demo_mode": "live",
+      "verification": [
+        "Every endpoint in the golden path has a documented method, path, request shape and response shape.",
+        "A frontend teammate builds one page against the mock without asking a clarifying question."
+      ],
+      "evidence": "evidence/infra-003/contract-coverage.txt",
+      "notes": "HOUR-2 DELIVERABLE. Sushree is the bottleneck for five people; this file is how they parallelize. Freeze at hour 4. 2026-08-23: docs/api-contract.md drafted covering all 32 features / 46 endpoints (coverage check in evidence). Stays in_progress -- the second verification step requires a frontend teammate to build a page against the mock without asking a clarifying question, which cannot be self-certified."
+    },
+    {
+      "id": "infra-004",
+      "priority": 4,
+      "area": "infra",
+      "title": "LLM/translation provider interface + disk cache + fallback + mock",
+      "user_visible_behavior": "Not user visible. The demo replays identically and works with no internet.",
+      "status": "not_started",
+      "depends_on": [
+        "infra-002"
+      ],
+      "demo_mode": "live",
+      "verification": [
+        "Call the tutor endpoint twice with the same input; second call is served from cache (log line or timing proves it).",
+        "Set the GLM key to garbage; the fallback provider answers.",
+        "Set PROVIDER=mock and disconnect wifi; the golden path still completes end to end."
+      ],
+      "evidence": null,
+      "notes": "Cache key = sha256(model + prompt). This is the single highest-leverage insurance policy for demo day."
+    },
+    {
+      "id": "infra-005",
+      "priority": 5,
+      "area": "infra",
+      "title": "Cloudflare tunnel + VITE_API_BASE wiring for remote team",
+      "user_visible_behavior": "A teammate on another laptop runs the frontend locally and it talks to Sushree's backend.",
+      "status": "not_started",
+      "depends_on": [
+        "infra-002"
+      ],
+      "demo_mode": "live",
+      "verification": [
+        "Start cloudflared; copy the https URL into a teammate's frontend/.env.local as VITE_API_BASE.",
+        "Teammate loads the app and successfully logs in against the remote backend.",
+        "CORS allows the vite dev origin."
+      ],
+      "evidence": null,
+      "notes": "Demo must run on at least two laptops. Tunnel URL changes on restart — repost it each time."
+    },
+    {
+      "id": "auth-001",
+      "priority": 6,
+      "area": "auth",
+      "title": "Email + password signup, login, logout",
+      "user_visible_behavior": "User signs up with email and password, logs in, lands on the dashboard for their role, and can log out.",
+      "status": "not_started",
+      "depends_on": [
+        "infra-002"
+      ],
+      "demo_mode": "live",
+      "verification": [
+        "Sign up a new student; password is stored as a pbkdf2_sha256 hash, never plaintext (check the DB row).",
+        "Log in with the correct password -> token returned and stored.",
+        "Log in with the wrong password -> 401, no token.",
+        "Authenticated request to a protected route succeeds; the same route without a token returns 401.",
+        "Logout invalidates the token; the next request returns 401."
+      ],
+      "evidence": null,
+      "notes": "Opaque UUID token in a sessions table. NO JWT. pbkdf2_sha256, NOT bcrypt (native build fails on Windows). Roles: student, teacher, admin."
+    },
+    {
+      "id": "auth-002",
+      "priority": 7,
+      "area": "auth",
+      "title": "Forgot password — UI only",
+      "user_visible_behavior": "Login page has a 'Forgot password?' link opening a screen that accepts an email and shows a confirmation message.",
+      "status": "not_started",
+      "depends_on": [
+        "auth-001"
+      ],
+      "demo_mode": "seeded",
+      "verification": [
+        "Click 'Forgot password?' on the login page.",
+        "Enter an email, submit, and see the confirmation copy.",
+        "No network request is made and no backend route exists."
+      ],
+      "evidence": null,
+      "notes": "EXPLICITLY UI-ONLY per team decision. Do not build email sending or reset tokens."
+    },
+    {
+      "id": "ingest-001",
+      "priority": 8,
+      "area": "ingest",
+      "title": "PyMuPDF ingestion to page-anchored chunks",
+      "user_visible_behavior": "Not directly visible, but every citation shown to a student resolves to a real book and page.",
+      "status": "not_started",
+      "depends_on": [
+        "infra-001"
+      ],
+      "demo_mode": "live",
+      "verification": [
+        "Ingest a real course PDF.",
+        "Query the chunks table: every row has doc_id, page_no and a char span.",
+        "Pick 3 chunks at random and confirm the text really appears on that page of the PDF."
+      ],
+      "evidence": null,
+      "notes": "Page numbers are non-optional — 'Show Source' depends on them. Run only on Sushree's machine; ship backend/data/dump.sql."
+    },
+    {
+      "id": "rag-001",
+      "priority": 9,
+      "area": "rag",
+      "title": "Embeddings + pgvector retrieval with citations",
+      "user_visible_behavior": "An explanation comes back with the specific chunks it was grounded in, each carrying a book title and page number.",
+      "status": "not_started",
+      "depends_on": [
+        "ingest-001"
+      ],
+      "demo_mode": "live",
+      "verification": [
+        "Embed the corpus with bge-small-en-v1.5 (384-dim).",
+        "Query a topic that IS in the corpus; top-3 chunks are on-topic by manual read.",
+        "Response includes citations with resolvable book + page."
+      ],
+      "evidence": null,
+      "notes": "Brute-force cosine. NO ivfflat/hnsw index — corpus is small and an index is a failure mode."
+    },
+    {
+      "id": "rag-002",
+      "priority": 10,
+      "area": "rag",
+      "title": "Evidence check + syllabus alignment score",
+      "user_visible_behavior": "Every lesson and explanation card shows a syllabus-alignment percentage.",
+      "status": "not_started",
+      "depends_on": [
+        "rag-001",
+        "infra-004"
+      ],
+      "demo_mode": "live",
+      "verification": [
+        "A well-covered topic scores high (>70%).",
+        "A tangential topic scores visibly lower.",
+        "The same score value appears on the student lesson card and in the API response."
+      ],
+      "evidence": null,
+      "notes": "RUBRIC FEATURE. top-k cosine + one LLM entailment check -> percentage. Build by hour 8."
+    },
+    {
+      "id": "rag-003",
+      "priority": 11,
+      "area": "rag",
+      "title": "Refuse when evidence is insufficient + uncertainty flag",
+      "user_visible_behavior": "Asked something the curriculum does not cover, the tutor says it lacks evidence instead of guessing — and the teacher sees it in Uncertainty Flags.",
+      "status": "not_started",
+      "depends_on": [
+        "rag-002"
+      ],
+      "demo_mode": "live",
+      "verification": [
+        "Ask an off-syllabus question; the tutor refuses and does not fabricate an answer.",
+        "A row appears in uncertainty_flags with the query and the score.",
+        "That row is visible on the teacher dashboard without any extra wiring."
+      ],
+      "evidence": null,
+      "notes": "RUBRIC FEATURE. One feature, two dashboards — the refusal auto-populates teacher-004."
+    },
+    {
+      "id": "rag-004",
+      "priority": 12,
+      "area": "rag",
+      "title": "Graded-work guardrail",
+      "user_visible_behavior": "Asked to solve a graded assignment question, the tutor declines and offers scaffolded hints instead of the answer.",
+      "status": "not_started",
+      "depends_on": [
+        "rag-001",
+        "infra-004"
+      ],
+      "demo_mode": "live",
+      "verification": [
+        "Paste a seeded assignment question verbatim; the tutor refuses to produce the final answer.",
+        "It returns hints/scaffolding instead.",
+        "A normal conceptual question on the same topic is still answered fully."
+      ],
+      "evidence": null,
+      "notes": "RUBRIC FEATURE. Guard prompt + rule: if the query matches an assignment chunk in the KB, refuse."
+    },
+    {
+      "id": "student-001",
+      "priority": 13,
+      "area": "student",
+      "title": "Course summary on login",
+      "user_visible_behavior": "On first login a student sees what's in scope: which books, which pages, which topics.",
+      "status": "not_started",
+      "depends_on": [
+        "auth-001",
+        "infra-003"
+      ],
+      "demo_mode": "seeded",
+      "verification": [
+        "Log in as the seeded student.",
+        "Course summary lists real books and page ranges drawn from the ingested corpus."
+      ],
+      "evidence": null,
+      "notes": null
+    },
+    {
+      "id": "student-002",
+      "priority": 14,
+      "area": "student",
+      "title": "Prerequisite gap check (diagnostic test)",
+      "user_visible_behavior": "Student takes a short diagnostic and receives a gap list — not a grade.",
+      "status": "not_started",
+      "depends_on": [
+        "student-001"
+      ],
+      "demo_mode": "live",
+      "verification": [
+        "Take the diagnostic answering some items wrong.",
+        "Output is a list of named prerequisite gaps.",
+        "No overall score or grade is displayed anywhere on the result screen."
+      ],
+      "evidence": null,
+      "notes": "GOLDEN PATH step 1. The 'gap list, not a grade' framing is a judging point — do not add a score."
+    },
+    {
+      "id": "student-003",
+      "priority": 15,
+      "area": "student",
+      "title": "Gap-to-lesson mapping + alignment score on the card",
+      "user_visible_behavior": "Each identified gap links to approved material, with a syllabus-alignment percentage on the lesson.",
+      "status": "not_started",
+      "depends_on": [
+        "student-002",
+        "rag-002"
+      ],
+      "demo_mode": "live",
+      "verification": [
+        "Click a gap from the diagnostic result.",
+        "A lesson loads sourced from the approved KB with a visible alignment percentage.",
+        "The percentage matches the value in the API response."
+      ],
+      "evidence": null,
+      "notes": "GOLDEN PATH step 2."
+    },
+    {
+      "id": "student-004",
+      "priority": 16,
+      "area": "student",
+      "title": "Show Source",
+      "user_visible_behavior": "Every explanation card links to the exact book and page it was grounded in.",
+      "status": "not_started",
+      "depends_on": [
+        "rag-001"
+      ],
+      "demo_mode": "live",
+      "verification": [
+        "Open any lesson card and click Show Source.",
+        "It names a real book and page number.",
+        "Open the PDF at that page and confirm the content matches."
+      ],
+      "evidence": null,
+      "notes": "Cheap, highly visible to judges, directly quoted in the problem statement."
+    },
+    {
+      "id": "student-005",
+      "priority": 17,
+      "area": "student",
+      "title": "Scoped practice generator",
+      "user_visible_behavior": "Practice problems are generated for the student's identified gaps, not random course-wide problems.",
+      "status": "not_started",
+      "depends_on": [
+        "student-003"
+      ],
+      "demo_mode": "live",
+      "verification": [
+        "From a specific gap, generate practice.",
+        "Every generated item is about that gap's concept.",
+        "Generating from a different gap produces visibly different items."
+      ],
+      "evidence": null,
+      "notes": "GOLDEN PATH step 3."
+    },
+    {
+      "id": "student-006",
+      "priority": 18,
+      "area": "student",
+      "title": "Post-quiz misconception check with confirm/deny",
+      "user_visible_behavior": "After a wrong answer, the AI names the likely misconception behind it and asks the student to confirm or deny.",
+      "status": "not_started",
+      "depends_on": [
+        "student-005"
+      ],
+      "demo_mode": "live",
+      "verification": [
+        "Answer a practice question wrong in a specific, predictable way.",
+        "The named misconception plausibly matches that wrong answer, not a generic one.",
+        "Click Confirm; a confirmed_diagnosis row is written.",
+        "Click Deny on another; it is recorded as denied and does NOT feed the heatmap."
+      ],
+      "evidence": null,
+      "notes": "GOLDEN PATH step 4 — the single most important feature in the build. Match against seeded error patterns per problem type."
+    },
+    {
+      "id": "student-007",
+      "priority": 19,
+      "area": "student",
+      "title": "Per-topic mastery tracker",
+      "user_visible_behavior": "Concept-level view of which ideas are solid and which are shaky — not one score, not time-on-task.",
+      "status": "not_started",
+      "depends_on": [
+        "student-006"
+      ],
+      "demo_mode": "seeded",
+      "verification": [
+        "Open the mastery view; concepts are listed individually with a solid/shaky state.",
+        "No single aggregate score and no time-tracking is shown."
+      ],
+      "evidence": null,
+      "notes": "The absence of a single score and of time-on-task is deliberate — it is the anti-surveillance stance."
+    },
+    {
+      "id": "teacher-001",
+      "priority": 20,
+      "area": "teacher",
+      "title": "Misconception heatmap (live-updating)",
+      "user_visible_behavior": "Per topic, the most common wrong mental models across the class, ranked by confirmed-diagnosis frequency.",
+      "status": "not_started",
+      "depends_on": [
+        "student-006"
+      ],
+      "demo_mode": "live",
+      "verification": [
+        "Note the current count for a misconception on the teacher dashboard.",
+        "On the second laptop, have the student confirm that misconception.",
+        "Refresh the teacher dashboard; the count has incremented."
+      ],
+      "evidence": null,
+      "notes": "GOLDEN PATH step 5 — the closing beat of the demo. Poll on an interval; do NOT build websockets."
+    },
+    {
+      "id": "teacher-002",
+      "priority": 21,
+      "area": "teacher",
+      "title": "Reasoning-path breakdown",
+      "user_visible_behavior": "For a given problem, the top confirmed error patterns, each with one anonymized example.",
+      "status": "not_started",
+      "depends_on": [
+        "teacher-001"
+      ],
+      "demo_mode": "seeded",
+      "verification": [
+        "Open a problem's breakdown.",
+        "Error patterns are ranked and each shows one example.",
+        "No student name or identifier appears anywhere."
+      ],
+      "evidence": null,
+      "notes": "Anonymization is a judging point — verify no names leak in the API response, not just the UI."
+    },
+    {
+      "id": "teacher-003",
+      "priority": 22,
+      "area": "teacher",
+      "title": "Prerequisite gap map",
+      "user_visible_behavior": "Class-level view of which foundational concepts a chunk of students are missing, tied to the current topic.",
+      "status": "not_started",
+      "depends_on": [
+        "student-002"
+      ],
+      "demo_mode": "seeded",
+      "verification": [
+        "Open the gap map for a topic.",
+        "Foundational concepts are shown with the share of the class missing each."
+      ],
+      "evidence": null,
+      "notes": null
+    },
+    {
+      "id": "teacher-004",
+      "priority": 23,
+      "area": "teacher",
+      "title": "Uncertainty flags panel",
+      "user_visible_behavior": "Cases where the tutor said 'not enough evidence' are surfaced for teacher review rather than failing silently.",
+      "status": "not_started",
+      "depends_on": [
+        "rag-003"
+      ],
+      "demo_mode": "live",
+      "verification": [
+        "Trigger a refusal as a student.",
+        "The flag appears in the teacher panel with the query and the alignment score."
+      ],
+      "evidence": null,
+      "notes": "Comes almost free from rag-003. High judging value for very little work."
+    },
+    {
+      "id": "teacher-005",
+      "priority": 24,
+      "area": "teacher",
+      "title": "Before/after reteach tracking",
+      "user_visible_behavior": "Shows whether a specific misconception is shrinking after a targeted reteach — not whether overall scores rose.",
+      "status": "not_started",
+      "depends_on": [
+        "teacher-001"
+      ],
+      "demo_mode": "seeded",
+      "verification": [
+        "Open a misconception that has a seeded reteach event.",
+        "Before and after frequencies are both shown, with the delta."
+      ],
+      "evidence": null,
+      "notes": "Seed two time buckets. Do not build a real longitudinal pipeline in 36 hours."
+    },
+    {
+      "id": "teacher-006",
+      "priority": 25,
+      "area": "teacher",
+      "title": "Auto-suggested reteach unit with teacher approval",
+      "user_visible_behavior": "AI proposes a short lesson or practice set for the class's most common misconception; the teacher approves or edits before assigning.",
+      "status": "not_started",
+      "depends_on": [
+        "teacher-001",
+        "infra-004"
+      ],
+      "demo_mode": "seeded",
+      "verification": [
+        "Open the top misconception and generate a reteach suggestion.",
+        "Edit the text, then approve.",
+        "It becomes assigned; without approval it is never visible to a student."
+      ],
+      "evidence": null,
+      "notes": "The approval gate is the human-in-the-loop story. Never auto-assign."
+    },
+    {
+      "id": "teacher-007",
+      "priority": 26,
+      "area": "teacher",
+      "title": "AI-sourced content verification queue",
+      "user_visible_behavior": "Material the AI found via web search sits in a queue for teacher approval before any student can see it.",
+      "status": "not_started",
+      "depends_on": [
+        "rag-003"
+      ],
+      "demo_mode": "seeded",
+      "verification": [
+        "Open the queue with seeded pending items.",
+        "Approve one; it becomes available.",
+        "Confirm a pending item cannot be reached from any student view."
+      ],
+      "evidence": null,
+      "notes": "Seed the items. Do NOT build live web search in 36 hours — the queue itself is the point."
+    },
+    {
+      "id": "admin-001",
+      "priority": 27,
+      "area": "admin",
+      "title": "Curriculum upload and versioning",
+      "user_visible_behavior": "Admin uploads syllabus/textbooks/notes per course with chapter and page mapping; older versions stay archived.",
+      "status": "not_started",
+      "depends_on": [
+        "ingest-001",
+        "auth-001"
+      ],
+      "demo_mode": "seeded",
+      "verification": [
+        "Upload a PDF as admin; it appears in the course's material list.",
+        "Upload a replacement; the previous version is still listed as archived, not deleted."
+      ],
+      "evidence": null,
+      "notes": "Upload by a verified admin counts as approval for this build — per the feature plan."
+    },
+    {
+      "id": "admin-002",
+      "priority": 28,
+      "area": "admin",
+      "title": "Course and institution structure with prerequisites",
+      "user_visible_behavior": "Departments, courses, and which courses are prerequisites for which others.",
+      "status": "not_started",
+      "depends_on": [
+        "auth-001"
+      ],
+      "demo_mode": "seeded",
+      "verification": [
+        "View the structure; a course shows its prerequisite courses.",
+        "Gap detection for that course references the correct prior course."
+      ],
+      "evidence": null,
+      "notes": "This is what makes gap detection reference the right prior course — seed it correctly."
+    },
+    {
+      "id": "admin-003",
+      "priority": 29,
+      "area": "admin",
+      "title": "Audit log and version history",
+      "user_visible_behavior": "Records who uploaded or changed what, and when.",
+      "status": "not_started",
+      "depends_on": [
+        "admin-001"
+      ],
+      "demo_mode": "seeded",
+      "verification": [
+        "Perform an upload as admin.",
+        "A log entry appears with actor, action and timestamp."
+      ],
+      "evidence": null,
+      "notes": "The human-in-the-loop trail. Cheap to build, good to point at during the pitch."
+    },
+    {
+      "id": "i18n-001",
+      "priority": 30,
+      "area": "i18n",
+      "title": "Multilingual interaction via Sarvam",
+      "user_visible_behavior": "Student picks a language; questions and explanations work in it, with citations preserved.",
+      "status": "not_started",
+      "depends_on": [
+        "rag-002",
+        "infra-004"
+      ],
+      "demo_mode": "live",
+      "verification": [
+        "Switch to Hindi and ask a question in Hindi.",
+        "The answer comes back in Hindi.",
+        "Citations still resolve to the correct English source book and page.",
+        "The alignment score is unchanged from the English equivalent question."
+      ],
+      "evidence": null,
+      "notes": "Pipeline: translate to English -> retrieve -> answer in English -> translate back. Vector space stays English-only."
+    },
+    {
+      "id": "a11y-001",
+      "priority": 31,
+      "area": "a11y",
+      "title": "Accessible interaction — read-aloud, font size, contrast",
+      "user_visible_behavior": "Student can have any explanation read aloud, enlarge text, and switch to high contrast.",
+      "status": "not_started",
+      "depends_on": [
+        "student-003"
+      ],
+      "demo_mode": "live",
+      "verification": [
+        "Click read-aloud on a lesson; browser speechSynthesis speaks it.",
+        "Increase font size; layout does not break.",
+        "Toggle high contrast; text remains readable throughout.",
+        "Tab through the student dashboard using only the keyboard and reach every control."
+      ],
+      "evidence": null,
+      "notes": "speechSynthesis is free and needs no API. shadcn/Radix gives keyboard nav and ARIA for free. ~40 min for a whole judging criterion."
+    },
+    {
+      "id": "demo-001",
+      "priority": 32,
+      "area": "demo",
+      "title": "Two-laptop golden path rehearsal",
+      "user_visible_behavior": "The full demo runs start to finish on two laptops without a manual fix.",
+      "status": "not_started",
+      "depends_on": [
+        "teacher-001",
+        "infra-005"
+      ],
+      "demo_mode": "live",
+      "verification": [
+        "Laptop A runs the student flow; laptop B shows the teacher dashboard.",
+        "Run docs/demo-script.md verbatim end to end.",
+        "Repeat it a second time from a clean state with no manual DB edits.",
+        "Repeat once with wifi disabled and PROVIDER=mock."
+      ],
+      "evidence": null,
+      "notes": "Rehearse at least twice before the deadline. Budget the last 3 hours for this — do not spend them on features."
+    }
+  ]
+}
