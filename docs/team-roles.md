@@ -42,25 +42,27 @@ Done means: same. Forgot password is UI only and must not make a network call.
 
 Blocks nobody.
 
-### 4. Backend - API and data
+### 4. Backend + AI engine (Sushree)
 
-Owns: auth, database models, ingestion and chunking, course and prerequisite structure, quiz engine, gap detection, seeding, and every HTTP endpoint.
+Owns: auth, database models, ingestion and chunking, course and prerequisite structure, quiz engine, gap detection, seeding, every HTTP endpoint - **and** retrieval, the alignment score, the refusal rule, the graded-work guardrail, the misconception matcher, prompts, and the provider layer.
 
-Files: `backend/app/models.py`, `backend/app/db.py`, `backend/app/routers/`, `backend/scripts/`
+Files: all of `backend/`, all of `prompts/`
 
-Done means: the endpoint matches the contract and returns real data from the database.
+Done means: the endpoint matches the contract and returns real data from the database, and each "smart" function returns a structured object with a confidence score attached rather than a paragraph of prose.
 
 Frontend does not wait on you. They build against fakes with the same shape.
 
-### 5. AI/ML - the tutor engine
+**On load:** this is roughly 17 of the 32 features with five people downstream, which is a real bottleneck and a deliberate choice. Two things keep it manageable: the API contract is written first so nobody waits on working code, and roles 5 and 6 absorb everything that does not need Python. If this role falls behind, that is the slack to pull from.
 
-Owns: retrieval, the alignment score, the refusal rule, the graded-work guardrail, the misconception matcher, prompts, and the provider layer with its cache and fallbacks.
+### 5. Content, language and accessibility
 
-Files: `backend/app/services/`, `backend/app/providers/`, `prompts/`
+Owns: the source PDFs that become the knowledge base, the diagnostic questions, the misconception list, seed data, translations, and the accessibility toggles.
 
-Done means: a plain Python function returns a structured object with a confidence score attached, not a paragraph of prose.
+Files: `backend/data/`, seed content, `frontend` i18n and a11y work
 
-The interface with backend is a **function signature, not HTTP**. Agree it in one message, then work independently. Backend wraps your function in a route and can build that route around a canned response while you are still working.
+Done means: a demo corpus exists, the diagnostic produces a **predictable** gap, and there are 8-10 **specific** misconceptions each paired with the wrong answer that signals it.
+
+This role is easy to underestimate and it decides whether the demo lands. "Struggles with forces" is worthless. "Treats constant velocity as implying a net force" is a diagnosis a physics teacher recognises instantly.
 
 ### 6. Integration and demo lead
 
@@ -70,18 +72,18 @@ Done means: the golden path runs start to finish with nobody standing behind a l
 
 Check in with every pair throughout. Do not parachute in at hour 30.
 
-## Two jobs nobody owned
+## Two jobs that get forgotten
 
-These are in the problem statement, so they are scored. Assign them or they will not happen.
+Both are in the problem statement, so both are scored. They now have owners - keep it that way.
 
-- **Multilingual and accessibility** (`i18n-001`, `a11y-001`). Read-aloud, font size, contrast, language switch. Roughly one hour of work for a whole judging criterion.
-- **The deck and the pitch.** SIH weighs presentation heavily. Suggested owner: the integration lead.
+- **Multilingual and accessibility** (`i18n-001`, `a11y-001`) - role 5. Read-aloud, font size, contrast, language switch. Roughly an hour of work for a whole judging criterion.
+- **The deck and the pitch** - role 6. SIH weighs presentation heavily and teams routinely budget nothing for it.
 
 ## Merge order
 
 1. **Skeleton and contracts.** Repo structure, design tokens, database models, API contract - merged to main together, before anyone splits off. *(Done: `cc24ce1`, `c2f7760`.)*
 2. **Parallel build.** Everyone on their own branch, in their own folder, merging small and often. Not one giant merge at the end.
-3. **Real-logic swap.** Backend and AI/ML replace canned responses with real ones. The shape never changed, so frontend touches nothing.
+3. **Real-logic swap.** Backend replaces canned responses with real ones. The shape never changed, so frontend touches nothing.
 4. **Integration and demo.** Golden path fully live, everything else seeded, rehearsed twice.
 
 ## Branch and commit rules

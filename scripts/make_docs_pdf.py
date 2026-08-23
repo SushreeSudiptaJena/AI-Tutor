@@ -23,6 +23,7 @@ DOCS = REPO_ROOT / "docs"
 OUT = DOCS / "pdf"
 
 PAGES = [
+    ("handbook.md", "AI Tutor - Team Handbook"),
     ("team-roles.md", "Team Roles and How It Merges"),
     ("frontend-guide.md", "Frontend Guide"),
     ("database-guide.md", "Database Guide"),
@@ -43,6 +44,8 @@ SUBS = {
     "←": "<-", "≤": "<=", "≥": ">=", "·": "-",
     "•": "-", " ": " ", "‑": "-", "×": "x",
     "✓": "[ok]", "✗": "[x]",
+    "│": "|", "├": "+", "└": "\\", "─": "-", "┬": "+", "┴": "+", "┼": "+",
+    "▼": "v", "►": ">", "◄": "<", "→": "->", "≈": "~",
 }
 
 
