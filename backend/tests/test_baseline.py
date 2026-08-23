@@ -30,8 +30,11 @@ def test_provider_status_shape():
     r = client.get("/meta/provider-status")
     assert r.status_code == 200
     body = r.json()
-    assert set(body) == {"active", "fallbacks_available", "cache_enabled"}
+    assert {"active", "fallbacks_available", "cache_enabled", "chain", "cache"} <= set(body)
     assert isinstance(body["fallbacks_available"], list)
+    # The chain always ends in mock, so a completely keyless machine still runs.
+    assert body["chain"][-1].startswith("mock:")
+    assert {"entries", "bytes", "enabled"} <= set(body["cache"])
 
 
 def test_unknown_route_uses_the_contract_error_envelope():

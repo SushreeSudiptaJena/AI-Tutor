@@ -85,7 +85,7 @@
       "area": "infra",
       "title": "LLM/translation provider interface + disk cache + fallback + mock",
       "user_visible_behavior": "Not user visible. The demo replays identically and works with no internet.",
-      "status": "in_progress",
+      "status": "passing",
       "depends_on": [
         "infra-002"
       ],
@@ -95,8 +95,8 @@
         "Set the GLM key to garbage; the fallback provider answers.",
         "Set PROVIDER=mock and disconnect wifi; the golden path still completes end to end."
       ],
-      "evidence": null,
-      "notes": "Cache key = sha256(model + prompt). This is the single highest-leverage insurance policy for demo day."
+      "evidence": "evidence/infra-004/verification.txt",
+      "notes": "Cache key = sha256(model + prompt). This is the single highest-leverage insurance policy for demo day. PASSING 2026-08-23. Cache key deliberately EXCLUDES provider/model (CLAUDE.md originally said sha256(model+prompt)): rehearse on one vendor, fall back to another mid-demo, and the cached answer must still be reused. Chain ordered by MEASURED latency: groq 1.3s, groq-alt 2.4s, gemini 6.5s, glm 21.7s. GLM works on glm-4.5-flash but is far too slow to lead; its paid models return 429 code 1113 (no account balance). All four model ids in .env were display names, not API ids - fixed. Current models are reasoning models: max_tokens now floors at 1024 and defaults to 2048, <think> tags are stripped, and Gemini thought-parts are skipped."
     },
     {
       "id": "infra-005",
@@ -163,7 +163,7 @@
       "area": "ingest",
       "title": "PyMuPDF ingestion to page-anchored chunks",
       "user_visible_behavior": "Not directly visible, but every citation shown to a student resolves to a real book and page.",
-      "status": "not_started",
+      "status": "in_progress",
       "depends_on": [
         "infra-001"
       ],

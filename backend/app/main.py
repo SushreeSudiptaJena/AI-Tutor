@@ -91,11 +91,16 @@ def health() -> dict:
 
 @app.get("/meta/provider-status")
 def provider_status() -> dict:
-    """Lets the demo show on screen which provider is live and that the cache is on."""
+    """Lets the demo show on screen which provider is live, what the fallback
+    chain is, and how warm the cache is."""
+    from .providers import cache as llm_cache, chain_names
+
     return {
         "active": config.PROVIDER,
         "fallbacks_available": config.configured_fallbacks(),
         "cache_enabled": config.LLM_CACHE_ENABLED,
+        "chain": chain_names(),
+        "cache": llm_cache.stats(),
     }
 
 

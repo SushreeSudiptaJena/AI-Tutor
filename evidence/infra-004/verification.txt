@@ -1,0 +1,69 @@
+infra-004 verification
+==================================================================
+chain: gemini:gemini-3.6-flash -> glm:glm-4.5-flash -> groq:qwen/qwen3.6-27b -> groq:openai/gpt-oss-120b -> mock:mock-1
+
+1. cache MISS (live call)
+   provider=gemini  cached=False     4875 ms
+   text: A block at constant velocity has zero net force because its accelerati...
+
+2. cache HIT (identical input)
+   provider=gemini  cached=True     29.0 ms
+   identical text: True
+   speedup: 168x
+
+3. FALLBACK: break the primary key, same question, cache off
+   provider=glm  <- fell through to the next VENDOR
+
+4. structured output (json_schema)
+   provider=gemini  parsed={'entailment': 1.0, 'reason': 'The source explicitly states that a block at constant velocity has zero net force, which directly supports the answer that the net force is zero.'}
+
+5. cache state
+   {'entries': 2, 'bytes': 497, 'enabled': True}
+
+6. OFFLINE: PROVIDER=mock, all keys blanked, no network possible
+   chain: mock:mock-1
+   provider=mock  text='Motion does not require a force; only a change in motion'
+   guardrail intent offline: solve->'solve'  understand->'understand'
+
+7. warm cache survives with the primary key destroyed
+   cached=True  provider=gemini  (answered with NO working key)
+
+   cache: {'entries': 2, 'bytes': 497, 'enabled': True}
+
+RESULT: PASS - all three verification steps in feature_list.json
+
+  1. same input twice -> second served from cache      step 1-2 (168x faster,
+                                                        byte-identical)
+  2. primary key broken -> fallback answers            step 3 (fell through to
+                                                        a DIFFERENT vendor)
+  3. PROVIDER=mock, no keys -> golden path completes   step 6 (including the
+                                                        guardrail intent check)
+
+Bugs this verification found, none of which would have surfaced from reading
+the code:
+
+  * All four model ids in .env were DISPLAY NAMES, not API ids
+    ("Gemini 3.6 Flash", "Llama 3.3 70B", "glm-5.3[1m]", "qwen3.6-27b").
+    Every provider failed with HTTP 400/404 - which looks exactly like a bad
+    key until you read the response body. The keys were fine all along.
+
+  * Current models are REASONING models. gemini-3.6-flash spent 104 tokens
+    thinking before writing anything, so max_tokens=1024 returned completely
+    EMPTY content with finishReason=MAX_TOKENS and no error. Groq's qwen
+    returns its reasoning inline in <think> tags. Both are now handled;
+    max_tokens floors at 1024 and defaults to 2048.
+
+  * GLM's paid models (glm-4.6, glm-5, glm-5.3) return HTTP 429 code 1113 -
+    the account has no balance. glm-4.5-flash works on the free tier.
+
+  * GLM takes ~21.7s per call. It works, but it can never lead the chain.
+
+Measured latency, 3 runs each, used to order the chain:
+
+  groq   openai/gpt-oss-120b     1312 ms
+  groq   qwen/qwen3.6-27b        2397 ms
+  gemini gemini-3.6-flash        6494 ms
+  glm    glm-4.5-flash          21728 ms
+
+Re-run backend/scripts/bench_providers.py if keys or models change, and once
+before demo day.

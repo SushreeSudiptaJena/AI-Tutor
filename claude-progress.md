@@ -13,10 +13,10 @@ Every session **reads this first** and **writes to it last**.
 | **Repository root** | the directory containing this file (every path in this repo is relative to it) |
 | **Standard startup path** | `./init.sh` (then `RUN_START_COMMAND=1 ./init.sh` to launch backend) |
 | **Standard verification path** | `python -m pytest backend/tests -q && npm --prefix frontend run build` |
-| **Highest priority unfinished feature** | `infra-004` — provider interface, disk cache, fallbacks, mock |
+| **Highest priority unfinished feature** | `ingest-001` — PyMuPDF ingestion of real PDFs into page-anchored chunks |
 | **Current blocker** | None for new work. `infra-001` and `infra-003` each need a second person to finish verifying; neither blocks anything downstream. |
 | **Golden path status** | Not started |
-| **Last verified** | 2026-08-23 — 26 tests pass, `./init.sh` green. Schema live on Neon, 18 chunks embedded, retrieval + guardrail thresholds verified, auth round trip verified. |
+| **Last verified** | 2026-08-23 — 42 tests pass, `./init.sh` green. Providers verified live: cache 168x speedup, cross-vendor fallback, and the full golden path offline on `PROVIDER=mock`. |
 
 ### Environment facts
 
@@ -31,6 +31,18 @@ Every session **reads this first** and **writes to it last**.
 ## Session Record
 
 *Newest entry at the top. One entry per session.*
+
+### Session 006 — 2026-08-23 — infra-004 PASSING
+
+| | |
+|---|---|
+| **Goal** | Provider interface, disk cache, fallback chain, mock. |
+| **Completed** | `providers/{base,cache,mock,http_providers,translate_sarvam}.py` and `__init__.complete()`. `scripts/bench_providers.py`. `/meta/provider-status` now exposes the chain and cache warmth. Contract updated. |
+| **Verification run** | 42 pytest tests (no network). Live: cache hit 168x faster and byte-identical; primary key broken → different vendor answered; `PROVIDER=mock` with all keys blanked completed the golden path including the guardrail intent check; a warm cache answered with no working key at all. |
+| **Evidence recorded** | `evidence/infra-004/verification.txt` |
+| **Commits** | One. |
+| **Known risks** | **GLM has no account balance** — paid models return 429 code 1113; only `glm-4.5-flash` works, at ~21.7s. It is third in the chain and must never lead. Gemini and Groq free tiers are the real capacity; watch for rate limits during heavy rehearsal. |
+| **Next best action** | `ingest-001` — PyMuPDF over real PDFs. Blocked on the content lead supplying material; until then `corpus.json` stands in and everything downstream is testable. |
 
 ### Session 005 — 2026-08-23 — models, seed, auth-001 PASSING
 
