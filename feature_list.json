@@ -85,7 +85,7 @@
       "area": "infra",
       "title": "LLM/translation provider interface + disk cache + fallback + mock",
       "user_visible_behavior": "Not user visible. The demo replays identically and works with no internet.",
-      "status": "not_started",
+      "status": "in_progress",
       "depends_on": [
         "infra-002"
       ],
@@ -123,7 +123,7 @@
       "area": "auth",
       "title": "Email + password signup, login, logout",
       "user_visible_behavior": "User signs up with email and password, logs in, lands on the dashboard for their role, and can log out.",
-      "status": "not_started",
+      "status": "passing",
       "depends_on": [
         "infra-002"
       ],
@@ -135,8 +135,8 @@
         "Authenticated request to a protected route succeeds; the same route without a token returns 401.",
         "Logout invalidates the token; the next request returns 401."
       ],
-      "evidence": null,
-      "notes": "Opaque UUID token in a sessions table. NO JWT. pbkdf2_sha256, NOT bcrypt (native build fails on Windows). Roles: student, teacher, admin."
+      "evidence": "evidence/auth-001/live-verification.txt",
+      "notes": "Opaque UUID token in a sessions table. NO JWT. pbkdf2_sha256, NOT bcrypt (native build fails on Windows). Roles: student, teacher, admin. PASSING 2026-08-23: all five steps verified live against the shared database. Logout deletes every session for the user, so it works across devices. Unknown email and wrong password return an identical message so the endpoint is not an account-enumeration oracle. Hashing lives in app/security.py and seed.py imports it rather than reimplementing, so seeded passwords cannot drift from verify_password."
     },
     {
       "id": "auth-002",

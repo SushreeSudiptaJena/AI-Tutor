@@ -5,12 +5,14 @@ Feature routers get included here as they land; today this is the baseline
 required by infra-002.
 """
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.requests import Request
 
 from . import config, db
+from .routers import auth
 
 app = FastAPI(
     title="AI Tutor",
@@ -36,6 +38,42 @@ def error(code: str, message: str, status: int, detail: dict | None = None) -> J
         status_code=status,
         content={"error": {"code": code, "message": message, "detail": detail or {}}},
     )
+
+
+_DEFAULT_CODES = {
+    400: "bad_request", 401: "unauthenticated", 403: "forbidden",
+    404: "not_found", 405: "bad_request", 409: "conflict", 503: "provider_unavailable",
+}
+
+
+@app.exception_handler(HTTPException)
+def http_exception(request: Request, exc: HTTPException) -> JSONResponse:
+    """Convert FastAPI's {"detail": ...} into the contract's error envelope.
+
+    Routes raise HTTPException(status, detail={"code": ..., "message": ...}) to
+    control the code; a plain string detail still comes out well-formed.
+    """
+    detail = exc.detail
+    if isinstance(detail, dict):
+        code = detail.get("code") or _DEFAULT_CODES.get(exc.status_code, "error")
+        message = detail.get("message", "")
+        extra = detail.get("detail", {})
+    else:
+        code = _DEFAULT_CODES.get(exc.status_code, "error")
+        message = str(detail)
+        extra = {}
+    return error(code, message, exc.status_code, extra)
+
+
+@app.exception_handler(RequestValidationError)
+def validation_error(request: Request, exc: RequestValidationError) -> JSONResponse:
+    """422 with per-field messages, as the contract specifies."""
+    fields: dict[str, str] = {}
+    for err in exc.errors():
+        # loc looks like ("body", "email"); the last string element is the field.
+        name = next((p for p in reversed(err["loc"]) if isinstance(p, str)), "body")
+        fields[name] = err.get("msg", "invalid")
+    return error("validation_error", "Some fields are invalid.", 422, fields)
 
 
 @app.exception_handler(404)
@@ -64,3 +102,7 @@ def provider_status() -> dict:
 @app.get("/languages")
 def languages() -> dict:
     return {"items": config.LANGUAGES}
+
+
+# --- routers ----------------------------------------------------------------
+app.include_router(auth.router)

@@ -1,0 +1,55 @@
+auth-001 live verification against the shared database
+======================================================
+
+1. login with the WRONG password
+   HTTP 401  {"error":{"code":"unauthenticated","message":"Email or password is incorrect.","detail":{}}}
+
+2. login with the CORRECT password (seeded hash verifies)
+   token: b86e36aadedd1a3a...  (64 chars, no dots -> not a JWT)
+
+3. GET /auth/me WITHOUT a token
+   HTTP 401  {"error":{"code":"unauthenticated","message":"Missing Authorization header.","detail":{}}}
+
+4. GET /auth/me WITH the token
+   HTTP 200  {"id":1,"email":"asha@example.edu","full_name":"Asha R","role":"student","course_id":2,"preferred_language":"en"}
+
+5. PATCH preferences to Hindi
+   HTTP 200  {"id":1,"email":"asha@example.edu","full_name":"Asha R","role":"student","course_id":2,"preferred_language":"hi"}
+
+6. signup with an email that already exists
+   HTTP 409  {"error":{"code":"conflict","message":"That email is already registered.","detail":{}}}
+
+7. logout
+   HTTP 204
+
+8. reuse the token AFTER logout (must be 401)
+   HTTP 401  {"error":{"code":"unauthenticated","message":"Invalid or expired token.","detail":{}}}
+
+9. signup a BRAND NEW student
+   HTTP 201
+   user: newstudent...@example.edu | role: student | token len: 64
+
+10. the NEW account can log in with its password
+   HTTP 200
+
+11. what is ACTUALLY stored in users.password_hash
+   stored : pbkdf2_sha256$260000$a2c6370732d5f906a66c637dda0f5494$3fd0...
+   algo   : pbkdf2_sha256 | iterations: 260000
+   plaintext present in the row? False
+   (test account removed)
+
+RESULT: PASS - all five verification steps in feature_list.json
+
+  1. signup stores pbkdf2_sha256, never plaintext        step 9, 11
+  2. correct password -> token                           step 2, 10
+  3. wrong password -> 401, no token                     step 1
+  4. protected route works with a token, 401 without     step 3, 4
+  5. logout invalidates the token                        step 7, 8
+
+Also covered beyond the spec:
+  - duplicate email -> 409 conflict                      step 6
+  - unknown email and wrong password return the SAME message, so the endpoint
+    is not an account-enumeration oracle
+  - every error uses the contract envelope {"error":{code,message,detail}}
+  - the token is 64 hex chars with no dots: opaque, not a JWT
+  - /auth/me never returns password_hash

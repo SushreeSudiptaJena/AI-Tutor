@@ -31,6 +31,7 @@ from sqlalchemy import delete, select
 from sqlalchemy.orm import Session as OrmSession
 
 from app.db import get_sessionmaker
+from app.security import hash_password
 from app.models import (
     Attempt,
     AuditLog,
@@ -66,11 +67,15 @@ def load(name: str) -> dict:
     return json.loads((SEED_DIR / name).read_text(encoding="utf-8"))
 
 
-def hash_password(plain: str) -> str:
-    """pbkdf2_sha256, standard library only - no compiler, works on Windows."""
-    salt = hashlib.sha256(plain.encode()).hexdigest()[:16]
-    dk = hashlib.pbkdf2_hmac("sha256", plain.encode(), salt.encode(), 260_000)
-    return f"pbkdf2_sha256$260000${salt}${dk.hex()}"
+def seeded_hash(plain: str, email: str) -> str:
+    """Same hashing as a real signup -- imported, not reimplemented, so seeded
+    passwords can never drift out of sync with app.security.verify_password.
+
+    The salt is derived from the email so re-seeding produces an identical hash
+    and the row genuinely does not change.
+    """
+    salt = hashlib.sha256(email.encode()).hexdigest()[:32]
+    return hash_password(plain, salt=salt)
 
 
 # ---------------------------------------------------------------------------
@@ -222,7 +227,7 @@ def seed_users(db: OrmSession, data: dict, courses: dict[str, Course]) -> dict[s
             db.add(row)
         row.full_name = u["full_name"]
         row.role = u["role"]
-        row.password_hash = hash_password(u["password"])
+        row.password_hash = seeded_hash(u["password"], u["email"])
         row.course_id = courses[u["course"]].id if u.get("course") else None
         row.preferred_language = u.get("preferred_language", "en")
         users[u["email"]] = row
@@ -336,7 +341,7 @@ def seed_demo_class(db: OrmSession, data: dict, primary: Course,
             db.add(row)
         row.full_name = f"Student {i:02d}"
         row.role = "student"
-        row.password_hash = hash_password("seeded-account-no-login")
+        row.password_hash = seeded_hash("seeded-account-no-login", email)
         row.course_id = primary.id
         row.preferred_language = "en"
         students.append(row)

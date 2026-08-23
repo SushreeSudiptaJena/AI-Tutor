@@ -13,10 +13,10 @@ Every session **reads this first** and **writes to it last**.
 | **Repository root** | the directory containing this file (every path in this repo is relative to it) |
 | **Standard startup path** | `./init.sh` (then `RUN_START_COMMAND=1 ./init.sh` to launch backend) |
 | **Standard verification path** | `python -m pytest backend/tests -q && npm --prefix frontend run build` |
-| **Highest priority unfinished feature** | `infra-004` — LLM/translation provider interface + disk cache + fallback + mock |
+| **Highest priority unfinished feature** | `infra-004` — provider interface, disk cache, fallbacks, mock |
 | **Current blocker** | None for new work. `infra-001` and `infra-003` each need a second person to finish verifying; neither blocks anything downstream. |
 | **Golden path status** | Not started |
-| **Last verified** | 2026-08-23 — `./init.sh` green on a clean clone (exit 0). 4 pytest tests pass, frontend builds, `/health` returns 200 with `db: ok` against the live database. |
+| **Last verified** | 2026-08-23 — 26 tests pass, `./init.sh` green. Schema live on Neon, 18 chunks embedded, retrieval + guardrail thresholds verified, auth round trip verified. |
 
 ### Environment facts
 
@@ -31,6 +31,18 @@ Every session **reads this first** and **writes to it last**.
 ## Session Record
 
 *Newest entry at the top. One entry per session.*
+
+### Session 005 — 2026-08-23 — models, seed, auth-001 PASSING
+
+| | |
+|---|---|
+| **Goal** | Build the data layer and authentication. |
+| **Completed** | `models.py` (21 tables, live on Neon). `reset_db.py`. Eight content-lead JSON files in `backend/data/seed/` with validation that refuses to seed undiagnosable practice items. `seed.py` (idempotent, verified across three runs). `services/embed.py` (fastembed + BGE query prefix). `security.py`, `schemas.py`, `deps.py`, `routers/auth.py`, and the contract's error envelope wired into `main.py` for HTTPException and validation errors. |
+| **Verification run** | 26 pytest tests, no DB and no network. Live retrieval: covered 0.834, off-syllabus 0.669, homework 0.925, conceptual-on-same-assignment 0.693. Live auth: 10-step round trip including wrong password, missing token, duplicate email, logout invalidation, and inspection of the stored hash. |
+| **Evidence recorded** | `evidence/rag-001/retrieval-live.txt`, `evidence/auth-001/live-verification.txt`, `evidence/infra-001/schema-created.txt` |
+| **Commits** | Three: models, seed, auth. |
+| **Known risks** | The off-syllabus retrieval margin is thin — 0.669 against a 0.68 threshold. Once real PDFs are ingested the corpus shifts and this could invert; re-run `calibrate_threshold.py` after ingestion and do not trim the entailment call. `infra-001` and `infra-003` still need a second person. |
+| **Next best action** | `infra-004` — provider interface with disk cache, GLM/Gemini/Groq fallbacks and MockProvider. Must land before anything calls an LLM, or the cache never gets retrofitted. |
 
 ### Session 004 — 2026-08-23 — infra-002 PASSING
 
