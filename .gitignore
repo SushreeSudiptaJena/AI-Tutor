@@ -38,3 +38,6 @@ Thumbs.db
 # frontend build artefacts
 frontend/tsconfig.tsbuildinfo
 frontend/dist/
+
+# local dev harness -- throwaway test UI, never pushed (see dev-harness/README.md)
+dev-harness/

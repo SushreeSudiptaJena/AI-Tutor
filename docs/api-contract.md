@@ -469,7 +469,7 @@ measurement.
 ### Auto-suggested reteach — `teacher-006`
 | Method | Path | Notes |
 |---|---|---|
-| `GET` | `/teacher/reteach` | `?status_filter=draft` — **added after the freeze.** Without it there is no way to reach a unit that already exists: `suggest` returns one once and `PATCH` needs an id, so a reloaded page lost it. |
+| `GET` | `/teacher/reteach` | `?status=draft` — **added after the freeze.** Without it there is no way to reach a unit that already exists: `suggest` returns one once and `PATCH` needs an id, so a reloaded page lost it. |
 | `POST` | `/teacher/reteach/suggest` | `{ misconception_id }` → `ReteachUnit` (`status: "draft"`) |
 | `PATCH` | `/teacher/reteach/{id}` | `{ title?, body? }` |
 | `POST` | `/teacher/reteach/{id}/approve` | → `status: "assigned"` |

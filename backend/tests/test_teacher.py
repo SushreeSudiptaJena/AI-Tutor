@@ -238,3 +238,20 @@ def test_drafting_refuses_when_the_corpus_cannot_support_it():
 
 def test_the_verification_queue_stores_a_rejection_reason():
     assert "reject_reason" in _sql_of(teacher._decide_sourced)
+
+
+def test_status_filters_use_the_query_name_the_contract_documents():
+    """`?status=` is an API surface. FastAPI names a query parameter after the
+    Python parameter, so `status_filter` meant a frontend following the
+    contract sent `?status=` and was silently ignored -- and because the
+    default was already "open", the only symptom was that `?status=all` did
+    nothing. Found by building a client against the contract."""
+    import inspect as _i
+
+    for fn in (teacher.uncertainty_flags, teacher.verification_queue,
+               teacher.list_reteach):
+        params = _i.signature(fn).parameters
+        default = params["status_filter"].default
+        assert getattr(default, "alias", None) == "status", (
+            f"{fn.__name__} exposes its status filter under the wrong query name"
+        )

@@ -20,7 +20,7 @@ system look more accurate than it is.
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session as OrmSession
 
@@ -150,7 +150,12 @@ def heatmap(
 
 @router.get("/uncertainty-flags")
 def uncertainty_flags(
-    status_filter: str = "open",
+    # The wire name is `status`, as documented. The local name cannot be, because
+    # `status` here is fastapi.status. Naming the parameter `status_filter`
+    # without an alias meant a frontend following the contract sent `?status=`
+    # and was silently ignored -- and since the default is already "open", the
+    # only visible symptom was that `?status=all` did nothing.
+    status_filter: str = Query("open", alias="status"),
     limit: int = 50,
     offset: int = 0,
     db: OrmSession = Depends(get_db),
@@ -519,7 +524,7 @@ def _sourced_out(row: SourcedContent) -> dict:
 
 @router.get("/verification-queue")
 def verification_queue(
-    status_filter: str = "pending",
+    status_filter: str = Query("pending", alias="status"),
     db: OrmSession = Depends(get_db),
     user: User = Depends(teacher_only),
 ) -> dict:
@@ -644,7 +649,7 @@ def _reteach_out(db: OrmSession, unit: ReteachUnit, *,
 
 @router.get("/reteach")
 def list_reteach(
-    status_filter: str = "all",
+    status_filter: str = Query("all", alias="status"),
     db: OrmSession = Depends(get_db),
     user: User = Depends(teacher_only),
 ) -> dict:
