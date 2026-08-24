@@ -1,0 +1,101 @@
+rag-004 -- graded-work guardrail, live against real assignment material
+=======================================================================
+
+Corpus: CSW2 (Computer Science Workshop 2, semester 4, admission batches 2024
+and 2025) -- "Django 5 By Example" plus the seven ITER assignment PDFs the admin
+uploads across the semester. The message used below is copied VERBATIM out of
+Assignment 1, Chapter 1, the way a student pasting their homework would.
+
+THE RESULT THAT MATTERS
+-----------------------
+Both phrasings clear the 0.80 vector gate:
+
+    "...solve this for me and give me the code"      similarity 0.8851
+    "...why does Django want a custom manager here"  similarity 0.8321
+
+Similarity cannot tell them apart -- it is the same assignment text either way.
+The intent check is what separates them, and it did: the first was refused with
+hints, the second was answered in full with citations. That contrast, on one
+question, is the whole feature.
+
+The cheap gate still does its job on cost: "What is a Python decorator?" scores
+0.5469 and returns without any model call at all.
+
+signup -> 201
+course : CSW2 - Computer Science Workshop 2 (id 5)
+gates  : assignment similarity > 0.8, intent confidence >= 0.6
+
+==============================================================================
+The cheap gate: how close is each message to graded material?
+==============================================================================
+  SOLVE       top assignment similarity 0.8851  (above the gate)
+              -> Assignment 1 - Chapter 1, p.2
+  UNDERSTAND  top assignment similarity 0.8321  (above the gate)
+              -> Assignment 1 - Chapter 1, p.2
+  GENERAL     top assignment similarity 0.7392  (below the gate)
+              -> Assignment 1 - Chapter 1, p.2
+
+==============================================================================
+Step 1 -- assignment question + 'solve this' MUST refuse with hints
+==============================================================================
+  HTTP 200
+  outcome  : graded_work_refused
+  matched  : {'material_id': 5, 'title': 'Assignment 1 - Chapter 1'}
+  hints (4):
+    - Check page 109 where a custom manager class is defined and see how the get_queryset method is overridden to filter by Post.Status.PUBLISHED.
+    - Make sure to reference the Post model (or its Status enum) inside the manager as shown in the example, so the filter can access the correct constant.
+    - Add the default manager objects = models.Manager() before your custom manager, as explained on page 110, to keep the standard manager available.
+    - Assign your custom manager to a field named published in the Post model; then you can use Post.published.all() to retrieve only published posts.
+  citations: [('Django 5 By Example (Ant', 'p.109'), ('Django 5 By Example (Ant', 'p.110'), ('Django 5 By Example (Ant', 'p.108'), ('Django 5 By Example (Ant', 'p.98')]
+  body     : This looks like it's from a graded assignment, so I'm not going to solve it for you. Here's how to approach it yourself.
+
+  RESULT: PASS
+  no 'evidence' key on a guardrail refusal (contract): True
+
+==============================================================================
+Step 2 -- the SAME question asked to UNDERSTAND must answer in full
+==============================================================================
+  HTTP 200
+  outcome  : answered
+  alignment: 71%  (top_sim 0.8585, threshold 0.7)
+  citations: [('Django 5 By Example (Ant', 'p.110'), ('Django 5 By Example (Ant', 'p.109'), ('Django 5 By Example (Ant', 'p.108'), ('Django 5 By Example (Ant', 'p.98')]
+  body     : Custom model managers allow you to modify the initial `QuerySet` returned by the manager directly at the model level `[2]`. 
+
+By overriding the manager's `get_queryset()` method, you build a base `Que
+
+  RESULT: PASS
+  refused as graded work: False  (must be False)
+
+==============================================================================
+Step 3 -- a lesson on the SAME concept is never guardrailed
+==============================================================================
+  concept  : 'Custom model managers in Django'
+  outcome  : answered
+  alignment: 88%  (top_sim 0.8315, threshold 0.7)
+  citations: [('Django 5 By Example (Ant', 'p.110'), ('Django 5 By Example (Ant', 'p.108'), ('Django 5 By Example (Ant', 'p.98'), ('Django 5 By Example (Ant', 'p.109'), ('Django 5 By Example (Ant', 'p.66')]
+  body     : In Django you can define a **custom model manager** to encapsulate a reusable query, such as “give me only the posts that are published” [4].
+
+Why it works: every model already has a default manager c
+
+  RESULT: PASS
+  (CSW2 has no seeded concepts or diagnostic, so this calls the same
+   tutor.lesson() the gap route calls, with the concept name directly.)
+
+==============================================================================
+Step 4 -- a general conceptual question on the topic answers in full
+==============================================================================
+  HTTP 200
+  outcome  : answered
+  alignment: 85%  (top_sim 0.8152, threshold 0.7)
+  citations: [('Django 5 By Example (Ant', 'p.110'), ('Django 5 By Example (Ant', 'p.108'), ('Django 5 By Example (Ant', 'p.66'), ('Django 5 By Example (Ant', 'p.109')]
+  body     : A Django model manager is the interface through which you query a model’s records. Every model gets a default manager called **objects** that simply returns all rows in the table [2]. The manager’s `g
+
+  RESULT: PASS
+
+==============================================================================
+Cost: the guardrail's model call only happens on a close match
+==============================================================================
+  'What is a Python decorator?' -> similarity 0.5469, refuse=False
+  reason: does not match graded material closely enough
+  (an intent call is only made above the similarity gate, so an
+   ordinary question costs one vector search and no model call)

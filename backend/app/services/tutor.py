@@ -26,11 +26,16 @@ from sqlalchemy.orm import Session as OrmSession
 from .. import prompts
 from ..models import UncertaintyFlag
 from ..providers import complete
-from . import evidence, retrieval
+from . import evidence, guardrail, retrieval
 
 REFUSAL_BODY = (
     "I don't have approved course material covering this, so I'm not going to "
     "guess at it. I've flagged it for your teacher."
+)
+
+GRADED_WORK_BODY = (
+    "This looks like it's from a graded assignment, so I'm not going to solve "
+    "it for you. Here's how to approach it yourself."
 )
 
 ANSWER_MAX_TOKENS = 1600
@@ -47,15 +52,36 @@ def ask(
 ) -> dict:
     """A `TutorResponse` from docs/api-contract.md.
 
-    `outcome` is `answered` or `insufficient_evidence`. The third outcome,
-    `graded_work_refused`, belongs to rag-004 and is added here later -- and
-    only on `/tutor/ask`, never on a gap lesson.
+    `outcome` is `answered`, `insufficient_evidence`, or `graded_work_refused`.
+    The third is reachable **only from here** -- `lesson()` below never returns
+    it, because a gap lesson is concept-driven and a refusal there could only be
+    a false positive.
 
     `language` is echoed as the language actually produced. Until i18n-001
     lands that is always English, and saying so is better than claiming a
     translation we did not do.
     """
+    # The guardrail runs before retrieval so a request to do graded work never
+    # reaches an answer prompt. Its first gate is a vector search, so the
+    # common case -- a question that is not homework at all -- costs one query
+    # and no model call.
+    verdict = guardrail.check(db, question, course_id=course_id)
+
     hits = retrieval.search(db, question, course_id=course_id, k=k)
+
+    if verdict.refuse:
+        # Hints are grounded in the same approved material a lesson would use,
+        # so a refusal still points somewhere real.
+        _, cites = retrieval.grounding(hits)
+        return {
+            "outcome": "graded_work_refused",
+            "language": "en",
+            "body": GRADED_WORK_BODY,
+            "hints": guardrail.hints(question, hits),
+            "citations": cites,
+            "matched_assignment": verdict.matched_assignment,
+        }
+
     report = evidence.assess(question, hits)
 
     if not report.sufficient:

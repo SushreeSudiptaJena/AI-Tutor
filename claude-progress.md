@@ -13,10 +13,10 @@ Every session **reads this first** and **writes to it last**.
 | **Repository root** | the directory containing this file (every path in this repo is relative to it) |
 | **Standard startup path** | `./init.sh` (then `RUN_START_COMMAND=1 ./init.sh` to launch backend) |
 | **Standard verification path** | `python -m pytest backend/tests -q && npm --prefix frontend run build` |
-| **Highest priority unfinished feature** | `rag-004` — graded-work guardrail. `retrieval.search_assignments()` already exists for its cheap first half. |
-| **Current blocker** | None for new work. `infra-001` and `infra-003` each need a second person to finish verifying; neither blocks anything downstream. |
-| **Golden path status** | Retrieval spine live end to end. `rag-002` (alignment score) is done and answering over HTTP; `student-002/003/005/006` and `teacher-001` are still to build. |
-| **Last verified** | 2026-08-24 — 96 tests pass, `./init.sh` green. Live: 1240 chunks of real course material ingested, retrieval + alignment + refusal verified through `POST /tutor/ask`. |
+| **Highest priority unfinished feature** | `student-004` (Show Source) and `teacher-004` (Uncertainty Flags) — both nearly free, the data already exists. Then `student-005` → `student-006` → `teacher-001` to close the golden path. |
+| **Current blocker** | None for new work. `infra-001`, `infra-003` and `infra-005` each need a second person to finish verifying; none blocks anything downstream. |
+| **Golden path status** | Steps 1–2 live (`student-002` → `student-003` with alignment score). Remaining: `student-005` practice, `student-006` misconception confirm/deny, `teacher-001` heatmap. |
+| **Last verified** | 2026-08-24 — 149 tests pass, `./init.sh` green. All three rubric features (`rag-002`, `rag-003`, `rag-004`) verified live against real course material. |
 
 ### Environment facts
 
@@ -24,6 +24,9 @@ Every session **reads this first** and **writes to it last**.
 - **Two courses now share the database.** `PH101` (Mechanics) holds the stand-in physics corpus; `CS-C` (Programming with C) holds the real ingested textbook. **Every retrieval is course-scoped and `course_id` is a required argument** — an unscoped search returns a real citation from the wrong subject, which reads as a slightly odd answer rather than as a bug.
 - **Source books are gitignored** (`backend/data/pdfs/*`), and rightly so: they are large and someone else's copyright. `manifest.json` is committed so the team can see what the corpus is made of. A teammate who needs the corpus consumes the shared Neon rows.
 - **`ALIGNMENT_REFUSAL_THRESHOLD` is corpus-specific**, currently `0.70`, measured against the C book. Re-run `backend/scripts/calibrate_threshold.py` after any ingest.
+- **Four courses now share the database.** `PH101` Mechanics (seeded physics stub — **this is the demo course**), `PH000` its prerequisite, `CS-C` Programming with C (real ingested textbook), `CSW2` Computer Science Workshop 2 (Django textbook + seven real assignment PDFs — this is where the guardrail is demonstrated).
+- **`cloudflared` is a standalone binary in `~/bin`**, not an installed service — the winget MSI needs elevation. `./tunnel.sh` starts it and prints the line to post to the team channel.
+- **Watch for stale servers.** A uvicorn left running from an earlier session was holding port 8000 and serving pre-auth code; `/health` answered 200 while every real route 404'd. `./tunnel.sh` now refuses to tunnel to a dead port, but check the port owner if routes vanish.
 - **Backend host:** Sushree's laptop, exposed via `cloudflared tunnel --url http://localhost:8000`. Tunnel URL changes on restart — post it to the team channel each time.
 - **Frontend:** each teammate runs `npm run dev` locally with `VITE_API_BASE` in `frontend/.env.local` pointing at the current tunnel URL.
 - **Keys:** GLM and Sarvam API keys confirmed working as of 2026-08-23.
@@ -34,6 +37,18 @@ Every session **reads this first** and **writes to it last**.
 ## Session Record
 
 *Newest entry at the top. One entry per session.*
+
+### Session 008 — 2026-08-24 — infra-005, student-001/002/003, rag-004
+
+| | |
+|---|---|
+| **Goal** | Tunnel for the team, then the golden path chain, then the graded-work guardrail against real assignment PDFs. |
+| **Completed** | `tunnel.sh`; `routers/student.py` (course summary, diagnostic, submit, gaps, gap lesson); `tutor.lesson()`; `services/guardrail.py`; `prompts/{gap_lesson,guardrail_intent,guardrail_hints}.md`. Ingestion now skips material already present, so an assignment uploaded mid-semester does not re-embed the textbook. 149 tests (was 96). |
+| **Verification run** | Ingested a second real course, CSW2: *Django 5 By Example* (1190 pages → 1938 chunks) plus the seven ITER assignment PDFs, all page-verified. Golden path steps 1–2 run live as the seeded physics student: four deliberate wrong answers → four named gaps → a lesson at 84% closing on the sin/cos swap the wrong answer encoded. Guardrail run live on a question copied verbatim out of Assignment 1. Tunnel verified through the public URL: CORS, login, 401, and `/tutor/ask`. |
+| **Evidence recorded** | `evidence/infra-005/tunnel-verification.txt`, `evidence/student-00{1,2,3}/*.txt`, `evidence/rag-004/guardrail-live.txt` |
+| **Commits** | Three: `infra-005`, the student chain, `rag-004`. |
+| **Known risks** | **`POST /student/syllabus-upload` is in the contract but not built** — the alternative diagnostic entry for incoming students. It is in no verification step, but a frontend teammate reading the contract will expect it. **CSW2 has no concepts, diagnostic or misconceptions**, so the gap→lesson→practice chain cannot run on it; the guardrail demo there calls `tutor.lesson()` with a concept name directly. The demo course remains `PH101`. The physics corpus is still the 18-chunk stand-in, not a real PDF — `student-004` Show Source will name a book and page that no file on disk can be opened at, unlike CS-C and CSW2. |
+| **Next best action** | `student-004` and `teacher-004` — both are one read endpoint over data that already exists, and both are explicitly flagged as high judging value for very little work. Then `student-005` → `student-006` → `teacher-001` closes the golden path. |
 
 ### Session 007 — 2026-08-24 — ingest-001, rag-001, rag-002, rag-003 PASSING
 

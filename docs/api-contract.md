@@ -509,4 +509,5 @@ Every shape above is final enough to mock. Suggested order, matching `feature_li
 | 2026-08-23 | Initial draft covering all 32 features. |
 | 2026-08-23 | `/health` documented as always-200 with a `degraded` state; implemented in `infra-002`. |
 | 2026-08-23 | Guardrail narrowed to `/tutor/ask` only, and now requires intent + assignment match. `Gap` gains `suggested_prompts`. |
+| 2026-08-24 | `POST /tutor/ask` now returns `graded_work_refused` (`rag-004`). `GET /student/course-summary`, `GET /student/diagnostic`, `POST /student/diagnostic/{id}/submit`, `GET /student/gaps` and `GET /student/gaps/{id}/lesson` implemented. `diagnostic_id` **is the course id** — a course has exactly one diagnostic. `POST /student/syllabus-upload` is documented but **not built**. A resource `404` now keeps its own message instead of "No such route." |
 | 2026-08-24 | `EvidenceReport.threshold` example corrected 0.35 → 0.68 (0.35 is below the embedding similarity floor, so refusal could never fire) and `reason` values documented. `POST /tutor/ask` implemented for `answered` and `insufficient_evidence`; `graded_work_refused` still pending `rag-004`. |

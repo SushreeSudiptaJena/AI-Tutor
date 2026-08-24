@@ -240,7 +240,7 @@
       "area": "rag",
       "title": "Graded-work guardrail (free-form chat only, intent-gated)",
       "user_visible_behavior": "Asked in chat to SOLVE a graded assignment question, the tutor declines and offers scaffolded hints. Asked to EXPLAIN the same question, it answers fully. Gap lessons are never guardrailed.",
-      "status": "not_started",
+      "status": "passing",
       "depends_on": [
         "rag-001",
         "infra-004"
@@ -252,8 +252,8 @@
         "Open a gap lesson whose concept overlaps that assignment -> answers normally, never returns graded_work_refused.",
         "Ask a general conceptual question on the topic -> answered fully."
       ],
-      "evidence": null,
-      "notes": "RUBRIC FEATURE. Refuse only when BOTH hold: assignment similarity > 0.80 AND an intent check says 'solve' rather than 'understand'. Run the cheap vector match first so the intent LLM call only happens on a match. Guardrail is scoped to /tutor/ask ONLY - gap lessons and practice are driven by concepts, not typed text, so a refusal there is always a false positive. The solve-vs-explain contrast on the same question is the strongest way to demo this."
+      "evidence": "evidence/rag-004/guardrail-live.txt",
+      "notes": "RUBRIC FEATURE. Refuse only when BOTH hold: assignment similarity > 0.80 AND an intent check says 'solve' rather than 'understand'. Cheap vector match first so the intent LLM call only happens on a match. Scoped to /tutor/ask ONLY. PASSING 2026-08-24 live against real graded material -- the seven ITER assignment PDFs for CSW2, with the question copied verbatim out of Assignment 1. THE DEMO MOMENT: both phrasings clear the vector gate (solve 0.8851, understand 0.8321), so similarity alone cannot separate them -- the intent check did, refusing the first with four hints citing Django 5 By Example pp.108-110 and answering the second in full at 71% alignment. A lesson on the same concept answered at 88%, never guardrailed. 'What is a Python decorator?' scores 0.5469 and costs no model call at all. TIES GO TO ANSWERING: unclear intent, confidence below 0.6, an unparseable reply or a provider outage all ANSWER rather than refuse -- a false refusal blocks a student who came to learn and they cannot appeal it, while a false answer merely explains something to someone who wanted the answer. The refusal never reaches the answer prompt, so a solution is never generated and discarded."
     },
     {
       "id": "student-001",
