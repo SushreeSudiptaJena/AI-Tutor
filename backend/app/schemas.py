@@ -9,6 +9,7 @@ tab, so every item goes out through an explicit model here.
 from __future__ import annotations
 
 import re
+from datetime import date
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, field_validator, model_validator
@@ -244,6 +245,52 @@ class ResolveFlagIn(BaseModel):
 
 class RejectSourcedIn(BaseModel):
     reason: str | None = None
+
+
+class CourseTermIn(BaseModel):
+    """admin-005. Every field optional: send only what you are changing.
+
+    The router reads `model_fields_set` so `null` can mean "clear this" while
+    an omitted key means "leave it alone". Without that distinction there is no
+    way to unset a term date once it is wrong.
+
+    The ordering check below only fires when BOTH dates arrive together. Sending
+    one that contradicts a stored one is caught in the router, against the
+    merged result -- see admin.set_course_term.
+    """
+
+    semester: int | None = None
+    admission_batches: list[int] | None = None
+    term_start: date | None = None
+    term_end: date | None = None
+
+    @field_validator("semester")
+    @classmethod
+    def _semester(cls, v: int | None) -> int | None:
+        if v is not None and not 1 <= v <= 10:
+            raise ValueError("semester must be between 1 and 10")
+        return v
+
+    @field_validator("admission_batches")
+    @classmethod
+    def _batches(cls, v: list[int] | None) -> list[int] | None:
+        if v is None:
+            return None
+        for year in v:
+            if not 2000 <= year <= 2100:
+                raise ValueError(f"{year} is not a plausible admission year")
+        # Sorted and de-duplicated: [2025, 2024, 2024] and [2024, 2025] are the
+        # same fact, and storing them differently makes them compare unequal.
+        return sorted(set(v))
+
+    @model_validator(mode="after")
+    def _window_is_ordered(self):
+        if (self.term_start is not None and self.term_end is not None
+                and self.term_end < self.term_start):
+            # A stored contradiction would make admin-006's delete guard
+            # nonsense -- in_term() would be false for every date.
+            raise ValueError("term_end cannot be earlier than term_start")
+        return self
 
 
 class SuggestReteachIn(BaseModel):

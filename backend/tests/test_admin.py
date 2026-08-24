@@ -270,3 +270,85 @@ def test_audit_titles_are_resolved_in_batches():
     source = inspect.getsource(admin._audit_titles)
     assert source.count(".in_(") == 2
     assert "db.get(" not in source
+
+
+# ---------------------------------------------------------------------------
+# admin-005 -- semester, admission batches, and the term window
+# ---------------------------------------------------------------------------
+
+def test_the_new_course_fields_are_all_nullable():
+    """They were added to a table that already had rows in the shared database.
+    A NOT NULL here would break every course that predates them."""
+    from app.models import Course
+
+    cols = Course.__table__.columns
+    for name in ("semester", "admission_batches", "term_start", "term_end"):
+        assert name in cols, name
+        assert cols[name].nullable, f"{name} must be nullable"
+
+
+def test_a_course_with_no_dates_is_never_in_term():
+    """'We do not know when this term runs' and 'this term runs all year' must
+    not look the same to the admin-006 delete guard."""
+    from datetime import date
+
+    from app.models import Course
+
+    assert Course(code="X", title="X").in_term(date(2026, 1, 1)) is False
+    assert Course(code="X", title="X", term_start=date(2026, 1, 1)).in_term(
+        date(2026, 1, 1)) is False
+
+
+def test_in_term_is_inclusive_of_both_ends():
+    from datetime import date
+
+    from app.models import Course
+
+    c = Course(code="X", title="X",
+               term_start=date(2026, 1, 10), term_end=date(2026, 5, 20))
+    assert c.in_term(date(2026, 1, 10)) is True
+    assert c.in_term(date(2026, 5, 20)) is True
+    assert c.in_term(date(2026, 1, 9)) is False
+    assert c.in_term(date(2026, 5, 21)) is False
+
+
+def test_term_input_rejects_an_impossible_window_and_bad_values():
+    import pydantic
+    import pytest
+
+    from app.schemas import CourseTermIn
+
+    CourseTermIn(semester=3, admission_batches=[2024, 2025])
+    for bad in ({"semester": 0}, {"semester": 11}, {"admission_batches": [1999]},
+                {"term_start": "2025-12-15", "term_end": "2025-08-01"}):
+        with pytest.raises(pydantic.ValidationError):
+            CourseTermIn(**bad)
+
+
+def test_admission_batches_are_sorted_and_deduplicated():
+    """[2025, 2024, 2024] and [2024, 2025] are the same fact; storing them
+    differently makes them compare unequal."""
+    from app.schemas import CourseTermIn
+
+    assert CourseTermIn(admission_batches=[2025, 2024, 2024]).admission_batches == [2024, 2025]
+
+
+def test_setting_the_term_is_a_partial_update():
+    """Setting the semester must not silently wipe the dates, and a field can
+    still be cleared by sending it as null."""
+    source = inspect.getsource(admin.set_course_term)
+    assert "model_fields_set" in source
+    assert "if field not in sent" in source
+
+
+def test_the_merged_window_is_validated_not_just_the_request():
+    """The schema can only compare two dates that arrive together. Sending one
+    that contradicts a stored one would write a window in which in_term() is
+    false for every date -- quietly disabling the delete guard."""
+    source = inspect.getsource(admin.set_course_term)
+    assert 'if "term_start" in sent else course.term_start' in source
+    assert "new_end < new_start" in source
+
+
+def test_setting_the_term_writes_an_audit_row():
+    assert '"course.set_term"' in inspect.getsource(admin.set_course_term)

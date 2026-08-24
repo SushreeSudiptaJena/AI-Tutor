@@ -14,13 +14,15 @@ Four deliberate absences, all taken straight from the problem statement. Do not
   * MisconceptionDiagnosis.confirmed is three-state, and only True is counted.
 """
 
-from datetime import datetime
+from datetime import date, datetime
 
 from pgvector.sqlalchemy import Vector
 from sqlalchemy import (
+    ARRAY,
     JSON,
     Boolean,
     Column,
+    Date,
     DateTime,
     Float,
     ForeignKey,
@@ -71,7 +73,32 @@ class Course(Base):
     title: Mapped[str] = mapped_column(String(200))
     department_id: Mapped[int | None] = mapped_column(ForeignKey("departments.id"))
 
+    # admin-005. All nullable, because they were added to a table that already
+    # had rows in the shared database and nothing may break for a course that
+    # predates them.
+    semester: Mapped[int | None] = mapped_column(Integer)
+    # A list because one subject is commonly taught to more than one admission
+    # year at once; they share the course, the corpus and the diagnostic. A
+    # Postgres array rather than a join table: this is read as a whole, never
+    # queried by element, and the stack is Postgres-only.
+    admission_batches: Mapped[list[int] | None] = mapped_column(ARRAY(Integer))
+    # The teaching window, and NOT decoration: admin-006 refuses to delete
+    # already-ingested material while a course is mid-term, and reads these.
+    term_start: Mapped[date | None] = mapped_column(Date)
+    term_end: Mapped[date | None] = mapped_column(Date)
+
     department: Mapped["Department | None"] = relationship()
+
+    def in_term(self, on: date) -> bool:
+        """Is `on` inside this course's teaching window?
+
+        False when either date is missing -- a course nobody has dated has no
+        protected window, and guessing one would block deletions on a course
+        whose term the admin never recorded.
+        """
+        if self.term_start is None or self.term_end is None:
+            return False
+        return self.term_start <= on <= self.term_end
 
     # Which courses must a student have done before this one. This is what lets
     # gap detection name the correct prior course.

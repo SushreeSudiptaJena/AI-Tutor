@@ -250,8 +250,37 @@ Structure (`admin-002`):
 ```json
 // Course
 { "id": 3, "code": "PH101", "title": "Mechanics", "department_id": 1,
-  "prerequisite_courses": [ { "id": 1, "code": "PH000", "title": "Class 12 Physics" } ] }
+  "prerequisite_courses": [ { "id": 1, "code": "PH000", "title": "Class 12 Physics" } ],
+  "semester": 3, "admission_batches": [2024, 2025],
+  "term_start": "2025-08-01", "term_end": "2025-12-15" }
 ```
+
+#### When a course runs, and who takes it — `admin-005`
+
+| Method | Path | Notes |
+|---|---|---|
+| `PUT` | `/admin/courses/{course_id}/term` | `{ semester?, admission_batches?, term_start?, term_end? }` → `Course` |
+
+All four fields are **nullable and were added late**, so every course that predates
+them keeps working: `semester`, `term_start` and `term_end` come back `null` and
+`admission_batches` comes back `[]`. Never an error, and never an inferred value.
+
+* `semester` — 1–10. Which semester of the programme this subject sits in.
+* `admission_batches` — the admission years that take it, e.g. `[2024, 2025]`.
+  A list because one subject is commonly taught to more than one cohort at once;
+  they share the course, the corpus and the diagnostic.
+* `term_start` / `term_end` — ISO dates (`YYYY-MM-DD`), the teaching window.
+
+**`term_start`/`term_end` are load-bearing, not descriptive.** `admin-006`
+refuses to delete already-ingested material while a course is mid-term, and this
+is the window it reads. A course with no dates set has no protected window.
+
+`term_end` earlier than `term_start` is `422` — a stored contradiction would
+silently make the delete guard nonsense. A `semester` outside 1–10 or a batch
+year outside 2000–2100 is also `422`.
+
+Send only the fields you are changing; omitted fields are left alone. To clear
+one, send it explicitly as `null` (or `[]` for `admission_batches`).
 
 Curriculum upload and versioning (`admin-001`):
 
@@ -745,6 +774,7 @@ Every shape above is final enough to mock. Suggested order, matching `feature_li
 
 | When | Change |
 |---|---|
+| 2026-08-25 | **`admin-005` — a course now knows its semester, its admission batches and its term dates.** `Course` gains `semester`, `admission_batches`, `term_start`, `term_end`, all nullable so existing courses are unaffected; new `PUT /admin/courses/{id}/term`. The dates are load-bearing: `admin-006` reads them to refuse deleting ingested material mid-term. **Needs a migration** — `create_all()` does not alter an existing table, so run `backend/scripts/migrate_course_terms.py` once against the shared database. |
 | 2026-08-24 | **`admin-004` — the audit log reads as a sentence.** `GET /admin/audit-log` rows gain a `summary`; `action`, `target` and `detail` are unchanged, because `?action=` filters on those verbs. New `?include_system=true` — `seed.run` rows are hidden by default, being a developer script's output rather than governance. Purely additive. |
 | 2026-08-24 | **`teacher-008` — a reteach unit can now target a prerequisite concept, not only a misconception.** `ReteachUnit.misconception_id` becomes **nullable**, `concept_id` is added, exactly one is set, and a new `target` field says which. New `POST /teacher/reteach/suggest-top` drafts the top three of the heatmap and the top three of the gap map in one call and reports what it skipped and why. `POST /teacher/reteach/suggest` now accepts `{ concept_id }` as well. Everything stays a `draft` — the batch never assigns. **This one needs a migration**: `create_all()` does not alter an existing table, so run `backend/scripts/migrate_reteach_targets.py` once against the shared database. |
 | 2026-08-24 | **`student-009` — answers are now readable back, so a reload does not wipe them.** `GET /student/diagnostic` gains `submitted_at` and a `your_answer` on every item; new `GET /student/practice/{practice_set_id}` returns a set with `your_answer`, `correct` and the pending `diagnosis` (now carrying `confirmed`); `Gap` gains `latest_practice_set_id` so a client can find the set to resume. All additive — no existing field changed shape or meaning. The no-score rule is intact: diagnostic **correctness is still never stored**, only the answer text, so there remains nothing countable in the database and `correct_answer` still never leaves the server. |

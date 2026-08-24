@@ -793,6 +793,84 @@
       ],
       "evidence": "evidence/admin-004/audit-log.txt",
       "notes": "PASSING 2026-08-24. Contract change (additive field + one query param), so docs/api-contract.md was edited FIRST. Raised as 'the audit log seems very technical'. Two separate problems behind that. (1) The payload was machine-shaped: action=material.archive / target=material:12 / detail={'version': 1}. (2) The log was 21 seed.run rows out of 52 -- a developer script writing into the governance trail an admin reads, so 'who changed the syllabus' meant scrolling past twenty re-seeds. The dotted verbs are UNCHANGED and stay: ?action= filters on them and the contract is what an admin types them from, so renaming would break the filter and the contract at once. `summary` is added alongside. seed.run is hidden by default and never deleted; ?include_system=true brings it back, and ?action=seed.run still returns it -- filtering for a thing and getting nothing back would be the endpoint lying. WHAT VERIFYING FOUND: an audit row outlives what it points at. A pruned reteach unit fell through to printing `reteach:32` back -- the exact technical noise the field exists to remove -- so the fallback now reads the subject out of the detail dict and says '(since removed)'. Titles are resolved in two batched queries for the whole page, not one lookup per row (perf-001). 295 tests (was 288)."
+    },
+    {
+      "id": "content-002",
+      "priority": 38,
+      "area": "content",
+      "title": "Digital Logic Design corpus: Roth textbook + four assignments",
+      "user_visible_behavior": "A DLD student gets lessons and citations out of Roth & Kinney, and the graded-work guardrail recognises the four DLD assignments as homework.",
+      "status": "in_progress",
+      "depends_on": [
+        "ingest-001"
+      ],
+      "demo_mode": "live",
+      "verification": [
+        "GET /admin/courses shows DLD - Digital Logic Design under Electronics & Communication Engineering.",
+        "All five materials are ingested with ingest_status done and a non-zero chunk_count.",
+        "ingest_pdfs.py --verify passes for the textbook (assignment chunks are covered by ingest-002).",
+        "A DLD retrieval returns citations from Roth with real page numbers, and never from CSW2 or CS-C -- retrieval is course-scoped.",
+        "The four assignments are kind='assignment', so they are searchable by the guardrail and never quotable as a lesson."
+      ],
+      "evidence": null,
+      "notes": "IN PROGRESS 2026-08-25. Five PDFs, all with text layers (checked before ingesting): Roth & Kinney 813pp as textbook, four assignments 2-4pp each. Semester 3, admission batches 2024 and 2025 -- those are NOT yet modelled on Course; admin-005 adds them and then this course gets them set."
+    },
+    {
+      "id": "ingest-002",
+      "priority": 39,
+      "area": "ingest",
+      "title": "Three chunks claim a page their text is not on",
+      "user_visible_behavior": "None today -- every affected chunk is in an assignment, and assignments are never quoted to a student. It would become visible the moment the same fault hit a textbook.",
+      "status": "not_started",
+      "depends_on": [],
+      "demo_mode": "live",
+      "verification": [
+        "ingest_pdfs.py --verify --sample 8 reports 0 failures across every material.",
+        "The fix is in page attribution, not in the verifier -- do not relax the check to make it pass."
+      ],
+      "evidence": null,
+      "notes": "FOUND 2026-08-25 while ingesting DLD, by running --verify rather than by reading. Three chunks report slice=True on_page=False: the text is a correct slice of the stored document, but it does not appear on the page_no it carries. chunk 1286 (material 7, CSW2 Assignment 3), chunk 1295 (material 8, CSW2 Assignment 4), chunk 3278 (material 17, DLD Assignment 3). ALL THREE ARE kind='assignment', which is why nothing is visible: LESSON_KINDS is (syllabus, textbook, notes), so an assignment chunk is searched by the graded-work guardrail and never quoted back with a citation. Suspect a chunk spanning a page boundary being attributed to the wrong side of it -- every failing span starts at or near 0. NOT fixed in this session's diff, per the working rules. Priority is real but not urgent: it is one page-attribution bug away from putting a wrong page number under 'Show Source'."
+    },
+    {
+      "id": "ingest-003",
+      "priority": 40,
+      "area": "ingest",
+      "title": "A half-ingested book is live in retrieval",
+      "user_visible_behavior": "After an interrupted ingest, a student gets answers and citations out of whatever fraction of the book got written before it stopped -- and nothing anywhere says the book is incomplete.",
+      "status": "not_started",
+      "depends_on": [],
+      "demo_mode": "live",
+      "verification": [
+        "Interrupt an ingest partway, then search that course: the partial material returns NO hits.",
+        "retrieval excludes ingest_status != 'complete', alongside its existing Material.status == 'active' filter.",
+        "An interrupted ingest leaves the material in a state a re-run can recover from, and chunk_count matches the rows actually written.",
+        "Re-running after an interruption does not duplicate chunks."
+      ],
+      "evidence": null,
+      "notes": "FOUND 2026-08-25, by killing the DLD textbook ingest partway and then searching. retrieval._search filters on Material.status == 'active' and NEVER looks at ingest_status, so material 19 -- ingest_status='running', 320 of 2053 chunks written, chunk_count still 0 -- answered a live DLD query with citations at p.130-131. Two faults, one visible: (1) retrieval has no completeness guard; (2) an interrupted ingest leaves ingest_status='running' with orphan chunks and chunk_count=0, and nothing detects or cleans it. The partial material was deleted by hand. This is worse than ingest-002 because a TEXTBOOK is quotable -- it puts real page-anchored citations from a fraction of a book under 'Show Source', which looks exactly like a working citation. Fix the retrieval guard first; it is the one that is student-visible."
+    },
+    {
+      "id": "admin-005",
+      "priority": 41,
+      "area": "admin",
+      "title": "A course knows its semester, its admission batches, and when its term runs",
+      "user_visible_behavior": "An admin can record that Digital Logic Design is a semester-3 subject taken by the 2024 and 2025 admission batches, and set the term's start and end dates -- which is what decides whether material may be deleted.",
+      "status": "passing",
+      "depends_on": [
+        "admin-002"
+      ],
+      "demo_mode": "live",
+      "verification": [
+        "Course gains semester, admission_batches, term_start and term_end; all nullable, so every existing course keeps working.",
+        "backend/scripts/migrate_course_terms.py adds them to the shared database, is idempotent, and drops nothing.",
+        "PUT /admin/courses/{id}/term sets them and writes an audit row; GET /admin/courses/{id} returns them.",
+        "term_end before term_start is a 422, not a stored contradiction.",
+        "A semester outside 1-10 and a batch year outside 2000-2100 are both 422.",
+        "GET /admin/courses/{id} on a course that has none of these returns nulls and an empty list, never an error.",
+        "python -m pytest backend/tests -q passes and ./init.sh still passes."
+      ],
+      "evidence": "evidence/admin-005/term.txt",
+      "notes": "PASSING 2026-08-25. Contract + schema change, so docs/api-contract.md was edited FIRST. Course had only code/title/department/prerequisites, so 'semester 3, admission batches 2024 and 2025' had nowhere to live. All four columns are NULLABLE because they were added to a table that already had rows in the shared database; a course that predates them returns nulls and [], never an error and never an inferred value -- 'we do not know when this term runs' and 'this term runs all year' must not look the same to admin-006's delete guard, which is why Course.in_term() returns False when either date is missing. create_all() does not alter an existing table, so this needed backend/scripts/migrate_course_terms.py; it has been RUN against the shared Neon database and is idempotent. PUT is a partial update keyed on model_fields_set, so null clears a field and an omitted key leaves it alone -- without that a date entered wrongly could never be unset. WHAT WRITING IT FOUND: the schema's ordering check can only compare two dates that arrive TOGETHER, so sending term_end alone against a stored term_start would have written a window in which in_term() is false for every date -- quietly disabling admin-006 before it was even built. The router now validates the MERGED window and 422s. Also added course.set_term and department.create to admin-004's phrase map, and made a course target render its code rather than its id. 303 tests (was 295)."
     }
   ]
 }

@@ -97,6 +97,36 @@
       "kind": "assignment",
       "course": "CSW2",
       "note": "Graded work. Searchable so rag-004 can recognise it; never quoted as a lesson."
+    },
+    {
+      "file": "dld-textbook-roth.pdf",
+      "title": "Fundamentals of Logic Design (Roth & Kinney)",
+      "kind": "textbook",
+      "course": "DLD"
+    },
+    {
+      "file": "dld-assignment1.pdf",
+      "title": "DLD Assignment 1 (14.10.2025)",
+      "kind": "assignment",
+      "course": "DLD"
+    },
+    {
+      "file": "dld-assignment2.pdf",
+      "title": "DLD Assignment 2 (24.10.2025)",
+      "kind": "assignment",
+      "course": "DLD"
+    },
+    {
+      "file": "dld-assignment3.pdf",
+      "title": "DLD Assignment 3 (28.11.2025)",
+      "kind": "assignment",
+      "course": "DLD"
+    },
+    {
+      "file": "dld-assignment4.pdf",
+      "title": "DLD Assignment 4 (06.12.2025)",
+      "kind": "assignment",
+      "course": "DLD"
     }
   ]
 }

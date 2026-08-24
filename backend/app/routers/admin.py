@@ -46,7 +46,7 @@ from ..config import REPO_ROOT
 from ..db import get_db
 from ..deps import admin_only
 from ..models import AuditLog, Course, Department, Material, ReteachUnit, User
-from ..schemas import CourseIn, DepartmentIn
+from ..schemas import CourseIn, CourseTermIn, DepartmentIn
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
@@ -82,6 +82,13 @@ def _course_out(course: Course) -> dict:
             {"id": p.id, "code": p.code, "title": p.title}
             for p in course.prerequisites
         ],
+        # admin-005. Nulls and an empty list for a course that predates these,
+        # never an inferred value -- "we do not know when this term runs" and
+        # "this term runs all year" must not look the same to admin-006.
+        "semester": course.semester,
+        "admission_batches": list(course.admission_batches or []),
+        "term_start": course.term_start.isoformat() if course.term_start else None,
+        "term_end": course.term_end.isoformat() if course.term_end else None,
     }
 
 
@@ -187,6 +194,67 @@ def create_course(
     _audit(db, user, "course.create", f"course:{course.id}",
            {"code": course.code,
             "prerequisites": [p.code for p in course.prerequisites]})
+    db.flush()
+    return _course_out(course)
+
+
+@router.put("/courses/{course_id}/term")
+def set_course_term(
+    course_id: int,
+    body: CourseTermIn,
+    db: OrmSession = Depends(get_db),
+    user: User = Depends(admin_only),
+) -> dict:
+    """admin-005 -- when this course runs, and which cohorts take it.
+
+    A partial update: only the keys actually sent are touched, so setting the
+    semester cannot silently wipe the term dates. `null` clears a field,
+    omitting it leaves it alone -- without that distinction a date entered
+    wrongly could never be unset.
+
+    The dates are not decoration. `admin-006` refuses to delete already-ingested
+    material while a course is mid-term, and this is the window it reads.
+    """
+    course = db.get(Course, course_id)
+    if course is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={"code": "not_found", "message": "No such course."},
+        )
+
+    sent = body.model_fields_set
+    changed: dict = {}
+
+    # Validate the MERGED window, not just the request. The schema can only
+    # compare two dates that arrived together; sending one that contradicts a
+    # stored one would otherwise write a window in which in_term() is false for
+    # every date, quietly disabling admin-006's guard.
+    new_start = body.term_start if "term_start" in sent else course.term_start
+    new_end = body.term_end if "term_end" in sent else course.term_end
+    if new_start is not None and new_end is not None and new_end < new_start:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail={
+                "code": "validation_error",
+                "message": "Some fields are invalid.",
+                "detail": {
+                    "term_end": f"cannot be earlier than term_start ({new_start})"
+                },
+            },
+        )
+
+    for field in ("semester", "admission_batches", "term_start", "term_end"):
+        if field not in sent:
+            continue
+        value = getattr(body, field)
+        if field == "admission_batches" and value is not None:
+            value = list(value)
+        setattr(course, field, value)
+        changed[field] = value.isoformat() if hasattr(value, "isoformat") else value
+
+    db.flush()
+    _audit(db, user, "course.set_term", f"course:{course.id}",
+           {"code": course.code, **changed})
     db.flush()
     return _course_out(course)
 
@@ -434,6 +502,8 @@ _ACTION_PHRASE = {
     "material.archive": "archived",
     "material.ingest": "ingested",
     "course.create": "created the course",
+    "course.set_term": "set the term details for",
+    "department.create": "created the department",
     "reteach.suggest": "drafted a reteach unit for",
     "reteach.edit": "edited the reteach unit",
     "reteach.approve": "approved and assigned the reteach unit",
@@ -485,7 +555,9 @@ def _audit_summary(row, actor_email: str | None, titles: dict[str, str]) -> str:
     if name:
         what = f"“{name}”"
     elif target.startswith("course:"):
-        what = f"course {target.split(':', 1)[1]}"
+        # Prefer the code the row recorded: "course DLD" is what an admin
+        # recognises, "course 9" is an internal id they have to go look up.
+        what = f"course {detail.get('code') or target.split(':', 1)[1]}"
     elif detail.get("concept") or detail.get("misconception") or detail.get("name"):
         # The row outlives what it points at -- a reteach unit can be pruned,
         # and printing the raw `reteach:32` back is the exact technical noise

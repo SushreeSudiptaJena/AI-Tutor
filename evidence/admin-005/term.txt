@@ -1,0 +1,29 @@
+admin-005 -- PUT /admin/courses/{id}/term
+
+[1] a course that predates the fields: nulls and [], never an error
+    CSW2 semester=None batches=[] term=None..None
+
+[2] set DLD: semester 3, batches 2024+2025, term dates
+    DLD - Digital Logic Design
+    semester=3  batches=[2024, 2025]  term=2025-08-01 .. 2025-12-15
+
+[3] partial update: change only the semester, dates must survive
+    semester=4  batches=[2024, 2025]  term=2025-08-01 .. 2025-12-15
+
+[4] clearing a field: null clears, omitted leaves alone
+    after semester=null ->  semester=None  term still 2025-08-01..2025-12-15
+
+[5] a window that contradicts a STORED date is refused
+    HTTP 422 -> validation_error | {'term_end': 'cannot be earlier than term_start (2025-08-01)'}
+
+[6] validation
+    {\"semester\":11}                                    -> HTTP 422
+    {\"admission_batches\":[1999]}                       -> HTTP 422
+    {\"term_start\":\"2025-12-15\",\"term_end\":\"2025-08-01\"} -> HTTP 422
+
+[7] unknown course
+    HTTP 404
+
+[8] final DLD state + audit row
+    DLD semester=3 batches=[2024, 2025] term=2025-08-01..2025-12-15
+    admin@example.edu performed course.set_term on course 9
