@@ -352,7 +352,13 @@ Returns a `TutorResponse`. `outcome` is normally `answered`; `evidence.alignment
 { "items": [ { "topic_id": 12, "topic": "Newton's Laws",
                "concepts": [ { "id": 44, "name": "Free-body diagrams", "state": "shaky" } ] } ] }
 ```
-`state`: `solid` | `shaky` | `untested`.
+`state`: `solid` | `shaky` | `untested`. **Built `student-007`.**
+
+Written by two things, both already live: `POST /student/diagnostic/{id}/submit`
+and `POST /student/practice/{id}/answer`. A correct practice answer moves a
+concept back from `shaky` to `solid`, so the view shows recovery and not only
+failure. `untested` is a real state, not a missing row — a concept nobody has
+been asked about is genuinely unknown.
 
 > No aggregate score and no time-on-task field exists anywhere in this response. That omission is the anti-surveillance stance — do not add one.
 
@@ -530,6 +536,7 @@ Every shape above is final enough to mock. Suggested order, matching `feature_li
 | 2026-08-23 | `/health` documented as always-200 with a `degraded` state; implemented in `infra-002`. |
 | 2026-08-23 | Guardrail narrowed to `/tutor/ask` only, and now requires intent + assignment match. `Gap` gains `suggested_prompts`. |
 | 2026-08-24 | Golden path complete. `POST /student/practice/generate` (needs `gap_id`; also returns `concept` and `source: generated\|seeded`), `POST /student/practice/{id}/answer`, `POST /student/misconception-diagnosis/{id}/confirm`, `GET /teacher/misconceptions/heatmap`, `GET /teacher/uncertainty-flags` and its `/resolve`. `student-004` Show Source needs no endpoint — it is the `Citation` object. |
+| 2026-08-24 | `GET /student/mastery` is **now built** (`student-007`) — exact shape as documented; no aggregate score, no time-on-task, and nothing countable to rebuild one from. |
 | 2026-08-24 | `POST /student/syllabus-upload` is **now built** (`student-008`) — PDF/`.txt`/`.md`, ≤10 MB, same `{gaps, message}` body as `submit`, `detected_from: "syllabus_upload"`, documented 400 reasons. |
 | 2026-08-24 | `POST /tutor/ask` now returns `graded_work_refused` (`rag-004`). `GET /student/course-summary`, `GET /student/diagnostic`, `POST /student/diagnostic/{id}/submit`, `GET /student/gaps` and `GET /student/gaps/{id}/lesson` implemented. `diagnostic_id` **is the course id** — a course has exactly one diagnostic. `POST /student/syllabus-upload` is documented but **not built**. A resource `404` now keeps its own message instead of "No such route." |
 | 2026-08-24 | `EvidenceReport.threshold` example corrected 0.35 → 0.68 (0.35 is below the embedding similarity floor, so refusal could never fire) and `reason` values documented. `POST /tutor/ask` implemented for `answered` and `insufficient_evidence`; `graded_work_refused` still pending `rag-004`. |

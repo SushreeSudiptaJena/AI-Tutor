@@ -424,7 +424,7 @@
       "area": "student",
       "title": "Per-topic mastery tracker",
       "user_visible_behavior": "Concept-level view of which ideas are solid and which are shaky — not one score, not time-on-task.",
-      "status": "not_started",
+      "status": "passing",
       "depends_on": [
         "student-006"
       ],
@@ -433,8 +433,8 @@
         "Open the mastery view; concepts are listed individually with a solid/shaky state.",
         "No single aggregate score and no time-tracking is shown."
       ],
-      "evidence": null,
-      "notes": "The absence of a single score and of time-on-task is deliberate — it is the anti-surveillance stance."
+      "evidence": "evidence/student-007/mastery-live.txt",
+      "notes": "The absence of a single score and of time-on-task is deliberate -- it is the anti-surveillance stance. PASSING 2026-08-24 live from a clean slate: every concept `untested` after reset_demo_state.py, then the diagnostic drove six to `solid` and exactly the two deliberately-missed concepts to `shaky`, then a correct practice answer moved one back from shaky to solid -- so recovery is visible, not just failure. Both writers already existed (diagnostic submit and practice answer); this is the read endpoint over them. The response was checked for score/percent/grade/average/total/count/updated_at/seconds/duration -- none present -- so a frontend cannot rebuild an aggregate from what it is given. `untested` is a first-class state: omitting an unasked concept would imply competence, and a zero would imply failure. States are read in ONE query, not one per concept. FOUND A PHANTOM: the first run listed a 16th concept, 'Model fields and field types', which is not in concepts.json -- dropped when it failed the evidence check at 0.56 -- but still a row in the shared DB, because seed.py upserts and never deletes. This is the first endpoint that enumerates EVERY concept in a course, so it is the first place such a row is visible at all. The orphan had zero dependents and was deleted; the code bug is infra-006."
     },
     {
       "id": "teacher-001",
@@ -683,6 +683,22 @@
       ],
       "evidence": null,
       "notes": "Rehearse at least twice before the deadline. Budget the last 3 hours for this — do not spend them on features."
+    },
+    {
+      "id": "infra-006",
+      "priority": 33,
+      "area": "infra",
+      "title": "seed.py should prune content removed from the seed files",
+      "user_visible_behavior": "A concept deleted from concepts.json disappears from the app instead of lingering in the database as a phantom.",
+      "status": "not_started",
+      "depends_on": [],
+      "demo_mode": "live",
+      "verification": [
+        "Remove a concept from concepts.json, re-run seed.py, and it is gone from GET /student/mastery.",
+        "A concept that still has gaps, mastery rows, practice items or diagnostic items is NOT deleted -- it is reported and left alone, because deleting it would take a student's history with it."
+      ],
+      "evidence": null,
+      "notes": "FOUND 2026-08-24 while verifying student-007. seed.py upserts by natural key and never deletes, so 'model-fields' -- dropped from concepts.json when it failed the corpus evidence check at 0.56 -- was still a row in the shared database. GET /student/mastery is the first endpoint that lists EVERY concept in a course, so it is the first place a phantom becomes visible to a user, and it showed as 'Model fields and field types: untested'. The orphan row was deleted by hand (it had zero dependents: no gaps, mastery, practice or diagnostic items) so the shared DB is clean now and a full reset_db.py + seed.py will not recreate it. The CODE is still unfixed: the next concept anyone removes will do the same thing. A prune must refuse to delete anything with dependents -- an orphan is safe to remove, a concept with a student's gap attached is not."
     }
   ]
 }

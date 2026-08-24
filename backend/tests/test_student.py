@@ -241,3 +241,43 @@ def test_options_survive_a_plain_list_and_a_missing_value():
 def test_the_diagnostic_route_unwraps_options():
     source = inspect.getsource(student.get_diagnostic)
     assert '"options": _options_list(' in source
+
+
+# ---------------------------------------------------------------------------
+# student-007 -- the mastery view, and the things it must never contain
+# ---------------------------------------------------------------------------
+
+def test_the_mastery_view_has_no_aggregate_score():
+    """The anti-surveillance stance, as a test. A single number invites
+    ranking students against each other and tells nobody what to do next."""
+    source = inspect.getsource(student.mastery)
+    body = source[source.index("return {"):]
+    for banned in ("score", "percent", "grade", "average", "total", "count"):
+        assert banned not in body.lower(), f"{banned!r} leaked into the mastery response"
+
+
+def test_the_mastery_view_exposes_no_timing_or_attempt_tallies():
+    """Time-on-task measures compliance, not understanding. The guarantee is
+    only real if a frontend cannot rebuild one, so nothing countable ships."""
+    source = inspect.getsource(student.mastery)
+    body = source[source.index("return {"):]
+    for banned in ("updated_at", "time", "duration", "attempts", "seconds"):
+        assert banned not in body.lower(), f"{banned!r} leaked into the mastery response"
+
+
+def test_the_mastery_view_is_scoped_to_the_signed_in_users_course():
+    source = inspect.getsource(student.mastery)
+    assert "Topic.course_id == course.id" in source
+    assert "Mastery.user_id == user.id" in source
+
+
+def test_a_concept_nobody_has_been_asked_about_is_untested_not_missing():
+    """`untested` is a first-class state. Dropping the concept would imply
+    competence by omission; a zero would imply failure."""
+    source = inspect.getsource(student.mastery)
+    assert 'states.get(concept.id, "untested")' in source
+
+
+def test_mastery_reads_every_state_in_one_query_not_one_per_concept():
+    source = inspect.getsource(student.mastery)
+    assert source.count("select(Mastery)") == 1

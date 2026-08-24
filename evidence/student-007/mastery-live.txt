@@ -1,0 +1,136 @@
+student-007 -- GET /student/mastery, live
+=========================================
+Run against the real database and the real provider chain, course CSW2, from a
+clean slate (reset_demo_state.py immediately before), so every state below is
+produced by something the student actually did in this run.
+
+The feature is as much about what the response does NOT contain as what it
+does. There is no aggregate score and no time-on-task, and the response carries
+nothing countable from which a frontend could build one.
+
+
+
+
+==============================================================================
+GET /student/mastery unauthenticated
+==============================================================================
+401 unauthenticated
+
+==============================================================================
+BEFORE - straight after reset_demo_state.py: nothing has been asked yet
+==============================================================================
+
+  Python foundations  (topic_id=4)
+      untested  Python classes and objects
+      untested  Class inheritance in Python
+      untested  Virtual environments and package isolation
+
+  How the web works  (topic_id=5)
+      untested  The HTTP request and response cycle
+      untested  HTTP methods, GET and POST
+      untested  HTML forms and input fields
+      untested  URL paths and routing
+
+  Relational data  (topic_id=6)
+      untested  Primary keys and foreign keys
+      untested  One-to-many relationships
+      untested  Filtering and querying records
+
+  Django models and the ORM  (topic_id=7)
+      untested  QuerySets and lazy evaluation
+      untested  Custom model managers
+
+  Django views, templates and forms  (topic_id=8)
+      untested  Views and the request object
+      untested  Template inheritance
+      untested  Django forms and validation
+
+every concept untested: True
+
+==============================================================================
+THE DIAGNOSTIC - correct on six, wrong on two
+==============================================================================
+-> Found 2 prerequisite gaps. | ['Virtual environments and package isolation', 'URL paths and routing']
+
+==============================================================================
+AFTER - the same view, now driven by what the student actually did
+==============================================================================
+
+  Python foundations  (topic_id=4)
+      untested  Python classes and objects
+      solid     Class inheritance in Python
+      shaky     Virtual environments and package isolation
+
+  How the web works  (topic_id=5)
+      solid     The HTTP request and response cycle
+      solid     HTTP methods, GET and POST
+      untested  HTML forms and input fields
+      shaky     URL paths and routing
+
+  Relational data  (topic_id=6)
+      solid     Primary keys and foreign keys
+      solid     One-to-many relationships
+      solid     Filtering and querying records
+
+  Django models and the ORM  (topic_id=7)
+      untested  QuerySets and lazy evaluation
+      untested  Custom model managers
+
+  Django views, templates and forms  (topic_id=8)
+      untested  Views and the request object
+      untested  Template inheritance
+      untested  Django forms and validation
+
+==============================================================================
+PRACTICE - answer a generated item CORRECTLY on a shaky concept
+==============================================================================
+item: You create a virtual environment `venv` and activate it. Inside the activated environment you run `python -m p
+answered: It will raise ModuleNotFoundError | correct: True
+
+Virtual environments is now: solid (practice writes mastery too, not just the diagnostic)
+
+==============================================================================
+THE GUARANTEES
+==============================================================================
+no aggregate score / time-on-task anywhere: True
+states present: ['shaky', 'solid', 'untested']
+top-level keys: ['items']
+per-topic keys: ['topic_id', 'topic', 'concepts']
+per-concept keys: ['id', 'name', 'state']
+
+concept count matches concepts.json: 15 == 15
+
+WHAT THIS RUN PROVES
+--------------------
+1. Contract shape exactly: {items:[{topic_id, topic, concepts:[{id, name,
+   state}]}]}, state in solid|shaky|untested. No extra fields.
+2. From a clean slate every concept is `untested` -- a first-class state, not a
+   hole in the data. Omitting the concept would imply competence; a zero would
+   imply failure.
+3. The diagnostic drives it: six correct answers -> solid, two deliberate wrong
+   answers -> shaky on exactly those two concepts.
+4. Practice drives it too. Answering a generated item correctly moved
+   "Virtual environments and package isolation" from shaky to solid, so
+   recovery is visible and not just failure.
+5. Course-scoped, user-scoped, and 401 without a token.
+6. Nothing countable ships: no score, percent, grade, average, total, count,
+   updated_at, seconds or duration appears anywhere in the body.
+
+A PHANTOM CONCEPT THIS FEATURE EXPOSED
+--------------------------------------
+The first run showed a sixteenth concept, "Model fields and field types
+(untested)", which is NOT in concepts.json -- it was dropped when it failed the
+corpus evidence check at 0.56. seed.py upserts by natural key and never
+deletes, so the row survived in the shared database.
+
+GET /student/mastery is the first endpoint that lists EVERY concept in a
+course, which is why this surfaced here and nowhere earlier: a phantom concept
+is invisible until something enumerates the syllabus.
+
+The orphan row had zero dependents (no gaps, no mastery, no practice items, no
+diagnostic items) and was deleted, so the shared DB is clean and a full
+reset_db.py + seed.py will not recreate it. The final count above is 15,
+matching concepts.json exactly. The underlying code bug -- seed.py does not
+prune removed content -- is recorded as infra-006, and a prune must refuse to
+touch any concept with dependents, because deleting one takes a student's
+history with it.

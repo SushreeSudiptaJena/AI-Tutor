@@ -477,6 +477,74 @@ def gap_lesson(
 
 
 # ---------------------------------------------------------------------------
+# student-007 -- what is solid and what is shaky
+# ---------------------------------------------------------------------------
+
+@router.get("/mastery")
+def mastery(
+    db: OrmSession = Depends(get_db),
+    user: User = Depends(current_user),
+) -> dict:
+    """Concept-level mastery, grouped by topic.
+
+    **There is no aggregate score here, and no time-on-task.** Not an
+    oversight, and not a thing to add later when the page looks sparse: a
+    single number invites ranking students against each other, and minutes-
+    spent measures compliance rather than understanding. Neither tells a
+    student what to do next. "Free-body diagrams: shaky" does.
+
+    That stance is only worth anything if the response makes it impossible to
+    reconstruct one. So no counts, no totals, no attempt tallies, no
+    timestamps -- a frontend cannot average what it was never given.
+
+    `untested` is a first-class state, not a gap in the data. A concept nobody
+    has been asked about is genuinely unknown, and saying so is more useful
+    than implying competence by omission or failure by a zero.
+    """
+    course = _course(db, user)
+
+    topics = db.scalars(
+        select(Topic).where(Topic.course_id == course.id).order_by(Topic.id)
+    ).all()
+    if not topics:
+        return {"items": []}
+
+    concepts = db.scalars(
+        select(Concept)
+        .where(Concept.topic_id.in_([t.id for t in topics]))
+        .order_by(Concept.id)
+    ).all()
+
+    # One query for every state, not one per concept. The N+1 version works
+    # fine on a seeded demo course and falls over on a real syllabus.
+    states = {
+        row.concept_id: row.state
+        for row in db.scalars(
+            select(Mastery).where(Mastery.user_id == user.id)
+        ).all()
+    }
+
+    by_topic: dict[int, list[dict]] = {}
+    for concept in concepts:
+        by_topic.setdefault(concept.topic_id, []).append({
+            "id": concept.id,
+            "name": concept.name,
+            "state": states.get(concept.id, "untested"),
+        })
+
+    # A topic with no concepts is skipped. It would render as a card with
+    # nothing in it, which reads as a loading failure rather than as the
+    # accurate statement that nobody has written its concepts yet.
+    return {
+        "items": [
+            {"topic_id": t.id, "topic": t.name, "concepts": by_topic[t.id]}
+            for t in topics
+            if by_topic.get(t.id)
+        ]
+    }
+
+
+# ---------------------------------------------------------------------------
 # student-005 -- scoped practice
 # ---------------------------------------------------------------------------
 
