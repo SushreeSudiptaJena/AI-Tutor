@@ -1,0 +1,39 @@
+{
+  "_readme": [
+    "Calibration set for CS-C (Programming with C), measured against",
+    "'Practical C Programming' (Harwani, Packt 2020).",
+    "",
+    "    .venv/Scripts/python.exe backend/scripts/calibrate_threshold.py \\",
+    "        --course CS-C --questions backend/data/calibration/cs-c.json",
+    "",
+    "'covered' questions must be things the book genuinely answers -- check the",
+    "chapter list before adding one, because a 'covered' question the book does",
+    "not cover drags the suggested threshold down and quietly disables refusal.",
+    "",
+    "'off_topic' must include NEAR-DOMAIN questions, not just obviously silly",
+    "ones. Another language's features, or a CS topic this book skips, are the",
+    "cases similarity cannot separate -- and the ones a judge will try. If the",
+    "margin comes out negative, that is the script telling the truth: the",
+    "entailment check in evidence.py is carrying the refusal, as designed."
+  ],
+  "covered": [
+    "How do I find the difference between two arrays in C?",
+    "What does a pointer to a structure let me do?",
+    "How do I open a file for reading in C?",
+    "How do I create a thread in a C program?",
+    "How does binary search work?",
+    "How do I represent a graph using an adjacency matrix?",
+    "How do I connect to a MySQL database from a C program?",
+    "How do I pass a function as an argument in C?"
+  ],
+  "off_topic": [
+    "Explain Python list comprehensions and when to use them",
+    "What does the React useEffect hook do on re-render?",
+    "How does Rust's borrow checker prevent data races at compile time?",
+    "How do I write a Kubernetes deployment manifest?",
+    "What is photosynthesis in plant cells?",
+    "Who won the football world cup in 2018?",
+    "Explain Newton's second law of motion",
+    "What were the main causes of the French Revolution?"
+  ]
+}

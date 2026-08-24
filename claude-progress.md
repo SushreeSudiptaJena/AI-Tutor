@@ -13,14 +13,17 @@ Every session **reads this first** and **writes to it last**.
 | **Repository root** | the directory containing this file (every path in this repo is relative to it) |
 | **Standard startup path** | `./init.sh` (then `RUN_START_COMMAND=1 ./init.sh` to launch backend) |
 | **Standard verification path** | `python -m pytest backend/tests -q && npm --prefix frontend run build` |
-| **Highest priority unfinished feature** | `ingest-001` — PyMuPDF ingestion of real PDFs into page-anchored chunks |
+| **Highest priority unfinished feature** | `rag-004` — graded-work guardrail. `retrieval.search_assignments()` already exists for its cheap first half. |
 | **Current blocker** | None for new work. `infra-001` and `infra-003` each need a second person to finish verifying; neither blocks anything downstream. |
-| **Golden path status** | Not started |
-| **Last verified** | 2026-08-23 — 42 tests pass, `./init.sh` green. Providers verified live: cache 168x speedup, cross-vendor fallback, and the full golden path offline on `PROVIDER=mock`. |
+| **Golden path status** | Retrieval spine live end to end. `rag-002` (alignment score) is done and answering over HTTP; `student-002/003/005/006` and `teacher-001` are still to build. |
+| **Last verified** | 2026-08-24 — 96 tests pass, `./init.sh` green. Live: 1240 chunks of real course material ingested, retrieval + alignment + refusal verified through `POST /tutor/ask`. |
 
 ### Environment facts
 
 - **DB:** Neon Postgres (shared, remote). One instance for the whole team. Connection string in `.env` as `DATABASE_URL`.
+- **Two courses now share the database.** `PH101` (Mechanics) holds the stand-in physics corpus; `CS-C` (Programming with C) holds the real ingested textbook. **Every retrieval is course-scoped and `course_id` is a required argument** — an unscoped search returns a real citation from the wrong subject, which reads as a slightly odd answer rather than as a bug.
+- **Source books are gitignored** (`backend/data/pdfs/*`), and rightly so: they are large and someone else's copyright. `manifest.json` is committed so the team can see what the corpus is made of. A teammate who needs the corpus consumes the shared Neon rows.
+- **`ALIGNMENT_REFUSAL_THRESHOLD` is corpus-specific**, currently `0.70`, measured against the C book. Re-run `backend/scripts/calibrate_threshold.py` after any ingest.
 - **Backend host:** Sushree's laptop, exposed via `cloudflared tunnel --url http://localhost:8000`. Tunnel URL changes on restart — post it to the team channel each time.
 - **Frontend:** each teammate runs `npm run dev` locally with `VITE_API_BASE` in `frontend/.env.local` pointing at the current tunnel URL.
 - **Keys:** GLM and Sarvam API keys confirmed working as of 2026-08-23.
@@ -31,6 +34,18 @@ Every session **reads this first** and **writes to it last**.
 ## Session Record
 
 *Newest entry at the top. One entry per session.*
+
+### Session 007 — 2026-08-24 — ingest-001, rag-001, rag-002, rag-003 PASSING
+
+| | |
+|---|---|
+| **Goal** | Build the ingestion pipeline so it is ready the moment PDFs land, then the retrieval, evidence and refusal services on top of it. |
+| **Completed** | `services/ingest.py` (PyMuPDF, page-anchored slicing, EPUB→fixed-PDF layout, self-verification), `scripts/ingest_pdfs.py`, `services/retrieval.py`, `services/evidence.py`, `services/tutor.py`, `routers/tutor.py` (`POST /tutor/ask`), `app/prompts.py` + `prompts/{evidence_entailment,tutor_answer}.md`, `backend/data/calibration/cs-c.json`, and a rewritten `calibrate_threshold.py` that is course-scoped and takes a question file. 54 new tests (42 → 96). |
+| **Verification run** | Real course material supplied by the owner and ingested for real: *Practical C Programming* (Harwani, Packt 2020), 5th-sem CSE core reading — 645 pages, 636 with text, **1240 chunks** under a new course `CS-C`. Five randomly sampled chunks re-verified against the PDF two independent ways. Live retrieval, alignment scoring and refusal exercised against the real provider chain, then again over HTTP through `POST /tutor/ask` as a signed-in student (401 unauthenticated, 200 answered, 200 insufficient_evidence). |
+| **Evidence recorded** | `evidence/ingest-001/verification.txt`, `evidence/rag-001/retrieval-live-cs-c.txt`, `evidence/rag-002/{alignment-live-cs-c,threshold-calibration-cs-c}.txt`, `evidence/rag-003/refusal-live-cs-c.txt` |
+| **Commits** | Two: `ingest-001`, then the `rag-001` → `rag-003` chain. The three rag features are one code path with one test module, so splitting them further would have meant commits that could not pass their own tests. |
+| **Known risks** | **The corpus is now C programming, not physics.** All seeded concepts, misconceptions, diagnostic and practice items are still Newton's laws under `PH101`, so the golden path demo and the ingested book are about different subjects. Someone has to decide which subject the demo runs on — if it is C, the content lead must redo `concepts/misconceptions/practice/diagnostic.json`; if it stays physics, `CS-C` is simply a second course that proves ingestion works. Nothing is broken either way, because retrieval is course-scoped. Secondary: cited page numbers for the C book come from our A4/11pt EPUB rendering, not the printed book — fine for "Show Source", wrong if anyone checks a physical copy. Embedding 1240 chunks takes ~15 minutes on this laptop; budget for that before re-ingesting on demo day. |
+| **Next best action** | `rag-004` — the graded-work guardrail. `retrieval.search_assignments()` is already the door it knocks on, and the mock provider already answers an `intent` schema. It needs assignment material in `CS-C` to match against; there is none yet, only the seeded physics problem set under `PH101`. |
 
 ### Session 006 — 2026-08-23 — infra-004 PASSING
 

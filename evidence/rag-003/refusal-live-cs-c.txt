@@ -1,0 +1,122 @@
+rag-003 -- refusal on insufficient evidence, the uncertainty flag it writes,
+and the same behaviour over HTTP through POST /tutor/ask.
+
+C:\Users\sushr\ai_tutor\.venv\Lib\site-packages\fastapi\testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+  from starlette.testclient import TestClient as TestClient  # noqa
+course      : CS-C - Programming with C (id 4)
+threshold   : ALIGNMENT_REFUSAL_THRESHOLD = 0.7
+provider    : PROVIDER=groq
+
+==============================================================================
+rag-003 -- refusal writes an uncertainty flag
+==============================================================================
+  question : 'What were the main causes of the French Revolution?'
+  outcome  : insufficient_evidence
+  body     : I don't have approved course material covering this, so I'm not going to guess at it. I've flagged it for your teacher.
+  citations: []
+  evidence : {'alignment_score': 0.2682, 'alignment_percent': 27, 'top_similarity': 0.5033, 'threshold': 0.7, 'sufficient': False, 'reason': 'no_matching_material'}
+
+  uncertainty_flags rows: 6 -> 7
+  flag 19: question='What were the main causes of the French Revolution?'
+           alignment_score=0.2682  reason=no_matching_material
+           course_id=4  status=open  at=2026-08-24 03:30:47.894306+00:00
+  flag has a user_id column: False  (must be False -- teacher views are anonymous)
+
+==============================================================================
+rag-003 -- the same row read the way teacher-004 will read it
+==============================================================================
+  [no_matching_material      ] 0.268  'What were the main causes of the French Revolution?'
+  [no_matching_material      ] 0.268  'What were the main causes of the French Revolution?'
+  [no_matching_material      ] 0.268  'What were the main causes of the French Revolution?'
+  [no_matching_material      ] 0.268  'What were the main causes of the French Revolution?'
+  [no_matching_material      ] 0.290  'Explain Lagrangian mechanics and the principle of le'
+
+  No extra wiring: the refusal above is already in this panel's query.
+
+==============================================================================
+rag-003 -- a covered question is answered, with citations
+==============================================================================
+  question : 'How do I create a thread in a C program?'
+  outcome  : answered
+  evidence : {'alignment_score': 0.8687, 'alignment_percent': 87, 'top_similarity': 0.8076, 'threshold': 0.7, 'sufficient': True, 'reason': None}
+  citations: 4
+    Practical C Programming (Harwani, Packt 2020), p.224 (Implementing Concurrency)
+    Practical C Programming (Harwani, Packt 2020), p.225 (Implementing Concurrency)
+    Practical C Programming (Harwani, Packt 2020), p.237 (Implementing Concurrency)
+    Practical C Programming (Harwani, Packt 2020), p.242 (Implementing Concurrency)
+
+  --- answer ---
+To start a thread you need the POSIX thread library. First include its header:
+
+```c
+#include <pthread.h>
+```
+
+Then write the routine the thread will run. It must return `void *` and accept a single `void *` argument:
+
+```c
+void *runThread(void *arg) {
+    printf("Running Thread\n");
+    for (int i = 1; i <= 5; ++i)
+        printf("%d\n", i);
+    return NULL;                     // [1]
+}
+```
+
+In `main` declare a variable of type `pthread_t` to hold the thread’s identifier:
+
+```c
+pthread_t tid;                       // [1]
+```
+
+Create the thread with `pthread_create`. The second argument (`NULL`) tells the system to use default attributes, the third argument is the function name, and the fourth is the argument you want to pass (here `NULL`):
+
+```c
+pthread_create(&tid, NULL, runThread, NULL);   // [1]
+```
+
+If you want the main program to wait for the thread to finish, call `pthread_join` with the same identifier:
+
+```c
+pthread_join(tid, NULL);             // [1][2]
+```
+
+Compile the source with the pthread library linked:
+
+```bash
+gcc createthread.c -o createthread -pthread   // [2]
+```
+
+Running the resulting executable will show the main message, the numbers printed by the thread, and finally “Thread over”. The same pattern works for multiple threads—just declare additional `pthread_t` variables and call `pthread_create` for each, then `pthread_join` each one, as illustrated in the textbook’s multi‑thread example. [3]
+  --- end ---
+
+==============================================================================
+rag-003 -- POST /tutor/ask over HTTP, as a signed-in CS-C student
+==============================================================================
+  login   -> 200
+
+  unauthenticated POST /tutor/ask -> 401 (expect 401)
+
+  COVERED: 'How do I create a thread in a C program?'
+    HTTP 200   outcome=answered
+    evidence: {'alignment_score': 0.8687, 'alignment_percent': 87, 'top_similarity': 0.8076, 'threshold': 0.7, 'sufficient': True, 'reason': None}
+    citations: 4
+      Practical C Programming (Harwani, Packt 2020), p.224
+      Practical C Programming (Harwani, Packt 2020), p.225
+      Practical C Programming (Harwani, Packt 2020), p.237
+    body: To start a thread you need the POSIX thread library. First include its header:
+
+```c
+#include <pthread.h>
+```
+
+Then write the routine the thread will run. It must return `void *` and accept a single `void *` argument:
+
+`...
+
+  OFF-SYLLABUS: 'What were the main causes of the French Revolution?'
+    HTTP 200   outcome=insufficient_evidence
+    evidence: {'alignment_score': 0.2682, 'alignment_percent': 27, 'top_similarity': 0.5033, 'threshold': 0.7, 'sufficient': False, 'reason': 'no_matching_material'}
+    citations: 0
+    uncertainty_flag_id: 20
+    body: I don't have approved course material covering this, so I'm not going to guess at it. I've flagged it for your teacher....

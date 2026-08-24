@@ -1,0 +1,35 @@
+rag-002 -- syllabus alignment score, live against the real provider chain.
+The TANGENTIAL case is the one that matters: top similarity 0.7014 is ABOVE
+the 0.70 threshold, so a similarity-only check would have answered a Rust
+question out of a C textbook. The entailment half scored it 0.0 and refused.
+
+C:\Users\sushr\ai_tutor\.venv\Lib\site-packages\fastapi\testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+  from starlette.testclient import TestClient as TestClient  # noqa
+course      : CS-C - Programming with C (id 4)
+threshold   : ALIGNMENT_REFUSAL_THRESHOLD = 0.7
+provider    : PROVIDER=groq
+
+==============================================================================
+rag-002 -- alignment score: covered vs tangential
+==============================================================================
+
+  COVERED: 'How do I create a thread in a C program?'
+    top_similarity   0.8076   (threshold 0.7)
+    retrieval_score  0.8022
+    entailment       0.9500  [groq cached]
+    -> alignment     87%   sufficient=True   reason=None
+    entailment says  'Provides step-by-step code and explanation for creating a thread with pthread_create, covering all needed details'
+
+  TANGENTIAL: "How does Rust's borrow checker prevent data races at compile time?"
+    top_similarity   0.7014   (threshold 0.7)
+    retrieval_score  0.6980
+    entailment       0.0000  [groq cached]
+    -> alignment     38%   sufficient=False   reason=material_does_not_answer
+    entailment says  "passages cover C compile-time assertions and string handling, with no mention of Rust's borrow checker or data race prevention"
+
+  OFF-SYLLABUS: 'What were the main causes of the French Revolution?'
+    top_similarity   0.5033   (threshold 0.7)
+    retrieval_score  0.4877
+    entailment       0.0000  [groq cached]
+    -> alignment     27%   sufficient=False   reason=no_matching_material
+    entailment says  'Passages discuss C programming topics and contain no information about the French Revolution or its causes'

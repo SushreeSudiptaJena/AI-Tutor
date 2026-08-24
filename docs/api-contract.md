@@ -78,12 +78,16 @@ The alignment score (`rag-002`) and the refusal decision (`rag-003`) come from o
   "alignment_score": 0.82,
   "alignment_percent": 82,
   "top_similarity": 0.79,
-  "threshold": 0.35,
+  "threshold": 0.68,
   "sufficient": true,
   "reason": null
 }
 ```
 `alignment_percent` is what the UI renders. When `sufficient` is `false`, `reason` is a short string and the caller receives a refusal outcome instead of prose.
+
+`reason` values: `no_matching_material` (top similarity below `threshold`, or nothing retrieved for the course) · `material_does_not_answer` (the material is close but an entailment check says it does not contain what the question needs). The teacher dashboard groups uncertainty flags by this field.
+
+`threshold` is a property of the **ingested corpus**, not a constant — it is re-measured with `backend/scripts/calibrate_threshold.py` after each ingest and read from `ALIGNMENT_REFUSAL_THRESHOLD`. Frontend must render whatever the API returns rather than hard-coding a number.
 
 ### `Gap`
 ```json
@@ -505,3 +509,4 @@ Every shape above is final enough to mock. Suggested order, matching `feature_li
 | 2026-08-23 | Initial draft covering all 32 features. |
 | 2026-08-23 | `/health` documented as always-200 with a `degraded` state; implemented in `infra-002`. |
 | 2026-08-23 | Guardrail narrowed to `/tutor/ask` only, and now requires intent + assignment match. `Gap` gains `suggested_prompts`. |
+| 2026-08-24 | `EvidenceReport.threshold` example corrected 0.35 → 0.68 (0.35 is below the embedding similarity floor, so refusal could never fire) and `reason` values documented. `POST /tutor/ask` implemented for `answered` and `insufficient_evidence`; `graded_work_refused` still pending `rag-004`. |

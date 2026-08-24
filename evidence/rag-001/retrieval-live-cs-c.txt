@@ -1,0 +1,47 @@
+rag-001 -- live retrieval with citations, against the ingested C corpus
+Run: backend/scripts (verify_rag.py) against the shared Neon database.
+
+C:\Users\sushr\ai_tutor\.venv\Lib\site-packages\fastapi\testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+  from starlette.testclient import TestClient as TestClient  # noqa
+course      : CS-C - Programming with C (id 4)
+threshold   : ALIGNMENT_REFUSAL_THRESHOLD = 0.7
+provider    : PROVIDER=groq
+
+==============================================================================
+rag-001 -- retrieval with citations
+==============================================================================
+  query: 'How do I create a thread in a C program?'
+
+  [1] sim=0.8076  Practical C Programming (Harwani, Packt 2020), p.224  (Implementing Concurrency)
+      pthread_join(tid, NULL); The createthread.c program for creating a thread and making it perform a task is as follows: #include <stdio.h> #include <std...
+  [2] sim=0.7964  Practical C Programming (Harwani, Packt 2020), p.224  (Implementing Concurrency)
+      How to do it... 1. Define a variable of the type pthread_t to store the thread identifier: pthread_t tid; 2. Create a thread and pass the identifier t...
+  [3] sim=0.7904  Practical C Programming (Harwani, Packt 2020), p.225  (Implementing Concurrency)
+      By invoking the pthread_join method, we will make the main method wait until the thread completes its task. It is essential to invoke the pthread_join...
+
+  citations returned to the client:
+    chunk 432  material 4  Practical C Programming (Harwani, Packt 2020)  p.224
+      snippet: pthread_join(tid, NULL); The createthread.c program for creating a thread and making it pe...
+    chunk 434  material 4  Practical C Programming (Harwani, Packt 2020)  p.225
+      snippet: By invoking the pthread_join method, we will make the main method wait until the thread co...
+
+  citation resolves against the source PDF:
+    p.224 of the PDF begins: How to do it... 1. Define a variable of the type pthread_t to store the thread identifier: pthread_t...
+    p.225 of the PDF begins: How it works... We will define a variable called tid of the type pthread_t to store the thread ident...
+
+==============================================================================
+rag-001 -- assignment material is searchable but never quotable
+==============================================================================
+  kinds returned by search()             : ['textbook']
+  'assignment' among them                : False
+  RESULT: PASS
+
+==============================================================================
+rag-001 -- retrieval is course-scoped
+==============================================================================
+  asking a C question against PH101 (Mechanics):
+    sim=0.5655  Concepts of Physics, Vol 1, p.118
+    sim=0.5489  Concepts of Physics, Vol 1, p.88
+    sim=0.5395  Concepts of Physics, Vol 1, p.138
+  C-book chunks leaked into the physics course: 0
+  RESULT: PASS

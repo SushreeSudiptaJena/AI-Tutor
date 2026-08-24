@@ -1,0 +1,29 @@
+corpus: CS-C - Programming with C
+
+kind        top-sim  source                                 question
+----------------------------------------------------------------------------------------------------
+COVERED      0.8726  Practical C Programming (Harwani, Pack How do I find the difference between two arr
+COVERED      0.8125  Practical C Programming (Harwani, Pack What does a pointer to a structure let me do
+COVERED      0.7867  Practical C Programming (Harwani, Pack How do I open a file for reading in C?
+COVERED      0.8076  Practical C Programming (Harwani, Pack How do I create a thread in a C program?
+COVERED      0.8316  Practical C Programming (Harwani, Pack How does binary search work?
+COVERED      0.8952  Practical C Programming (Harwani, Pack How do I represent a graph using an adjacenc
+COVERED      0.7872  Practical C Programming (Harwani, Pack How do I connect to a MySQL database from a 
+COVERED      0.7442  Practical C Programming (Harwani, Pack How do I pass a function as an argument in C
+OFF-TOPIC    0.6793  Practical C Programming (Harwani, Pack Explain Python list comprehensions and when 
+OFF-TOPIC    0.6801  Practical C Programming (Harwani, Pack What does the React useEffect hook do on re-
+OFF-TOPIC    0.7014  Practical C Programming (Harwani, Pack How does Rust's borrow checker prevent data 
+OFF-TOPIC    0.5867  Practical C Programming (Harwani, Pack How do I write a Kubernetes deployment manif
+OFF-TOPIC    0.5881  Practical C Programming (Harwani, Pack What is photosynthesis in plant cells?
+OFF-TOPIC    0.5150  Practical C Programming (Harwani, Pack Who won the football world cup in 2018?
+OFF-TOPIC    0.6145  Practical C Programming (Harwani, Pack Explain Newton's second law of motion
+OFF-TOPIC    0.5033  Practical C Programming (Harwani, Pack What were the main causes of the French Revo
+
+lowest covered      : 0.7442
+highest off-topic   : 0.7014
+margin              : +0.0428
+
+SUGGESTED ALIGNMENT_REFUSAL_THRESHOLD = 0.72
+
+Put that in .env. Then verify by hand through the real endpoint:
+one covered question must answer, one off-topic must refuse.

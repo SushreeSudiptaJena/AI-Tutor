@@ -132,3 +132,30 @@ class ItemOut(BaseModel):
     options: list[str] | None = None
     concept: str | None = None
     problem_type: str | None = None
+
+
+# --- tutor (rag-003) --------------------------------------------------------
+
+class TutorAskIn(BaseModel):
+    """`course_id` is deliberately absent: the course comes from the signed-in
+    user, so nobody can read another course's material by editing the body."""
+
+    question: str
+    language: str = "en"
+    topic_id: int | None = None
+
+    @field_validator("question")
+    @classmethod
+    def _question(cls, v: str) -> str:
+        v = v.strip()
+        if len(v) < 3:
+            raise ValueError("ask a question of at least a few characters")
+        return v[:2000]
+
+    @field_validator("language")
+    @classmethod
+    def _lang(cls, v: str) -> str:
+        v = v.strip().lower() or "en"
+        if not re.match(r"^[a-z]{2}$", v):
+            raise ValueError("language must be a two-letter code")
+        return v
