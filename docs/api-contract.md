@@ -290,7 +290,50 @@ Curriculum upload and versioning (`admin-001`):
 | `GET` | `/admin/courses/{course_id}/materials` | `?include_archived=false` |
 | `GET` | `/admin/materials/{material_id}` | single `Material` |
 | `POST` | `/admin/materials/{material_id}/archive` | `200 Material` with `status: "archived"` |
+| `DELETE` | `/admin/materials/{material_id}` | `204` — guarded. **`admin-006`.** |
 | `GET` | `/admin/materials/{material_id}/versions` | `{ items: [Material] }`, newest first |
+
+#### Deleting material — `admin-006`
+
+`DELETE /admin/materials/{material_id}` → `204`, and the material and its chunks
+are gone.
+
+**Archiving is still the normal path.** This is the escape hatch for material
+uploaded by mistake, not a replacement for `archive`. The rule the rest of this
+system is built on — a citation must always resolve — is not dropped here, it is
+bounded by one guard:
+
+| Situation | Result |
+|---|---|
+| Never ingested (no chunks) | `204`. An upload mistake is fixable the day it happens, whatever the date. |
+| Ingested, course **mid-term** | `409 conflict`, code `mid_term`. |
+| Ingested, course outside its term | `204`. |
+| Ingested, course has no term dates | `204` — no dates means no protected window. |
+
+```json
+// 409 mid_term
+{ "error": { "code": "mid_term",
+    "message": "Digital Logic Design is mid-term until 2025-12-15. Material already in the corpus can only be deleted between terms — archive it instead.",
+    "detail": { "course": "DLD", "term_start": "2025-08-01", "term_end": "2025-12-15",
+                "chunk_count": 2053 } } }
+```
+
+Mid-term is read from `term_start`/`term_end` (`admin-005`). A course with either
+date unset has no protected window and is never blocked by this — that is
+deliberate, so an unrecorded term cannot silently freeze an admin out.
+
+> **There is no stored reference to check against.** Nothing in the schema
+> persists a `chunk_id`: a `Citation` is built from live retrieval at request
+> time and never written down. So the API *cannot* tell you a given material is
+> cited somewhere — that is precisely why the term window is the guard. Do not
+> add a "refuse if cited" check believing it can be made accurate.
+
+The **source file is left on disk**. Deleting a row will not throw away the only
+copy of a book, and the response says so. Remove it from `backend/data/pdfs/`
+yourself if you do not want the next `ingest_pdfs.py` run to pick it up again.
+
+A `material.delete` audit row is written and outlives the material — `target` is
+a string, not a foreign key, so the trail survives what it describes.
 
 ```json
 // Material
@@ -774,6 +817,7 @@ Every shape above is final enough to mock. Suggested order, matching `feature_li
 
 | When | Change |
 |---|---|
+| 2026-08-25 | **`admin-006` — `DELETE /admin/materials/{id}`.** Archiving remains the normal path; this is the escape hatch for an upload mistake. Never-ingested material deletes freely; ingested material is `409 mid_term` while its course's `term_start`/`term_end` window contains today. There is deliberately **no** "refuse if cited" check — nothing in the schema persists a `chunk_id`, so no such check could be accurate. The source file is left on disk. |
 | 2026-08-25 | **`admin-005` — a course now knows its semester, its admission batches and its term dates.** `Course` gains `semester`, `admission_batches`, `term_start`, `term_end`, all nullable so existing courses are unaffected; new `PUT /admin/courses/{id}/term`. The dates are load-bearing: `admin-006` reads them to refuse deleting ingested material mid-term. **Needs a migration** — `create_all()` does not alter an existing table, so run `backend/scripts/migrate_course_terms.py` once against the shared database. |
 | 2026-08-24 | **`admin-004` — the audit log reads as a sentence.** `GET /admin/audit-log` rows gain a `summary`; `action`, `target` and `detail` are unchanged, because `?action=` filters on those verbs. New `?include_system=true` — `seed.run` rows are hidden by default, being a developer script's output rather than governance. Purely additive. |
 | 2026-08-24 | **`teacher-008` — a reteach unit can now target a prerequisite concept, not only a misconception.** `ReteachUnit.misconception_id` becomes **nullable**, `concept_id` is added, exactly one is set, and a new `target` field says which. New `POST /teacher/reteach/suggest-top` drafts the top three of the heatmap and the top three of the gap map in one call and reports what it skipped and why. `POST /teacher/reteach/suggest` now accepts `{ concept_id }` as well. Everything stays a `draft` — the batch never assigns. **This one needs a migration**: `create_all()` does not alter an existing table, so run `backend/scripts/migrate_reteach_targets.py` once against the shared database. |

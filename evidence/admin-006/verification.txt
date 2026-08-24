@@ -1,0 +1,65 @@
+==========================================================================
+[1] never-ingested material deletes freely, even mid-term
+==========================================================================
+  DELETE -> HTTP 204
+  [PASS] 204 for material that was never ingested
+  [PASS] the row is gone
+
+==========================================================================
+[2] ingested material, course mid-term -> 409 mid_term
+==========================================================================
+  DELETE -> HTTP 409
+  {
+  "error": {
+    "code": "mid_term",
+    "message": "Throwaway Test Course is mid-term until 2026-09-24. Material already in the corpus can only be deleted between terms \u2014 archive it instead.",
+    "detail": {
+      "course": "ZZTEST",
+      "term_start": "2026-07-26",
+      "term_end": "2026-09-24",
+      "chunk_count": 1
+    }
+  }
+}
+  [PASS] 409
+  [PASS] code is mid_term
+  [PASS] it says what to do instead
+  [PASS] it names the window and the size
+  [PASS] the material survived the refusal
+
+==========================================================================
+[3] same material, course now OUTSIDE its term -> 204
+==========================================================================
+  DELETE -> HTTP 204
+  [PASS] 204 once the term is over
+  [PASS] material gone
+  [PASS] its chunks cascaded
+
+==========================================================================
+[4] a course with NO term dates has no protected window
+==========================================================================
+  DELETE -> HTTP 204
+  [PASS] 204 -- an unrecorded term must not freeze an admin out
+
+==========================================================================
+[5] the audit row outlives the material, and reads as a sentence
+==========================================================================
+  - admin@example.edu deleted “ingested, no dates” (version 1)
+  - admin@example.edu deleted “ingested, mid term” (version 1)
+  - admin@example.edu deleted “never ingested” (version 1)
+  [PASS] a material.delete row exists
+  [PASS] it survived the material it describes
+
+==========================================================================
+[6] unknown material is 404, and archiving still works
+==========================================================================
+  DELETE unknown -> HTTP 404
+  [PASS] 404
+  archive -> HTTP 200, status=archived
+  [PASS] archive still returns 200 archived
+
+  (throwaway course and materials cleaned up)
+
+==========================================================================
+ALL CHECKS PASSED
+==========================================================================

@@ -10,11 +10,17 @@ Three rules:
 * **Admin only.** `teacher_only` admits teachers; nothing here does. Uploading
   course material and rewriting the prerequisite graph are institutional acts.
 
-* **Nothing is deleted, only archived.** A replaced textbook stays as a row
-  with `status: "archived"`. Chunks already cite it by page, and deleting the
-  material would leave a student looking at a citation to a book that no longer
-  exists. Archiving keeps history readable and takes the material out of
-  retrieval, which is what `retrieval.search` already filters on.
+* **Archiving, not deletion, is how material leaves the corpus.** A replaced
+  textbook stays as a row with `status: "archived"`. Chunks already cite it by
+  page, and deleting the material would leave a student looking at a citation
+  to a book that no longer exists. Archiving keeps history readable and takes
+  the material out of retrieval, which is what `retrieval.search` already
+  filters on.
+
+  `admin-006` added a bounded exception, not a reversal: `DELETE
+  /admin/materials/{id}` exists for material uploaded by mistake, and refuses
+  whenever the material is already in the corpus and its course is mid-term.
+  If you are choosing between the two, you want `archive`.
 
 * **Every mutation writes an audit row.** Not for tidiness -- `admin-003` is
   the only place a human can see who approved what, and `teacher-005` reads
@@ -28,6 +34,7 @@ from __future__ import annotations
 
 import re
 import unicodedata
+from datetime import date
 from pathlib import Path
 
 from fastapi import (
@@ -36,6 +43,7 @@ from fastapi import (
     File,
     Form,
     HTTPException,
+    Response,
     UploadFile,
     status,
 )
@@ -45,7 +53,7 @@ from sqlalchemy.orm import Session as OrmSession
 from ..config import REPO_ROOT
 from ..db import get_db
 from ..deps import admin_only
-from ..models import AuditLog, Course, Department, Material, ReteachUnit, User
+from ..models import AuditLog, Chunk, Course, Department, Material, ReteachUnit, User
 from ..schemas import CourseIn, CourseTermIn, DepartmentIn
 
 router = APIRouter(prefix="/admin", tags=["admin"])
@@ -486,6 +494,81 @@ def archive_material(
     return _material_out(db, material)
 
 
+@router.delete("/materials/{material_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_material(
+    material_id: int,
+    db: OrmSession = Depends(get_db),
+    user: User = Depends(admin_only),
+) -> Response:
+    """admin-006 -- remove material uploaded by mistake.
+
+    **Archiving is still the normal path.** This module's rule -- nothing is
+    deleted, only archived -- is not dropped here, it is bounded. The rule
+    exists because a citation must always resolve, and the escape hatch is for
+    material that was never part of the corpus, or whose course is not currently
+    being taught.
+
+    One guard, and it is the term window:
+
+    * never ingested (no chunks) -- always deletable. An upload mistake should
+      be fixable the day it happens.
+    * ingested, and the course is mid-term -- refused. Deleting a book out from
+      under a class in week six is the thing archiving was invented to prevent.
+    * ingested, outside the term (or the course has no dates) -- deletable.
+
+    There is deliberately **no** "refuse if it is cited" check. Nothing in the
+    schema persists a `chunk_id` -- a Citation is built from live retrieval at
+    request time and never written down -- so such a check could only ever be a
+    guess dressed as a guarantee. The term window is the honest guard.
+
+    The source file on disk is left alone: deleting a row must not throw away
+    the only copy of a book.
+    """
+    material = db.get(Material, material_id)
+    if material is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={"code": "not_found", "message": "No such material."},
+        )
+
+    chunk_count = int(db.scalar(
+        select(func.count()).select_from(Chunk).where(Chunk.material_id == material.id)
+    ) or 0)
+
+    course = db.get(Course, material.course_id)
+    if chunk_count and course is not None and course.in_term(date.today()):
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={
+                "code": "mid_term",
+                "message": (
+                    f"{course.title} is mid-term until {course.term_end}. "
+                    "Material already in the corpus can only be deleted between "
+                    "terms — archive it instead."
+                ),
+                "detail": {
+                    "course": course.code,
+                    "term_start": course.term_start.isoformat(),
+                    "term_end": course.term_end.isoformat(),
+                    "chunk_count": chunk_count,
+                },
+            },
+        )
+
+    # Written BEFORE the delete and keyed by string, not by foreign key, so the
+    # trail outlives what it describes. An audit row that vanished with its
+    # subject would make deletion the one act nobody could review.
+    _audit(db, user, "material.delete", f"material:{material.id}",
+           {"title": material.title, "kind": material.kind,
+            "version": material.version, "chunk_count": chunk_count,
+            "course": course.code if course else None,
+            "source_path_left_on_disk": material.source_path})
+
+    db.delete(material)      # chunks cascade -- Material.chunks is delete-orphan
+    db.flush()
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
 # ---------------------------------------------------------------------------
 # admin-003 -- the audit log
 # ---------------------------------------------------------------------------
@@ -503,6 +586,7 @@ _ACTION_PHRASE = {
     "material.ingest": "ingested",
     "course.create": "created the course",
     "course.set_term": "set the term details for",
+    "material.delete": "deleted",
     "department.create": "created the department",
     "reteach.suggest": "drafted a reteach unit for",
     "reteach.edit": "edited the reteach unit",
@@ -558,12 +642,18 @@ def _audit_summary(row, actor_email: str | None, titles: dict[str, str]) -> str:
         # Prefer the code the row recorded: "course DLD" is what an admin
         # recognises, "course 9" is an internal id they have to go look up.
         what = f"course {detail.get('code') or target.split(':', 1)[1]}"
-    elif detail.get("concept") or detail.get("misconception") or detail.get("name"):
+    elif (detail.get("title") or detail.get("concept")
+          or detail.get("misconception") or detail.get("name")):
         # The row outlives what it points at -- a reteach unit can be pruned,
         # and printing the raw `reteach:32` back is the exact technical noise
         # this field exists to remove. The detail dict still names the subject.
-        subject = detail.get("concept") or detail.get("misconception") or detail["name"]
-        what = f"“{str(subject).replace('-', ' ')}” (since removed)"
+        subject = (detail.get("title") or detail.get("concept")
+                   or detail.get("misconception") or detail["name"])
+        what = f"“{str(subject).replace('-', ' ')}”"
+        # ...but not on a deletion. "deleted X (since removed)" states the
+        # obvious twice; the row IS the record that X is gone.
+        if not row.action.endswith(".delete"):
+            what += " (since removed)"
     elif target:
         what = "something that has since been removed"
     else:

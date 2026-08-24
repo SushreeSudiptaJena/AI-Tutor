@@ -352,3 +352,77 @@ def test_the_merged_window_is_validated_not_just_the_request():
 
 def test_setting_the_term_writes_an_audit_row():
     assert '"course.set_term"' in inspect.getsource(admin.set_course_term)
+
+
+# ---------------------------------------------------------------------------
+# admin-006 -- deleting material, and the guard that makes it safe
+# ---------------------------------------------------------------------------
+
+def test_deleting_ingested_material_is_refused_mid_term():
+    """Deleting a book out from under a class in week six is the thing
+    archiving was invented to prevent."""
+    source = inspect.getsource(admin.delete_material)
+    assert "course.in_term(date.today())" in source
+    assert '"mid_term"' in source
+    assert "HTTP_409_CONFLICT" in source
+
+
+def test_the_mid_term_guard_only_applies_to_ingested_material():
+    """An upload mistake should be fixable the day it happens."""
+    source = inspect.getsource(admin.delete_material)
+    assert "if chunk_count and course is not None and course.in_term" in source
+
+
+def test_the_audit_row_is_written_before_the_delete_and_outlives_it():
+    """An audit row that vanished with its subject would make deletion the one
+    act nobody could review."""
+    source = inspect.getsource(admin.delete_material)
+    assert source.index('"material.delete"') < source.index("db.delete(material)")
+    from app.models import AuditLog
+    assert not AuditLog.__table__.columns["target"].foreign_keys, (
+        "target must stay a plain string, or the trail dies with the material"
+    )
+
+
+def test_delete_does_not_remove_the_source_file():
+    """Deleting a row must not throw away the only copy of a book."""
+    source = inspect.getsource(admin.delete_material)
+    for banned in ("unlink", "os.remove", "shutil.rmtree", "Path.unlink"):
+        assert banned not in source, f"{banned} would destroy the uploaded file"
+    assert "source_path_left_on_disk" in source
+
+
+def test_there_is_no_refuse_if_cited_check_because_nothing_stores_a_citation():
+    """A Citation is built from live retrieval and never written down. A
+    'refuse if cited' check could only be a guess dressed as a guarantee."""
+    from app import models
+
+    for name in dir(models):
+        cls = getattr(models, name)
+        table = getattr(cls, "__table__", None)
+        if table is None or name == "Chunk":
+            continue
+        assert "chunk_id" not in table.columns, (
+            f"{name} now stores a chunk_id -- admin-006's reasoning needs revisiting"
+        )
+
+
+def test_archiving_still_exists_and_is_untouched():
+    """Delete is a bounded exception, not a replacement."""
+    source = inspect.getsource(admin.archive_material)
+    assert 'material.status = "archived"' in source
+    assert "db.delete" not in source
+
+
+def test_a_delete_summary_names_what_was_deleted():
+    """The material row is gone by definition, so the title has to come from
+    the audit detail -- and 'deleted something that has since been removed'
+    states the obvious twice."""
+    from app.routers.admin import _audit_summary
+
+    row = _Row("material.delete", "material:12",
+               {"title": "DLD Assignment 1", "version": 1})
+    summary = _audit_summary(row, "admin@example.edu", {})
+    assert "DLD Assignment 1" in summary
+    assert "since removed" not in summary
+    assert "material:12" not in summary

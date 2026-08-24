@@ -871,6 +871,30 @@
       ],
       "evidence": "evidence/admin-005/term.txt",
       "notes": "PASSING 2026-08-25. Contract + schema change, so docs/api-contract.md was edited FIRST. Course had only code/title/department/prerequisites, so 'semester 3, admission batches 2024 and 2025' had nowhere to live. All four columns are NULLABLE because they were added to a table that already had rows in the shared database; a course that predates them returns nulls and [], never an error and never an inferred value -- 'we do not know when this term runs' and 'this term runs all year' must not look the same to admin-006's delete guard, which is why Course.in_term() returns False when either date is missing. create_all() does not alter an existing table, so this needed backend/scripts/migrate_course_terms.py; it has been RUN against the shared Neon database and is idempotent. PUT is a partial update keyed on model_fields_set, so null clears a field and an omitted key leaves it alone -- without that a date entered wrongly could never be unset. WHAT WRITING IT FOUND: the schema's ordering check can only compare two dates that arrive TOGETHER, so sending term_end alone against a stored term_start would have written a window in which in_term() is false for every date -- quietly disabling admin-006 before it was even built. The router now validates the MERGED window and 422s. Also added course.set_term and department.create to admin-004's phrase map, and made a course target render its code rather than its id. 303 tests (was 295)."
+    },
+    {
+      "id": "admin-006",
+      "priority": 42,
+      "area": "admin",
+      "title": "Delete course material, with the two guards that make it safe",
+      "user_visible_behavior": "An admin can remove material uploaded by mistake. Material that students' citations point at, or that is ingested while the course is mid-term, is refused with a reason and archived instead.",
+      "status": "passing",
+      "depends_on": [
+        "admin-001",
+        "admin-005"
+      ],
+      "demo_mode": "live",
+      "verification": [
+        "DELETE /admin/materials/{id} on a never-ingested material returns 204 and the row is gone, even mid-term.",
+        "An INGESTED material whose course's term window contains today is 409 code=mid_term, names the window and chunk_count, says to archive instead, and the material survives the refusal.",
+        "The same material deletes with 204 once the course is outside its term, and its chunks cascade.",
+        "A course with no term dates has no protected window -- an unrecorded term must not freeze an admin out.",
+        "A material.delete audit row outlives the material and reads as a sentence naming the deleted title.",
+        "Unknown material is 404. Archiving still returns 200 with status archived and is unchanged.",
+        "python -m pytest backend/tests -q passes and ./init.sh still passes."
+      ],
+      "evidence": "evidence/admin-006/verification.txt",
+      "notes": "PASSING 2026-08-25. Contract change, so docs/api-contract.md was edited FIRST. THE 'REFUSE IF CITED' CHECK WAS DROPPED, AND THAT IS THE MAIN FINDING. It was agreed up front, but it rests on a premise the schema does not support: NOTHING persists a chunk_id. A Citation is built from live retrieval at request time and never written down, and the only FK pointing at materials is Chunk.material_id. So an 'is it cited?' check could only ever be a guess dressed as a guarantee. A test now asserts no model gains a chunk_id, so if that ever changes this reasoning gets revisited instead of silently rotting. The term window is the honest guard, and it is what was actually asked for: never-ingested material deletes freely (an upload mistake should be fixable the day it happens); ingested material is refused while its course is mid-term; a course with no dates has no protected window, deliberately, so an unrecorded term cannot freeze an admin out. The source file is LEFT ON DISK -- deleting a row must not throw away the only copy of a book -- and the audit detail records that it was. The audit row is written BEFORE the delete and keyed by string, not FK, so the trail outlives what it describes; without that, deletion would be the one act nobody could review. admin.py's module docstring was updated: the 'nothing is deleted' rule is now bounded, not absolute, and saying otherwise would mislead the next reader. Verifying also caught the audit summary reading 'deleted something that has since been removed' -- it now takes the title from the detail dict and drops the redundant suffix on deletes. 310 tests (was 303). Re-runnable: backend/scripts/verify_admin_006.py, which builds and cleans up its own throwaway course so it never touches the demo corpus."
     }
   ]
 }
