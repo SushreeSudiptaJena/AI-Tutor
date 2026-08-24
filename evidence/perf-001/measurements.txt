@@ -1,6 +1,7 @@
 perf-001 -- why every click took seconds, and a click under load took a minute
 Measured 2026-08-24 on the demo laptop against the shared Neon database
-(ep-dry-credit-azo3aw2p-pooler.c-3.ap-southeast-1.aws.neon.tech).
+(a `-pooler` endpoint in ap-southeast-1; the instance id is redacted -- this
+repo is public and the region is the part that matters here).
 
 Reported symptom: "everything loads super duper slow, I click a button and it
 responds after 1 minute."
