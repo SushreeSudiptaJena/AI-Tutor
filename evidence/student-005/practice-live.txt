@@ -1,0 +1,24 @@
+student-005 -- scoped practice generation, live.
+Generated for the gap's concept, not the course. A second gap produces
+entirely different items, and the answer key never reaches the client.
+
+student : asha@example.edu (course 2)
+teacher : ravi@example.edu role=teacher
+
+==============================================================================
+STEP 3  Scoped practice -- generated for THIS gap, not the course
+==============================================================================
+  HTTP 200
+  practice_set 3 for concept 'Vector components'  source=generated
+    [16] A force of magnitude 30 N acts at an angle of 30° above the horizontal. What i
+          options: ['26 N', '15 N', '30 N', '13 N']
+    [17] A displacement of 40 m is directed 60° north of east. What is the east‑ward (h
+          options: ['20 m', '34.6 m', '40 m', '10 m']
+    [18] A force of 12 N acts at an angle of 120° measured from the positive x‑axis (co
+          options: ['-6 N', '10.4 N', '6 N', '12 N']
+  answer key fields leaked to the client: []  (must be [])
+
+  a DIFFERENT gap (Free-body diagrams) gives different items:
+    [19] A 5.0 kg block rests on a frictionless incline that makes a 30° angle with the
+    [20] An 8.0 kg crate is placed on a smooth incline that is 20° above the horizontal
+  prompts shared between the two gaps: 0  (must be 0)

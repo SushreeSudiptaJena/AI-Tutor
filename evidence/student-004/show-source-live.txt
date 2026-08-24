@@ -1,0 +1,33 @@
+student-004 -- Show Source. Every citation names a real book and page.
+No endpoint of its own by design (see 'Features with no HTTP surface' in
+the contract): Show Source IS the Citation object on a lesson card.
+The second block re-opens the actual source PDF at the cited page and
+confirms the quoted text is really there.
+
+student : asha@example.edu (course 2)
+teacher : ravi@example.edu role=teacher
+
+==============================================================================
+student-004  Show Source -- every citation names a real book and page
+==============================================================================
+  citations on the lesson card (5):
+    [7] Concepts of Physics, Vol 1, p.118  (4. Vectors)
+        "A vector may be resolved into two perpendicular components. For a vector o..."
+    [3] Concepts of Physics, Vol 1, p.143  (5. Newton's Laws of Motion)
+        "Newton's second law relates the net force on a body to its acceleration: F..."
+    [8] Concepts of Physics, Vol 1, p.121  (4. Vectors)
+        "Two perpendicular vectors are added using the Pythagorean theorem, not by ..."
+    [2] Concepts of Physics, Vol 1, p.141  (5. Newton's Laws of Motion)
+        "When a block slides across a rough floor at constant speed, the applied pu..."
+    [14] Concepts of Physics, Vol 1, p.133  (5. Newton's Laws of Motion)
+        "A free-body diagram shows every force acting on one chosen body, and nothi..."
+
+  every citation carries: ['book_title', 'chapter', 'chunk_id', 'material_id', 'page_no', 'snippet']
+  book_title and page_no present on all: True
+
+  citations resolved against the actual source PDF (course CS-C):
+    p.224: cited text found on that page of the PDF = True
+    p.224: cited text found on that page of the PDF = True
+  NOTE: PH101 is the seeded stand-in corpus, so its citations name a
+        book and page with no file on disk to open. CS-C and CSW2 are
+        real ingested PDFs and resolve exactly, as shown above.

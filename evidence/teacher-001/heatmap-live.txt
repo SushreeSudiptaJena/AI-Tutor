@@ -1,0 +1,40 @@
+teacher-001 -- misconception heatmap, live-updating.
+Confirm increments the count; deny does not. The denial is stored and
+excluded from every teacher aggregate, which is what makes the number mean
+'students who agreed' rather than 'times the algorithm guessed'.
+The payload contains no student id, name or email.
+
+student : asha@example.edu (course 2)
+teacher : ravi@example.edu role=teacher
+
+==============================================================================
+STEP 5  Teacher heatmap: confirm increments, deny does not
+==============================================================================
+  heatmap before confirming: 7 for 'Uses sine where cosine is required when reso'
+  student clicks CONFIRM -> HTTP 204 (expect 204)
+  heatmap after  confirming: 8
+  INCREMENTED: True
+
+  student clicks DENY on 'Uses sine where cosine is required when '
+  heatmap 8 -> 8   unchanged: True
+  (the denial is stored, and excluded from every teacher aggregate)
+
+==============================================================================
+teacher-001  The full heatmap the teacher sees
+==============================================================================
+  class_size 25   updated_at 2026-08-24T05:29:58.326403Z
+      9   36%  Treats constant velocity as implying a net force
+      8   32%  Uses sine where cosine is required when resolving al
+      4   16%  Assumes the normal force always equals mg, even on a
+      3   12%  Adds perpendicular force magnitudes arithmetically i
+      2    8%  Believes heavier objects fall faster even without ai
+      2    8%  Places both action and reaction forces on the same b
+
+  payload mentions 'student': False
+  payload mentions '@'      : False   (no emails)
+
+==============================================================================
+ACCESS  A student cannot read the teacher dashboards
+==============================================================================
+  student GET /teacher/misconceptions/heatmap            -> HTTP 403 (expect 403)
+  student GET /teacher/uncertainty-flags                 -> HTTP 403 (expect 403)

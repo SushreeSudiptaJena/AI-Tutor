@@ -13,10 +13,10 @@ Every session **reads this first** and **writes to it last**.
 | **Repository root** | the directory containing this file (every path in this repo is relative to it) |
 | **Standard startup path** | `./init.sh` (then `RUN_START_COMMAND=1 ./init.sh` to launch backend) |
 | **Standard verification path** | `python -m pytest backend/tests -q && npm --prefix frontend run build` |
-| **Highest priority unfinished feature** | `student-004` (Show Source) and `teacher-004` (Uncertainty Flags) — both nearly free, the data already exists. Then `student-005` → `student-006` → `teacher-001` to close the golden path. |
+| **Highest priority unfinished feature** | `student-007` mastery view, then the seeded teacher/admin panels (`teacher-002/003/005/006/007`, `admin-001/002/003`). All are read endpoints over data that already exists. |
 | **Current blocker** | None for new work. `infra-001`, `infra-003` and `infra-005` each need a second person to finish verifying; none blocks anything downstream. |
-| **Golden path status** | Steps 1–2 live (`student-002` → `student-003` with alignment score). Remaining: `student-005` practice, `student-006` misconception confirm/deny, `teacher-001` heatmap. |
-| **Last verified** | 2026-08-24 — 149 tests pass, `./init.sh` green. All three rubric features (`rag-002`, `rag-003`, `rag-004`) verified live against real course material. |
+| **Golden path status** | **COMPLETE — all 7 features passing, verified live end to end in one run.** diagnostic → gap + 84% alignment → generated practice → wrong answer → specific misconception → confirm → teacher heatmap increments. |
+| **Last verified** | 2026-08-24 — 170 tests pass, `./init.sh` green. 16 of 32 features passing. |
 
 ### Environment facts
 
@@ -37,6 +37,18 @@ Every session **reads this first** and **writes to it last**.
 ## Session Record
 
 *Newest entry at the top. One entry per session.*
+
+### Session 009 — 2026-08-24 — golden path COMPLETE + student-004, teacher-004
+
+| | |
+|---|---|
+| **Goal** | Finish the golden path (`student-005` → `student-006` → `teacher-001`), then the two nearly-free wins. |
+| **Completed** | `services/practice.py`, `routers/teacher.py`, practice/confirm routes on the student router, `prompts/{practice_generate,practice_explain}.md`. Mock provider extended so `PROVIDER=mock` still yields a *diagnosable* item and guardrail hints. 170 tests (was 149). |
+| **Verification run** | One live run of the whole golden path: 4 deliberate wrong diagnostic answers → 4 named gaps → lesson at 84% with 5 citations → 3 generated practice items scoped to that gap (a second gap gave entirely different items, 0 shared prompts) → answered 15 N on a 30 N @ 30° item → the specific sin/cos-swap diagnosis → confirm → heatmap 7→8 → deny → unchanged. Teacher payloads carry no id, name or email; students get 403. |
+| **Evidence recorded** | `evidence/student-004/show-source-live.txt`, `evidence/student-005/practice-live.txt`, `evidence/student-006/misconception-live.txt`, `evidence/teacher-001/heatmap-live.txt`, `evidence/teacher-004/uncertainty-flags-live.txt` |
+| **Commits** | One. |
+| **Known risks** | **The demo database has accumulated verification artefacts** — repeated runs left five duplicate "French Revolution" uncertainty flags and extra practice sets/attempts. It is all real data, but the flags panel looks repetitive; `reset_db.py` + `seed.py` before the demo cleans it, at the cost of re-seeding. **PH101 is still the 18-chunk stand-in corpus**, so a `student-004` citation there names a page with no PDF behind it — CS-C and CSW2 resolve exactly. Practice generation costs one LLM call and took a few seconds per set; `POST .../answer` costs another for the explanation. Both are cached, so a rehearsed demo is fast, but a judge asking for a brand-new gap's practice will wait. |
+| **Next best action** | `student-007` (mastery view) — the rows are already written by the diagnostic and by every practice answer, so it is one read endpoint. Then the seeded teacher/admin panels. `demo-001` (two-laptop rehearsal) is now unblocked and is the highest-value non-feature work left. |
 
 ### Session 008 — 2026-08-24 — infra-005, student-001/002/003, rag-004
 

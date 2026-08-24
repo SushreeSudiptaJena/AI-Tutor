@@ -188,3 +188,47 @@ class DiagnosticSubmitIn(BaseModel):
         if len(seen) != len(v):
             raise ValueError("the same item was answered more than once")
         return v
+
+
+# --- practice (student-005, student-006) ------------------------------------
+
+class PracticeGenerateIn(BaseModel):
+    """`gap_id` is required. Practice that is not scoped to a gap is just a
+    quiz, and the scoping is the whole claim of student-005."""
+
+    gap_id: int
+    count: int | None = None
+
+    @field_validator("count")
+    @classmethod
+    def _count(cls, v: int | None) -> int | None:
+        if v is not None and not 1 <= v <= 8:
+            raise ValueError("count must be between 1 and 8")
+        return v
+
+
+class PracticeAnswerIn(BaseModel):
+    item_id: int
+    answer: str
+
+    @field_validator("answer")
+    @classmethod
+    def _answer(cls, v: str) -> str:
+        v = v.strip()
+        if not v:
+            raise ValueError("answer is required")
+        return v[:300]
+
+
+class ConfirmDiagnosisIn(BaseModel):
+    """Three-state on the way in too: the student either agrees or disagrees.
+    There is no 'skip' -- an unanswered diagnosis simply stays `confirmed=None`
+    because this endpoint was never called."""
+
+    confirmed: bool
+
+
+# --- teacher (teacher-004) --------------------------------------------------
+
+class ResolveFlagIn(BaseModel):
+    note: str | None = None

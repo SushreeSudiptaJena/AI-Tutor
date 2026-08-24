@@ -73,7 +73,10 @@ class MockProvider:
             return {"misconception_slug": None, "confidence": 0.0,
                     "reason": "mock: no confident match"}
 
-        # Practice generation.
+        # Practice generation. `distractors` is not optional decoration: a
+        # generated item whose wrong answers map to no misconception produces
+        # the demo's weakest moment -- a wrong answer, and silence. With the
+        # wifi off, the mock still has to hand back something diagnosable.
         if "items" in props:
             return {"items": [{
                 "prompt": "A 2 kg block slides at constant velocity across a rough floor. "
@@ -82,7 +85,12 @@ class MockProvider:
                 "options": ["0 N", "6 N", "20 N", "24 N"],
                 "correct_answer": "0 N",
                 "problem_type": "net-force-constant-velocity",
+                "distractors": {"6 N": "velocity-implies-force"},
             }]}
+
+        # Scaffolded hints for the graded-work guardrail (rag-004).
+        if "hints" in props:
+            return {"hints": _HINTS}
 
         # Generic explanation object.
         out: dict = {}

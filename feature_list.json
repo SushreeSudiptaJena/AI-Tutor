@@ -319,7 +319,7 @@
       "area": "student",
       "title": "Show Source",
       "user_visible_behavior": "Every explanation card links to the exact book and page it was grounded in.",
-      "status": "not_started",
+      "status": "passing",
       "depends_on": [
         "rag-001"
       ],
@@ -329,8 +329,8 @@
         "It names a real book and page number.",
         "Open the PDF at that page and confirm the content matches."
       ],
-      "evidence": null,
-      "notes": "Cheap, highly visible to judges, directly quoted in the problem statement."
+      "evidence": "evidence/student-004/show-source-live.txt",
+      "notes": "Cheap, highly visible to judges, directly quoted in the problem statement. PASSING 2026-08-24. No endpoint of its own by design -- the contract lists Show Source under 'Features with no HTTP surface': it IS the Citation object on a lesson card. Verified live: all five citations on a gap lesson carried book_title, page_no, chapter and snippet. Step 3 of the verification (open the PDF at that page) was done programmatically against CS-C, where the cited page was re-extracted from the source PDF and the quoted text confirmed present. CAVEAT: PH101, the demo course, is still the 18-chunk stand-in corpus, so its citations name a book and page with no file on disk to open. Ingest a real physics PDF if a judge is going to check one."
     },
     {
       "id": "student-005",
@@ -338,7 +338,7 @@
       "area": "student",
       "title": "Scoped practice generator",
       "user_visible_behavior": "Practice problems are generated for the student's identified gaps, not random course-wide problems.",
-      "status": "not_started",
+      "status": "passing",
       "depends_on": [
         "student-003"
       ],
@@ -348,8 +348,8 @@
         "Every generated item is about that gap's concept.",
         "Generating from a different gap produces visibly different items."
       ],
-      "evidence": null,
-      "notes": "GOLDEN PATH step 3."
+      "evidence": "evidence/student-005/practice-live.txt",
+      "notes": "GOLDEN PATH step 3. PASSING 2026-08-24 live and fully dynamic. Generated three items for 'Vector components' (30 N at 30 degrees, 40 m at 60 degrees, 12 N at 120 degrees); a second gap, 'Free-body diagrams', produced entirely different incline problems with zero shared prompts. No answer-key field reaches the client. THE DESIGN DECISION THAT MATTERS: the generator must declare which misconception each distractor was built from, and an item where no wrong option maps to a known misconception is REJECTED and regenerated. Without that, generated items produce no diagnosis at all -- see student-006. Validation also rejects a mapped correct answer, an unknown problem_type, duplicate options and the wrong option count. Falls back to the seeded items for the concept after two failed attempts, and the response says source=generated|seeded so a silently failing generator is visible rather than mysterious."
     },
     {
       "id": "student-006",
@@ -357,7 +357,7 @@
       "area": "student",
       "title": "Post-quiz misconception check with confirm/deny",
       "user_visible_behavior": "After a wrong answer, the AI names the likely misconception behind it and asks the student to confirm or deny.",
-      "status": "not_started",
+      "status": "passing",
       "depends_on": [
         "student-005"
       ],
@@ -368,8 +368,8 @@
         "Click Confirm; a confirmed_diagnosis row is written.",
         "Click Deny on another; it is recorded as denied and does NOT feed the heatmap."
       ],
-      "evidence": null,
-      "notes": "GOLDEN PATH step 4 — the single most important feature in the build. Match against seeded error patterns per problem type."
+      "evidence": "evidence/student-006/misconception-live.txt",
+      "notes": "GOLDEN PATH step 4 -- the single most important feature in the build. PASSING 2026-08-24 live. The generated item was 30 N at 30 degrees; correct horizontal component 30cos30 = 26 N, and a student reaching for sine gets 30sin30 = 15 N. Answering 15 N produced the SPECIFIC diagnosis 'Uses sine where cosine is required when resolving along the horizontal', not a generic one. THIS IS THE CASE SEEDED REGEXES CANNOT COVER: sin-cos-swap's pattern is ^5(\\.0+)?\\s*N$, welded to the seeded 10 N question, and it would never have matched 15 N -- the demo's key moment would have silently produced nothing. Diagnosis order is declared-distractor first (exact), then the seeded regex, then none; regexes are only ever matched within the same problem_type, because velocity-implies-force matches almost any answer ending in N and would otherwise diagnose every wrong answer in the app. Confirm wrote the row and the heatmap went 7 to 8; Deny left it at 8. No diagnosis is returned when nothing matches -- a generic diagnosis is worse than none, because the student is asked to confirm reasoning that was never theirs."
     },
     {
       "id": "student-007",
@@ -395,7 +395,7 @@
       "area": "teacher",
       "title": "Misconception heatmap (live-updating)",
       "user_visible_behavior": "Per topic, the most common wrong mental models across the class, ranked by confirmed-diagnosis frequency.",
-      "status": "not_started",
+      "status": "passing",
       "depends_on": [
         "student-006"
       ],
@@ -405,8 +405,8 @@
         "On the second laptop, have the student confirm that misconception.",
         "Refresh the teacher dashboard; the count has incremented."
       ],
-      "evidence": null,
-      "notes": "GOLDEN PATH step 5 — the closing beat of the demo. Poll on an interval; do NOT build websockets."
+      "evidence": "evidence/teacher-001/heatmap-live.txt",
+      "notes": "GOLDEN PATH step 5 -- the closing beat of the demo. Poll on an interval; do NOT build websockets. PASSING 2026-08-24 live: noted the count, the student confirmed, the count incremented on the next read, and a denial on a second diagnosis left its count unchanged. It is a plain aggregate query, so 'live' costs nothing and a confirmation on another laptop shows up on the next poll. Only confirmed IS TRUE is counted -- None means asked-and-unanswered, False means the student disagreed, and counting either would make the number mean 'times the algorithm guessed'. The query joins through attempts, the only table in it holding a user id, and groups that away rather than selecting it; the payload contains no student id, name or email. share is of the CLASS, not of the diagnoses, because '11 of 40 students' is what a teacher acts on. Students get 403."
     },
     {
       "id": "teacher-002",
@@ -451,7 +451,7 @@
       "area": "teacher",
       "title": "Uncertainty flags panel",
       "user_visible_behavior": "Cases where the tutor said 'not enough evidence' are surfaced for teacher review rather than failing silently.",
-      "status": "not_started",
+      "status": "passing",
       "depends_on": [
         "rag-003"
       ],
@@ -460,8 +460,8 @@
         "Trigger a refusal as a student.",
         "The flag appears in the teacher panel with the query and the alignment score."
       ],
-      "evidence": null,
-      "notes": "Comes almost free from rag-003. High judging value for very little work."
+      "evidence": "evidence/teacher-004/uncertainty-flags-live.txt",
+      "notes": "Comes almost free from rag-003. High judging value for very little work. PASSING 2026-08-24 live: eight open flags, newest first, each with the question, the alignment percentage and the reason; resolving one removed it from the open list. Populated entirely by rag-003 refusals and by gap lessons the corpus could not teach -- nothing writes here on the teacher's behalf. alignment_percent is DERIVED from the stored score rather than stored separately, so it cannot drift from the number the student was shown. The rows have no user column at all, so the panel is anonymous by construction. The optional resolve note is accepted and not stored; there is no column for it and inventing one for free text nobody reads is not worth a migration."
     },
     {
       "id": "teacher-005",

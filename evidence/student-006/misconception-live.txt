@@ -1,0 +1,44 @@
+student-006 -- post-quiz misconception check with confirm/deny, live.
+
+The item was generated live: 30 N at 30 degrees above the horizontal.
+The correct horizontal component is 30cos30 = 26 N; a student who reaches
+for sine instead gets 30sin30 = 15 N. The generator declared that mapping
+when it wrote the item, so answering 15 N produces the SPECIFIC diagnosis
+rather than a generic one.
+
+This is the case the seeded regexes cannot cover: sin-cos-swap's pattern is
+^5(\.0+)?\s*N$, welded to the seeded 10 N question. It would not have
+matched 15 N, and the demo's key moment would have silently produced no
+diagnosis at all.
+
+student : asha@example.edu (course 2)
+teacher : ravi@example.edu role=teacher
+
+==============================================================================
+STEP 4  Answer wrong in a predictable way -> named misconception
+==============================================================================
+  item     : A force of magnitude 30 N acts at an angle of 30° above the horizontal. What i
+  answering: '15 N'  -- the answer a specific mistake produces
+  expecting: Uses sine where cosine is required when resolving along the horizontal
+
+  correct        : False
+  correct_answer : 26 N
+  explanation    : The horizontal component of a force is found with the cosine of its angle, because a vector “directed at an angle θ above the horizontal” resolves into \(F\cos\...
+  citations      : [('Concepts of Physics, Vol 1', 'p.118'), ('Concepts of Physics, Vol 1', 'p.160'), ('Concepts of Physics, Vol 1', 'p.143')]
+
+  DIAGNOSIS 148
+    misconception: Uses sine where cosine is required when resolving along the horizontal
+    asked        : That answer usually comes from this reasoning: uses sine where cosine is required when resolving along the horizontal. Does that match your thinking?
+    specific rather than generic: True
+
+==============================================================================
+STEP 5  Teacher heatmap: confirm increments, deny does not
+==============================================================================
+  heatmap before confirming: 7 for 'Uses sine where cosine is required when reso'
+  student clicks CONFIRM -> HTTP 204 (expect 204)
+  heatmap after  confirming: 8
+  INCREMENTED: True
+
+  student clicks DENY on 'Uses sine where cosine is required when '
+  heatmap 8 -> 8   unchanged: True
+  (the denial is stored, and excluded from every teacher aggregate)

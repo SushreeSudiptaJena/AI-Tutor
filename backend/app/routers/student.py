@@ -16,13 +16,14 @@ Three rules run through the whole file:
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Response, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session as OrmSession
 
 from ..db import get_db
 from ..deps import current_user
 from ..models import (
+    Attempt,
     Chunk,
     Concept,
     Course,
@@ -30,11 +31,19 @@ from ..models import (
     Gap,
     Mastery,
     Material,
+    MisconceptionDiagnosis,
+    PracticeItem,
+    PracticeSet,
     Topic,
     User,
 )
-from ..schemas import DiagnosticSubmitIn
-from ..services import retrieval, tutor
+from ..schemas import (
+    ConfirmDiagnosisIn,
+    DiagnosticSubmitIn,
+    PracticeAnswerIn,
+    PracticeGenerateIn,
+)
+from ..services import practice, retrieval, tutor
 
 router = APIRouter(prefix="/student", tags=["student"])
 
@@ -343,3 +352,183 @@ def gap_lesson(
         topic_name=topic.name if topic else None,
         language=language,
     )
+
+
+# ---------------------------------------------------------------------------
+# student-005 -- scoped practice
+# ---------------------------------------------------------------------------
+
+@router.post("/practice/generate")
+def generate_practice(
+    body: PracticeGenerateIn,
+    db: OrmSession = Depends(get_db),
+    user: User = Depends(current_user),
+) -> dict:
+    """Practice for one gap's concept -- not random course-wide problems.
+
+    `gap_id` is required rather than optional: practice that is not scoped to a
+    gap is just a quiz, and the whole claim of this feature is the scoping.
+    """
+    gap = db.get(Gap, body.gap_id)
+    if gap is None or gap.user_id != user.id:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={"code": "not_found", "message": "No such gap."},
+        )
+    if gap.concept is None:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={"code": "conflict",
+                    "message": "That gap has no concept attached to practise."},
+        )
+
+    practice_set, items, rejected, used_fallback = practice.generate(
+        db,
+        user_id=user.id,
+        concept=gap.concept,
+        course_id=user.course_id,
+        gap_id=gap.id,
+        count=body.count or practice.DEFAULT_COUNT,
+    )
+
+    if not items:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail={"code": "provider_unavailable",
+                    "message": "Could not build practice for that gap right now.",
+                    "detail": {"rejected": [r.reason for r in rejected]}},
+        )
+
+    return {
+        "practice_set_id": practice_set.id,
+        "concept": gap.concept.name,
+        "items": [
+            {
+                "id": item.id,
+                "prompt": item.prompt,
+                "kind": item.kind,
+                "options": _options_list(item.options),
+                "gap_id": gap.id,
+            }
+            for item in items
+        ],
+        # Visible on purpose: a generator that is quietly failing every item and
+        # falling back to seeds should be obvious here, not a mystery on stage.
+        "source": "seeded" if used_fallback else "generated",
+    }
+
+
+# ---------------------------------------------------------------------------
+# student-006 -- answer, and the misconception behind a wrong one
+# ---------------------------------------------------------------------------
+
+@router.post("/practice/{practice_set_id}/answer")
+def answer_practice(
+    practice_set_id: int,
+    body: PracticeAnswerIn,
+    db: OrmSession = Depends(get_db),
+    user: User = Depends(current_user),
+) -> dict:
+    """Record the attempt and, when it is wrong, name the likely misconception.
+
+    The diagnosis is a *question*, never a verdict. It is written with
+    `confirmed = None` and only counts for a teacher once the student agrees --
+    the student is the authority on what they were thinking.
+    """
+    practice_set = db.get(PracticeSet, practice_set_id)
+    if practice_set is None or practice_set.user_id != user.id:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={"code": "not_found", "message": "No such practice set."},
+        )
+
+    item = db.get(PracticeItem, body.item_id)
+    if item is None or item.practice_set_id != practice_set.id:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={"code": "not_found",
+                    "message": "That item is not in this practice set."},
+        )
+
+    correct = practice.is_correct(body.answer, item.correct_answer)
+    attempt = Attempt(user_id=user.id, practice_item_id=item.id,
+                      answer=body.answer, correct=correct)
+    db.add(attempt)
+    db.flush()
+
+    if item.concept_id is not None:
+        mastery = db.scalar(
+            select(Mastery).where(Mastery.user_id == user.id,
+                                  Mastery.concept_id == item.concept_id)
+        )
+        if mastery is None:
+            mastery = Mastery(user_id=user.id, concept_id=item.concept_id)
+            db.add(mastery)
+        mastery.state = "solid" if correct else "shaky"
+
+    diagnosis_out = None
+    if not correct:
+        misconception, source = practice.diagnose(db, item, body.answer)
+        if misconception is not None:
+            diagnosis = MisconceptionDiagnosis(
+                attempt_id=attempt.id,
+                misconception_id=misconception.id,
+                source=source,
+                confirmed=None,      # asked, not decided
+            )
+            db.add(diagnosis)
+            db.flush()
+            diagnosis_out = {
+                "id": diagnosis.id,
+                "misconception_id": misconception.id,
+                "label": misconception.label,
+                "question": practice.confirm_question(misconception),
+            }
+
+    explanation, citations = practice.explain(
+        db, item, body.answer, correct, user.course_id
+    )
+
+    return {
+        "correct": correct,
+        "correct_answer": item.correct_answer,
+        "explanation": explanation,
+        "citations": citations,
+        # null when the answer was right, or when no known error pattern
+        # matches -- a generic diagnosis is worse than none, because the
+        # student is asked to confirm reasoning that was never theirs.
+        "diagnosis": diagnosis_out,
+    }
+
+
+@router.post("/misconception-diagnosis/{diagnosis_id}/confirm",
+             status_code=status.HTTP_204_NO_CONTENT)
+def confirm_diagnosis(
+    diagnosis_id: int,
+    body: ConfirmDiagnosisIn,
+    db: OrmSession = Depends(get_db),
+    user: User = Depends(current_user),
+) -> Response:
+    """The student agrees or disagrees that this was their reasoning.
+
+    Only `true` ever reaches a teacher aggregate. A denial is kept -- throwing
+    it away would make the system look more accurate than it is -- but excluded
+    everywhere, which is what makes the teacher's number mean "students who
+    agreed" rather than "the algorithm's guesses".
+    """
+    diagnosis = db.get(MisconceptionDiagnosis, diagnosis_id)
+    if diagnosis is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={"code": "not_found", "message": "No such diagnosis."},
+        )
+
+    attempt = db.get(Attempt, diagnosis.attempt_id)
+    if attempt is None or attempt.user_id != user.id:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={"code": "not_found", "message": "No such diagnosis."},
+        )
+
+    diagnosis.confirmed = body.confirmed
+    return Response(status_code=status.HTTP_204_NO_CONTENT)

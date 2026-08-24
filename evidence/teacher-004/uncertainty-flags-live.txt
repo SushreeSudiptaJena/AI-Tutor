@@ -1,0 +1,29 @@
+teacher-004 -- uncertainty flags panel, live.
+Populated entirely by rag-003 refusals and by gap lessons the corpus could
+not teach. Nothing writes here on the teacher's behalf -- one feature, two
+dashboards. The rows have no user column at all.
+
+student : asha@example.edu (course 2)
+teacher : ravi@example.edu role=teacher
+
+==============================================================================
+teacher-004  Uncertainty flags -- what the tutor refused to answer
+==============================================================================
+  7 open flag(s); newest first:
+    [ 19]  27%  no_matching_material       'What were the main causes of the French Revo'
+    [ 18]  27%  no_matching_material       'What were the main causes of the French Revo'
+    [ 17]  27%  no_matching_material       'What were the main causes of the French Revo'
+    [ 16]  27%  no_matching_material       'What were the main causes of the French Revo'
+    [ 13]  29%  no_matching_material       'Explain Lagrangian mechanics and the princip'
+    [ 15]  12%  no_matching_material       'What is the Higgs mechanism?'
+
+  resolve flag 19 -> HTTP 204 (expect 204)
+  still in the open list: False  (must be False)
+
+  payload mentions '@': False   (flags have no user column at all)
+
+==============================================================================
+ACCESS  A student cannot read the teacher dashboards
+==============================================================================
+  student GET /teacher/misconceptions/heatmap            -> HTTP 403 (expect 403)
+  student GET /teacher/uncertainty-flags                 -> HTTP 403 (expect 403)
