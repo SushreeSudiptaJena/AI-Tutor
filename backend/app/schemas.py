@@ -11,7 +11,7 @@ from __future__ import annotations
 import re
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, field_validator
+from pydantic import BaseModel, ConfigDict, field_validator, model_validator
 
 Role = Literal["student", "teacher", "admin"]
 
@@ -247,7 +247,23 @@ class RejectSourcedIn(BaseModel):
 
 
 class SuggestReteachIn(BaseModel):
-    misconception_id: int
+    """teacher-008: a unit targets a misconception OR a prerequisite concept.
+
+    Exactly one. Both is ambiguous about which lesson to write, and neither is
+    a request with no subject -- either way the caller has a bug, and a 422
+    naming it beats drafting against whichever field happened to win.
+    """
+
+    misconception_id: int | None = None
+    concept_id: int | None = None
+
+    @model_validator(mode="after")
+    def exactly_one_target(self):
+        if (self.misconception_id is None) == (self.concept_id is None):
+            raise ValueError(
+                "Send exactly one of misconception_id or concept_id."
+            )
+        return self
 
 
 class PatchReteachIn(BaseModel):

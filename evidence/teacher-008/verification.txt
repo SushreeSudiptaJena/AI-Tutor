@@ -1,0 +1,93 @@
+============================================================================
+the two rankings this draws from
+============================================================================
+  heatmap top 3:
+    #19     9 confirmed  Puts the foreign key on the one side of a one-to-many re
+    #15     7 confirmed  Chooses GET for a request that changes server state
+    #20     5 confirmed  Believes a filter returns a single record rather than a 
+  gap map top 3:
+    #18    11 missing    One-to-many relationships
+    #14     8 missing    HTTP methods, GET and POST
+    #19     6 missing    Filtering and querying records
+
+============================================================================
+[1] POST /teacher/reteach/suggest-top
+============================================================================
+  HTTP 200   created 5, skipped 6
+    created  unit 34   target=misconception Understanding filter() returns a QuerySet
+    created  unit 35   target=misconception Reteach: Assumes the server remembers the previo
+    created  unit 36   target=concept       Reteach: HTTP methods, GET and POST
+    created  unit 37   target=concept       Introducing Python Virtual Environments
+    created  unit 38   target=concept       Reteach: URL paths and routing
+    skipped  misconception already_drafted          Puts the foreign key on the one side o
+    skipped  misconception insufficient_evidence    (43%) Chooses GET for a request that changes
+    skipped  misconception insufficient_evidence    (41%) Treats a class attribute as if every i
+    skipped  misconception insufficient_evidence    (37%) Believes an input without a name attri
+    skipped  concept       covered_by_misconception One-to-many relationships
+    skipped  concept       covered_by_misconception Filtering and querying records
+  [PASS] returns 200, not 201 -- it is a partial-success report
+  coverage: 3/3 from the heatmap, 3/3 from the gap map
+  [PASS] it drew on both rankings -- {'requested_per_ranking': 3, 'from_heatmap': 3, 'from_gap_map': 3}
+  [PASS] it filled the panel rather than stopping at the literal top three -- {'requested_per_ranking': 3, 'from_heatmap': 3, 'from_gap_map': 3}
+
+============================================================================
+[2] exactly one target is set on every unit
+============================================================================
+  draft units by target: {'concept': 3, 'misconception': 3}
+  [PASS] every unit has exactly one target set
+  [PASS] both kinds exist -- {'concept': 3, 'misconception': 3}
+  [PASS] a concept unit carries no practice items (no error pattern yet)
+
+============================================================================
+[3] nothing was assigned
+============================================================================
+  statuses of created units: {'draft'}
+  [PASS] everything created is a draft
+  [PASS] GET /student/assignments is unchanged -- 0 -> 0
+
+============================================================================
+[4] a refusal skips one target, it does not fail the batch
+============================================================================
+  refused: Chooses GET for a request that changes server state at 43%
+  refused: Treats a class attribute as if every instance had it at 41%
+  refused: Believes an input without a name attribute is still  at 37%
+  [PASS] a refusal is reported as a skip and the batch still returned 200
+  [PASS] no skip reason is an unhandled error -- {'covered_by_misconception', 'insufficient_evidence', 'already_drafted'}
+
+============================================================================
+[5] running it again does not duplicate
+============================================================================
+  draft units 6 -> 6; second run created 0, skipped 11
+    misconception already_drafted
+    misconception insufficient_evidence
+    misconception already_drafted
+    misconception insufficient_evidence
+    misconception insufficient_evidence
+    misconception already_drafted
+  [PASS] no new units on a second run
+  [PASS] the existing drafts are reported as already_drafted
+
+============================================================================
+[6] overlap between the two rankings is reported, not duplicated
+============================================================================
+  One-to-many relationships -> already covered by unit 33
+  Filtering and querying records -> already covered by unit 34
+  One-to-many relationships -> already covered by unit 33
+  Filtering and querying records -> already covered by unit 34
+  [PASS] no two draft units share a title
+
+============================================================================
+[7] single suggest still works, both ways, and rejects ambiguity
+============================================================================
+  {misconception_id} -> HTTP 201 target=misconception
+  [PASS] misconception_id still works
+  {concept_id}        -> HTTP 201 target=concept
+  [PASS] concept_id works
+  {}                                           -> HTTP 422
+  [PASS] empty body is a 422
+  {"misconception_id": 19, "concept_id": 18}   -> HTTP 422
+  [PASS] {'misconception_id': 19, 'concept_id': 18} is a 422
+
+============================================================================
+ALL CHECKS PASSED
+============================================================================

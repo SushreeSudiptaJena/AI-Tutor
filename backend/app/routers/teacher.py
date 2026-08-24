@@ -610,7 +610,12 @@ def _reteach_out(db: OrmSession, unit: ReteachUnit, *,
     misconceptions a wrong answer could mean. A unit and the items that detect
     it stay in step by construction instead of by remembering to update both.
     """
-    misconception = db.get(Misconception, unit.misconception_id)
+    misconception = (
+        db.get(Misconception, unit.misconception_id)
+        if unit.misconception_id is not None else None
+    )
+    concept = db.get(Concept, unit.concept_id) if unit.concept_id is not None else None
+
     items = []
     if misconception is not None and misconception.problem_type:
         items = db.scalars(
@@ -619,11 +624,18 @@ def _reteach_out(db: OrmSession, unit: ReteachUnit, *,
                    PracticeItem.problem_type == misconception.problem_type)
             .order_by(PracticeItem.id)
         ).all()
+    # A concept unit has none, and that is not an oversight: practice items are
+    # found through `problem_type`, which is a property of a wrong answer. A
+    # prerequisite nobody was taught has no error pattern to exercise yet.
 
     return {
         "id": unit.id,
         "misconception_id": unit.misconception_id,
-        "label": misconception.label if misconception else None,
+        "concept_id": unit.concept_id,
+        # So a frontend reads a kind instead of inferring one from a null.
+        "target": unit.target,
+        "label": (misconception.label if misconception
+                  else concept.name if concept else None),
         "title": unit.title,
         "body": unit.body,
         "practice_items": [
@@ -664,27 +676,113 @@ def list_reteach(
     return {"items": [_reteach_out(db, r) for r in rows]}
 
 
+def _existing_unit(db: OrmSession, *, misconception_id=None, concept_id=None):
+    """Any unit already covering this target, draft or assigned."""
+    stmt = select(ReteachUnit)
+    if misconception_id is not None:
+        stmt = stmt.where(ReteachUnit.misconception_id == misconception_id)
+    else:
+        stmt = stmt.where(ReteachUnit.concept_id == concept_id)
+    return db.scalars(stmt.order_by(ReteachUnit.id.desc())).first()
+
+
+def _concepts_for_problem_type(db: OrmSession, problem_type: str | None) -> set[int]:
+    """Which concepts a misconception's error pattern exercises.
+
+    misconception.problem_type -> the seeded practice items carrying it ->
+    their concept. The same join `practice.diagnose()` uses, which is why a
+    unit and the items that detect it stay in step by construction.
+    """
+    if not problem_type:
+        return set()
+    return {
+        cid
+        for (cid,) in db.execute(
+            select(PracticeItem.concept_id)
+            .where(PracticeItem.problem_type == problem_type,
+                   PracticeItem.concept_id.is_not(None))
+            .distinct()
+        ).all()
+    }
+
+
+def _draft_and_store(db: OrmSession, user: User, *, misconception=None, concept=None):
+    """Draft one unit and upsert it. Returns `(unit, citations, report)`.
+
+    Raises `reteach.NotSupported` / `AllProvidersFailed` for the caller to turn
+    into a 422/503 or -- in the batch path -- into a skip reason. Shared so the
+    single and batch routes cannot drift on the thing that matters: a unit is
+    always written as `draft`, never assigned.
+    """
+    if misconception is not None:
+        title, text, citations, report = reteach.draft(db, misconception)
+        unit = db.scalar(
+            select(ReteachUnit).where(
+                ReteachUnit.misconception_id == misconception.id,
+                ReteachUnit.status == "draft",
+            )
+        )
+        if unit is None:
+            unit = ReteachUnit(misconception_id=misconception.id)
+            db.add(unit)
+        detail = {"misconception": misconception.slug}
+    else:
+        title, text, citations, report = reteach.draft_for_concept(db, concept)
+        unit = db.scalar(
+            select(ReteachUnit).where(
+                ReteachUnit.concept_id == concept.id,
+                ReteachUnit.status == "draft",
+            )
+        )
+        if unit is None:
+            unit = ReteachUnit(concept_id=concept.id)
+            db.add(unit)
+        detail = {"concept": concept.slug}
+
+    unit.title = title
+    unit.body = text
+    unit.status = "draft"          # never assigned, on either path
+    unit.approved_by_id = None
+    db.flush()
+
+    db.add(AuditLog(actor_id=user.id, action="reteach.suggest",
+                    target=f"reteach:{unit.id}", detail=detail))
+    db.flush()
+    return unit, citations, report
+
+
 @router.post("/reteach/suggest", status_code=status.HTTP_201_CREATED)
 def suggest_reteach(
     body: SuggestReteachIn,
     db: OrmSession = Depends(get_db),
     user: User = Depends(teacher_only),
 ) -> dict:
-    """Draft a unit against one misconception. Always `draft`, never assigned.
+    """Draft a unit against one misconception or one prerequisite concept.
+    Always `draft`, never assigned.
 
-    Re-suggesting for a misconception that already has an unapproved draft
-    replaces that draft rather than stacking another one up. A teacher pressing
-    the button twice means "try again", not "give me two".
+    Re-suggesting for a target that already has an unapproved draft replaces
+    that draft rather than stacking another one up. A teacher pressing the
+    button twice means "try again", not "give me two".
     """
-    misconception = db.get(Misconception, body.misconception_id)
-    if misconception is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail={"code": "not_found", "message": "No such misconception."},
-        )
+    misconception = concept = None
+    if body.misconception_id is not None:
+        misconception = db.get(Misconception, body.misconception_id)
+        if misconception is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail={"code": "not_found", "message": "No such misconception."},
+            )
+    else:
+        concept = db.get(Concept, body.concept_id)
+        if concept is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail={"code": "not_found", "message": "No such concept."},
+            )
 
     try:
-        title, text, citations, report = reteach.draft(db, misconception)
+        unit, citations, report = _draft_and_store(
+            db, user, misconception=misconception, concept=concept)
     except reteach.NotSupported as exc:
         # exc.report, not report -- `report` is only bound on the success path,
         # so reading it here raised UnboundLocalError and turned an honest 422
@@ -711,29 +809,156 @@ def suggest_reteach(
                     "message": "Could not draft a unit just now. Try again shortly."},
         )
 
-    unit = db.scalar(
-        select(ReteachUnit).where(
-            ReteachUnit.misconception_id == misconception.id,
-            ReteachUnit.status == "draft",
-        )
-    )
-    if unit is None:
-        unit = ReteachUnit(misconception_id=misconception.id)
-        db.add(unit)
-    unit.title = title
-    unit.body = text
-    unit.status = "draft"
-    unit.approved_by_id = None
-    db.flush()
-
-    db.add(AuditLog(actor_id=user.id, action="reteach.suggest",
-                    target=f"reteach:{unit.id}",
-                    detail={"misconception": misconception.slug}))
-    db.flush()
-
     out = _reteach_out(db, unit, citations=citations)
     out["evidence"] = report.to_dict()
     return out
+
+
+TOP_N_PER_RANKING = 3
+# How far down each ranking to keep looking when the top rows refuse or
+# duplicate. Bounded so a barren corpus cannot turn one press into 40 model calls.
+MAX_CANDIDATES_PER_RANKING = 8
+
+
+@router.post("/reteach/suggest-top")
+def suggest_top_reteach(
+    db: OrmSession = Depends(get_db),
+    user: User = Depends(teacher_only),
+) -> dict:
+    """teacher-008 -- draft the whole panel: top 3 misconceptions + top 3 gaps.
+
+    So a teacher opening the page finds it populated instead of finding a
+    button they must press once per misconception, having first worked out
+    which misconceptions are worth pressing it for.
+
+    **Partial success is the normal case, not the error case.** The corpus
+    genuinely cannot support a unit on every target -- that refusal is a
+    feature, and it fires on real rows. One target refusing must never cost the
+    other five, so every failure becomes a `skipped` entry with a reason and
+    the loop carries on. That is also why this returns 200 and not 201.
+
+    Nothing here is ever assigned. A batch button must not become a way around
+    the approval gate.
+    """
+    created: list[dict] = []
+    skipped: list[dict] = []
+
+    def note(target, obj_id, label, reason, **extra):
+        skipped.append({"target": target, "id": obj_id, "label": label,
+                        "reason": reason, **extra})
+
+    # Read the two panels through their own endpoints rather than reimplementing
+    # their ranking here. If the heatmap ever changes what "top" means, this
+    # follows it instead of quietly disagreeing with the screen beside it.
+    heat = heatmap(db=db, user=user)["items"][:MAX_CANDIDATES_PER_RANKING]
+    gaps = gap_map(db=db, user=user)["items"][:MAX_CANDIDATES_PER_RANKING]
+
+    # Which concepts the misconception half already covers, via problem_type ->
+    # the practice items that exercise it -> their concept. The top gap and the
+    # top heatmap row are very often the same subject seen from two directions,
+    # and two near-identical units read as padding.
+    covered: dict[int, int] = {}
+
+    def take(rows, want, handle):
+        """Walk a ranking until `want` of its rows have a unit behind them.
+
+        Strictly "the top three" filled the panel with two units on the real
+        corpus: one target refused for lack of evidence and two gaps were
+        already covered by a misconception unit. Those are correct decisions
+        that still leave a teacher with an empty-looking screen, so a
+        non-productive row advances to the next candidate instead of consuming
+        a slot. A row that already HAS a unit does consume one -- the panel
+        shows it, which is what the teacher actually cares about.
+        """
+        got = 0
+        for row in rows:
+            if got >= want:
+                break
+            if handle(row):
+                got += 1
+        return got
+
+    def do_misconception(row) -> bool:
+        misconception = db.get(Misconception, row["misconception_id"])
+        if misconception is None:
+            return False
+        existing = _existing_unit(db, misconception_id=misconception.id)
+        if existing is not None:
+            # Skip, do not redraft. A batch button that overwrote drafts would
+            # silently destroy a teacher's edits the second time they pressed
+            # it -- and would spend model calls to do it. `suggest` is the
+            # deliberate "try again" for one target.
+            note("misconception", misconception.id, misconception.label,
+                 "already_assigned" if existing.status != "draft" else "already_drafted",
+                 unit_id=existing.id)
+            # Coverage is a fact about the unit EXISTING, not about having made
+            # it just now. When this was only recorded on the create path, a
+            # second run skipped the covering misconception, forgot the
+            # overlap, and drafted the duplicate gap unit the first run had
+            # correctly declined.
+            for cid in _concepts_for_problem_type(db, misconception.problem_type):
+                covered[cid] = existing.id
+            return True
+        try:
+            unit, citations, _ = _draft_and_store(db, user, misconception=misconception)
+        except reteach.NotSupported as exc:
+            note("misconception", misconception.id, misconception.label,
+                 "insufficient_evidence",
+                 alignment_percent=exc.report.to_dict()["alignment_percent"])
+            return False
+        except AllProvidersFailed:
+            note("misconception", misconception.id, misconception.label,
+                 "provider_unavailable")
+            return False
+        created.append(_reteach_out(db, unit, citations=citations))
+        for cid in _concepts_for_problem_type(db, misconception.problem_type):
+            covered[cid] = unit.id
+        return True
+
+    def do_concept(row) -> bool:
+        concept = db.get(Concept, row["concept_id"])
+        if concept is None:
+            return False
+        if concept.id in covered:
+            note("concept", concept.id, concept.name,
+                 "covered_by_misconception", unit_id=covered[concept.id])
+            return False
+        existing = _existing_unit(db, concept_id=concept.id)
+        if existing is not None:
+            note("concept", concept.id, concept.name,
+                 "already_assigned" if existing.status != "draft" else "already_drafted",
+                 unit_id=existing.id)
+            return True
+        try:
+            unit, citations, _ = _draft_and_store(db, user, concept=concept)
+        except reteach.NotSupported as exc:
+            note("concept", concept.id, concept.name, "insufficient_evidence",
+                 alignment_percent=exc.report.to_dict()["alignment_percent"])
+            return False
+        except AllProvidersFailed:
+            note("concept", concept.id, concept.name, "provider_unavailable")
+            return False
+        created.append(_reteach_out(db, unit, citations=citations))
+        return True
+
+    # Misconceptions first, deliberately: they are what establishes `covered`,
+    # so running the gap half first would draft the duplicate before knowing it
+    # was one.
+    from_heatmap = take(heat, TOP_N_PER_RANKING, do_misconception)
+    from_gap_map = take(gaps, TOP_N_PER_RANKING, do_concept)
+
+    return {
+        "created": created,
+        "skipped": skipped,
+        # How many of each ranking's slots ended up with a unit behind them.
+        # Below `requested` means the corpus could not support more, not that
+        # the endpoint stopped early.
+        "coverage": {
+            "requested_per_ranking": TOP_N_PER_RANKING,
+            "from_heatmap": from_heatmap,
+            "from_gap_map": from_gap_map,
+        },
+    }
 
 
 @router.patch("/reteach/{unit_id}")

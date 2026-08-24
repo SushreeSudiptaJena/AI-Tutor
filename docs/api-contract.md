@@ -557,16 +557,38 @@ measurement.
 | Method | Path | Notes |
 |---|---|---|
 | `GET` | `/teacher/reteach` | `?status=draft` — **added after the freeze.** Without it there is no way to reach a unit that already exists: `suggest` returns one once and `PATCH` needs an id, so a reloaded page lost it. |
-| `POST` | `/teacher/reteach/suggest` | `{ misconception_id }` → `ReteachUnit` (`status: "draft"`) |
+| `POST` | `/teacher/reteach/suggest` | `{ misconception_id }` **or** `{ concept_id }` — exactly one. → `ReteachUnit` (`status: "draft"`) |
+| `POST` | `/teacher/reteach/suggest-top` | Drafts the top three of each ranking in one call. **`teacher-008`.** |
 | `PATCH` | `/teacher/reteach/{id}` | `{ title?, body? }` |
 | `POST` | `/teacher/reteach/{id}/approve` | → `status: "assigned"` |
 
 ```json
 // ReteachUnit
-{ "id": 12, "misconception_id": 7, "title": "…", "body": "…",
+{ "id": 12, "misconception_id": 7, "concept_id": null, "target": "misconception",
+  "label": "Puts the foreign key on the one side of a one-to-many relationship",
+  "title": "…", "body": "…",
   "practice_items": [ /* PracticeItem */ ], "citations": [ /* Citation */ ],
   "status": "draft", "approved_by": null }
 ```
+
+#### A unit targets a misconception **or** a prerequisite concept — `teacher-008`
+
+`misconception_id` is nullable as of `teacher-008`, and `concept_id` is new.
+**Exactly one of the two is set**, and `target` says which (`"misconception"` |
+`"concept"`) so a frontend never has to infer it from a null.
+
+The two kinds are not the same lesson with a different key on it:
+
+* A **misconception** unit argues against a belief the class already holds and
+  that has been working for them. It names the wrong model, finds the case
+  where it breaks, and says what to notice next time.
+* A **concept** unit teaches a prerequisite they were never taught. There is no
+  wrong model to dislodge — arguing against one they do not hold is confusing,
+  so it gets its own prompt (`prompts/reteach_prerequisite.md`).
+
+`practice_items[]` is empty for a concept unit. They are found through
+`problem_type`, which is a property of a misconception; a prerequisite gap has
+no error pattern to exercise yet.
 
 > A `draft` unit is **never** visible at `GET /student/assignments`. Enforced by the query, which filters `status == "assigned"`. The approval gate is the human-in-the-loop story — never auto-assign.
 
@@ -580,6 +602,61 @@ content wearing a teacher's name the moment it is approved. The response also
 carries `evidence` (the same `EvidenceReport` as a lesson) and `citations[]`.
 `practice_items[]` never include `correct_answer`; a teacher-facing screen is
 still a screen.
+
+#### Drafting the whole panel at once — `teacher-008`
+
+`POST /teacher/reteach/suggest-top` — no body. Fills the panel from **both**
+rankings: three units from `GET /teacher/misconceptions/heatmap` and three from
+`GET /teacher/gap-map`, so a teacher opening the page finds it populated rather
+than facing six deliberate button presses.
+
+**It aims for three from each ranking, not literally the top three rows.** A row
+that yields no unit — the corpus refuses it, or a gap is already covered by a
+misconception unit — advances to the next candidate instead of consuming a
+slot. Taken literally, "the top three" produced **two** units against the real
+corpus: one refusal and two overlaps, every one of them a correct decision, and
+still an empty-looking screen. A row that already *has* a unit does consume a
+slot, because the panel shows it.
+
+It looks at most `8` rows deep per ranking, so a thin corpus cannot turn one
+press into forty model calls.
+
+```json
+{
+  "created": [ /* ReteachUnit */ ],
+  "skipped": [
+    { "target": "misconception", "id": 16, "label": "…",
+      "reason": "insufficient_evidence", "alignment_percent": 41 },
+    { "target": "concept", "id": 19, "label": "Filtering and querying records",
+      "reason": "already_drafted", "unit_id": 14 },
+    { "target": "concept", "id": 18, "label": "One-to-many relationships",
+      "reason": "covered_by_misconception", "unit_id": 12 }
+  ],
+  "coverage": { "requested_per_ranking": 3, "from_heatmap": 3, "from_gap_map": 2 }
+}
+```
+
+`coverage` says how many slots each ranking actually filled. Below
+`requested_per_ranking` means the corpus could not support more — not that the
+endpoint gave up early.
+
+Everything it makes is a `draft`. **It never assigns**, so `GET
+/student/assignments` is unchanged by this call — the approval gate is the
+whole human-in-the-loop story and a batch button must not become a way around
+it.
+
+`skipped[].reason` is one of:
+
+| `reason` | Meaning |
+|---|---|
+| `insufficient_evidence` | The corpus cannot support a unit on that target. Carries `alignment_percent`. **The other five are still drafted** — one refusal must never fail the batch. |
+| `already_drafted` | An unapproved draft for that target already exists. Running this twice does not double the units; use `suggest` to redraft one. |
+| `already_assigned` | An approved unit already covers it. Not silently replaced — that would change what students were given. |
+| `covered_by_misconception` | A gap concept whose error pattern a misconception unit in this same batch already covers. The top gap and the top heatmap row are frequently the same subject seen from two directions, and two near-identical units read as padding. |
+
+A `503` from the provider chain fails only the target it was drafting; the
+batch reports it as `provider_unavailable` and carries on. The endpoint returns
+`200`, not `201` — it is a partial-success report, not a single creation.
 
 ### AI-sourced content verification queue — `teacher-007`
 | Method | Path | Notes |
@@ -649,6 +726,7 @@ Every shape above is final enough to mock. Suggested order, matching `feature_li
 
 | When | Change |
 |---|---|
+| 2026-08-24 | **`teacher-008` — a reteach unit can now target a prerequisite concept, not only a misconception.** `ReteachUnit.misconception_id` becomes **nullable**, `concept_id` is added, exactly one is set, and a new `target` field says which. New `POST /teacher/reteach/suggest-top` drafts the top three of the heatmap and the top three of the gap map in one call and reports what it skipped and why. `POST /teacher/reteach/suggest` now accepts `{ concept_id }` as well. Everything stays a `draft` — the batch never assigns. **This one needs a migration**: `create_all()` does not alter an existing table, so run `backend/scripts/migrate_reteach_targets.py` once against the shared database. |
 | 2026-08-24 | **`student-009` — answers are now readable back, so a reload does not wipe them.** `GET /student/diagnostic` gains `submitted_at` and a `your_answer` on every item; new `GET /student/practice/{practice_set_id}` returns a set with `your_answer`, `correct` and the pending `diagnosis` (now carrying `confirmed`); `Gap` gains `latest_practice_set_id` so a client can find the set to resume. All additive — no existing field changed shape or meaning. The no-score rule is intact: diagnostic **correctness is still never stored**, only the answer text, so there remains nothing countable in the database and `correct_answer` still never leaves the server. |
 | 2026-08-23 | Initial draft covering all 32 features. |
 | 2026-08-23 | `/health` documented as always-200 with a `degraded` state; implemented in `infra-002`. |

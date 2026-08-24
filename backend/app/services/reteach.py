@@ -24,7 +24,7 @@ import json
 from sqlalchemy.orm import Session as OrmSession
 
 from .. import prompts
-from ..models import Misconception, Topic
+from ..models import Concept, Course, Misconception, Topic
 from ..providers import complete
 from . import evidence, retrieval
 
@@ -94,6 +94,64 @@ def draft(db: OrmSession, misconception: Misconception, *, k: int = retrieval.DE
     if not body:
         body = (
             f"{misconception.description or misconception.label}\n\n"
+            "The model did not return a usable draft. The citations below are "
+            "the approved material this unit should be built from."
+        )
+
+    return title[:300], body, cites, report
+
+
+def draft_for_concept(db: OrmSession, concept: Concept, *, k: int = retrieval.DEFAULT_K):
+    """The gap-map half of teacher-008. Same contract as `draft()`.
+
+    Deliberately not `draft()` with a different label. A misconception unit
+    argues against a model the class already holds; this one teaches something
+    they were never taught. Arguing against a mistake they have not made is
+    confusing and faintly insulting, so the pedagogy -- and therefore the
+    prompt -- is different. See prompts/reteach_prerequisite.md.
+
+    The retrieval query is the concept name plus its topic. Unlike a
+    misconception there is no error phrasing to search with, and the topic is
+    what disambiguates a bare concept name against a whole book.
+    """
+    topic = db.get(Topic, concept.topic_id) if concept.topic_id else None
+    course_id = topic.course_id if topic else None
+
+    query = f"{concept.name}. {topic.name if topic else ''}".strip()
+    hits = retrieval.search(db, query, course_id=course_id, k=k)
+    report = evidence.assess(query, hits)
+    if not report.sufficient:
+        raise NotSupported(report)
+
+    prerequisite = (
+        db.get(Course, concept.prerequisite_course_id)
+        if concept.prerequisite_course_id else None
+    )
+    context, cites = retrieval.grounding(hits)
+    result = complete(
+        prompts.render("reteach_prerequisite",
+                       label=concept.name,
+                       topic=topic.name if topic else "this course",
+                       prerequisite_course=(
+                           prerequisite.title if prerequisite else "an earlier course"),
+                       context=context),
+        json_schema=RETEACH_SCHEMA,
+        max_tokens=DRAFT_MAX_TOKENS,
+    )
+
+    title, body = "", ""
+    try:
+        parsed = json.loads(result.text)
+        title = str(parsed.get("title", "")).strip()
+        body = str(parsed.get("body", "")).strip()
+    except (json.JSONDecodeError, TypeError, ValueError):
+        pass
+
+    if not title:
+        title = f"Reteach: {concept.name}"[:300]
+    if not body:
+        body = (
+            f"{concept.name}\n\n"
             "The model did not return a usable draft. The citations below are "
             "the approved material this unit should be built from."
         )

@@ -189,10 +189,90 @@ def test_before_after_is_null_not_zero_before_any_reteach():
 
 
 def test_a_reteach_unit_is_created_as_a_draft_and_never_assigned():
-    """The approval gate is the human-in-the-loop story. Never auto-assign."""
-    source = _sql_of(teacher.suggest_reteach)
+    """The approval gate is the human-in-the-loop story. Never auto-assign.
+
+    Both write paths -- `suggest` and teacher-008's `suggest-top` -- go through
+    `_draft_and_store`, which is the point: two routes that each set a status
+    could drift, and only one of them would be noticed.
+    """
+    source = _sql_of(teacher._draft_and_store)
     assert 'unit.status = "draft"' in source
     assert '"assigned"' not in source
+    # And neither route may set a status behind the helper's back.
+    for fn in (teacher.suggest_reteach, teacher.suggest_top_reteach):
+        assert "unit.status =" not in _sql_of(fn)
+
+
+def test_the_batch_suggest_never_assigns_and_survives_one_refusal():
+    """teacher-008. The corpus genuinely cannot support a unit on every target,
+    so partial success is the normal case -- one 422 must not cost the other
+    five drafts."""
+    source = _sql_of(teacher.suggest_top_reteach)
+    assert '"assigned"' not in source.replace('"already_assigned"', "")
+    # Every failure mode is recorded and moved past, never raised: a 422 on one
+    # target must not cost the other five drafts.
+    for failure in ("reteach.NotSupported", "AllProvidersFailed"):
+        assert source.count(f"except {failure}") == 2, (
+            f"{failure} must be handled on both the misconception and concept halves"
+        )
+    assert "raise" not in source, "a per-target failure must not abort the batch"
+    assert source.count('"insufficient_evidence"') == 2
+    assert source.count('"provider_unavailable"') == 2
+
+
+def test_the_batch_walks_further_down_a_ranking_when_a_row_yields_nothing():
+    """Strictly 'the top three' filled the panel with two units on the real
+    corpus -- one target refused for lack of evidence and two gaps were already
+    covered by a misconception unit. Correct decisions, empty-looking screen."""
+    source = _sql_of(teacher.suggest_top_reteach)
+    assert "MAX_CANDIDATES_PER_RANKING" in source
+    assert teacher.MAX_CANDIDATES_PER_RANKING > teacher.TOP_N_PER_RANKING
+    # Bounded, so a barren corpus cannot turn one press into dozens of calls.
+    assert teacher.MAX_CANDIDATES_PER_RANKING <= 12
+
+
+def test_the_misconception_half_runs_before_the_gap_half():
+    """It is what establishes `covered`. Running the gap half first would draft
+    the duplicate before knowing it was one."""
+    source = _sql_of(teacher.suggest_top_reteach)
+    assert source.index("do_misconception)") < source.index("do_concept)")
+
+
+def test_the_batch_skips_an_existing_draft_instead_of_overwriting_it():
+    """A batch button that redrafted would silently destroy a teacher's edits
+    the second time they pressed it, and spend six model calls doing it."""
+    source = _sql_of(teacher.suggest_top_reteach)
+    assert '"already_drafted"' in source
+    assert source.count("_existing_unit") == 2   # checked on both halves
+
+
+def test_a_reteach_unit_targets_exactly_one_of_the_two():
+    import pydantic
+    import pytest
+
+    from app.models import ReteachUnit
+    from app.schemas import SuggestReteachIn
+
+    cols = ReteachUnit.__table__.columns
+    assert cols["misconception_id"].nullable, "the gap map has no misconception"
+    assert "concept_id" in cols and cols["concept_id"].nullable
+
+    SuggestReteachIn(misconception_id=1)
+    SuggestReteachIn(concept_id=1)
+    for ambiguous in ({}, {"misconception_id": 1, "concept_id": 1}):
+        with pytest.raises(pydantic.ValidationError):
+            SuggestReteachIn(**ambiguous)
+
+
+def test_a_prerequisite_unit_does_not_argue_against_a_misconception():
+    """Different pedagogy, so a different prompt. Telling students they believe
+    something wrong, when they were simply never taught it, is confusing."""
+    from app.prompts import load
+
+    body = load("reteach_prerequisite").lower()
+    assert "never taught" in body or "were never" in body
+    assert "{{prerequisite_course}}" in load("reteach_prerequisite")
+    assert load("reteach_prerequisite") != load("reteach_suggest")
 
 
 def test_only_approve_can_assign_a_reteach_unit():
@@ -255,3 +335,16 @@ def test_status_filters_use_the_query_name_the_contract_documents():
         assert getattr(default, "alias", None) == "status", (
             f"{fn.__name__} exposes its status filter under the wrong query name"
         )
+
+
+def test_overlap_coverage_is_recorded_even_when_the_unit_already_existed():
+    """Found by running the batch twice. `covered` was only populated on the
+    create path, so the second run skipped the covering misconception as
+    already_drafted, forgot the overlap, and drafted the duplicate gap unit the
+    first run had correctly declined. Coverage is a fact about the unit
+    existing, not about having made it this run."""
+    source = _sql_of(teacher.suggest_top_reteach)
+    assert source.count("_concepts_for_problem_type") == 2, (
+        "coverage must be recorded on both the create path and the skip path"
+    )
+    assert "covered[cid] = existing.id" in source

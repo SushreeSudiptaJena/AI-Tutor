@@ -745,6 +745,32 @@
       ],
       "evidence": "evidence/student-009/verification.txt",
       "notes": "PASSING 2026-08-24. Contract change, so docs/api-contract.md was edited FIRST (changelog row at the top; student-002, student-005 and the Gap object all amended). Found while debugging a report that MCQ selection was not persistent: the dev harness held selections in the DOM only, but the backend half was real -- GET /student/diagnostic returned items with no record of what was answered and there was no GET for a practice set, so no frontend could have restored state either. PRACTICE needed no new storage: Attempt already holds answer + correct, and MisconceptionDiagnosis.confirmed is already three-state, so GET /student/practice/{id} just reads them; explanation and citations are deliberately NOT replayed because each costs a model call. The DIAGNOSTIC did need storage: submit_diagnostic judges correctness in memory and persists only Gap and Mastery rows -- its docstring says 'no score is computed here even internally'. New table diagnostic_responses therefore stores the ANSWER TEXT ONLY and has no correctness column, so there is still nothing countable in the database and correct_answer still never leaves the server; two tests now guard that. Created with create_all(), which added the one table and dropped nothing. WHAT VERIFYING FOUND THAT READING WOULD NOT: reset_demo_state.py knew nothing about the new table, so a pre-demo reset would have left the diagnostic opening with every option already selected from the last rehearsal -- the app appearing to answer its own questions, on stage. Now in its PLAN and covered by a test. Verified live end to end, then the golden path re-run clean: diagnostic -> gap attributed to CSW1 -> lesson at 66% with four real page citations -> scoped practice -> wrong answer -> the specific misconception -> confirm -> heatmap 7 -> 8, and the answer plus its confirmed diagnosis still there after a re-read. 281 tests (was 272). Re-runnable: backend/scripts/verify_student_009.py and backend/scripts/smoke_golden_path.py."
+    },
+    {
+      "id": "teacher-008",
+      "priority": 36,
+      "area": "teacher",
+      "title": "Reteach suggestions from both rankings, not one misconception at a time",
+      "user_visible_behavior": "A teacher opening the reteach panel sees six drafts waiting -- the three misconceptions most students confirmed, and the three prerequisite concepts most students are missing -- instead of an empty list and a button they have to press once per misconception.",
+      "status": "passing",
+      "depends_on": [
+        "teacher-004",
+        "teacher-003",
+        "teacher-006"
+      ],
+      "demo_mode": "live",
+      "verification": [
+        "POST /teacher/reteach/suggest-top fills three slots from GET /teacher/misconceptions/heatmap and three from GET /teacher/gap-map, walking further down a ranking when a row yields no unit, and reports coverage.from_heatmap / coverage.from_gap_map.",
+        "A gap-driven unit comes back with concept_id set and misconception_id null; a heatmap-driven one the other way round. Exactly one is ever set.",
+        "Every unit it creates has status draft. Nothing is auto-assigned, and GET /student/assignments is unchanged by the call.",
+        "A target the corpus cannot support is SKIPPED with a reason, not invented, and the other five still get drafted -- one 422 must not fail the batch.",
+        "A target that already has a draft is skipped rather than duplicated; running suggest-top twice does not double the units.",
+        "A gap concept already covered by a misconception unit in the same batch is skipped as redundant, with the overlap reported.",
+        "POST /teacher/reteach/suggest still works with {misconception_id} and now also accepts {concept_id}; passing both or neither is a 422.",
+        "python -m pytest backend/tests -q passes and ./init.sh still passes."
+      ],
+      "evidence": "evidence/teacher-008/verification.txt",
+      "notes": "PASSING 2026-08-24. Contract + schema change, so docs/api-contract.md was edited FIRST. ReteachUnit was keyed to a misconception with a NOT NULL FK, so the gap map -- which ranks CONCEPTS, not wrong beliefs -- had nothing to hang a unit on. misconception_id is now nullable, concept_id is added, exactly one is set, and a new `target` field says which so a frontend never infers a kind from a null. create_all() does NOT alter an existing table, so this needed explicit idempotent ALTERs in backend/scripts/migrate_reteach_targets.py -- the no-Alembic tradeoff -- run once against the shared Neon database. The two kinds get different prompts: a misconception unit argues against a belief the class already holds, a prerequisite unit teaches something they were never taught, so reteach_prerequisite.md is a sibling of reteach_suggest.md, not a reuse. TWO THINGS ONLY RUNNING IT FOUND. (1) Taken literally, 'the top three of each' produced TWO units against the real corpus: one misconception refused at 43% and two gaps were already covered by a misconception unit -- every one of those a correct decision, and still an empty-looking panel, which is the opposite of what was asked for. So a row that yields no unit now advances to the next candidate instead of consuming a slot, bounded at 8 rows deep per ranking; the run then filled 3/3 and 3/3. (2) Coverage of an overlapping gap was only recorded when a unit was CREATED, so the second run skipped the covering misconception as already_drafted, forgot the overlap, and drafted the duplicate the first run had correctly declined. Coverage is a fact about the unit existing; regression test added. Final live run: 5 created + 1 seeded = 6 drafts, nothing assigned, GET /student/assignments unchanged, and a second press created nothing. 288 tests (was 285). Re-runnable: backend/scripts/verify_teacher_008.py."
     }
   ]
 }

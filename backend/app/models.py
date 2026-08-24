@@ -410,7 +410,17 @@ class ReteachUnit(Base):
     __tablename__ = "reteach_units"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    misconception_id: Mapped[int] = mapped_column(ForeignKey("misconceptions.id"), index=True)
+    # teacher-008: a unit targets a misconception OR a prerequisite concept,
+    # never both and never neither. The gap map ranks concepts, not wrong
+    # beliefs, so a NOT NULL misconception_id left it nothing to hang a unit on.
+    #
+    # Two columns rather than a (kind, target_id) pair on purpose: these are
+    # real foreign keys to different tables, and a polymorphic id would give up
+    # referential integrity to save one column.
+    misconception_id: Mapped[int | None] = mapped_column(
+        ForeignKey("misconceptions.id"), index=True
+    )
+    concept_id: Mapped[int | None] = mapped_column(ForeignKey("concepts.id"), index=True)
     title: Mapped[str] = mapped_column(String(300))
     body: Mapped[str] = mapped_column(Text)
     # draft is invisible to every student query. The approval gate is the
@@ -419,7 +429,14 @@ class ReteachUnit(Base):
     approved_by_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"))
     created_at: Mapped[datetime] = _now()
 
-    misconception: Mapped["Misconception"] = relationship()
+    misconception: Mapped["Misconception | None"] = relationship()
+    concept: Mapped["Concept | None"] = relationship()
+
+    @property
+    def target(self) -> str:
+        """Which of the two this unit is about. The API returns this so a
+        frontend never has to infer a kind from which field happens to be null."""
+        return "misconception" if self.misconception_id is not None else "concept"
 
 
 class SourcedContent(Base):
