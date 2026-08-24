@@ -1,0 +1,156 @@
+admin-001 / admin-002 / admin-003 -- live
+=========================================
+Against the real shared database, signed in as admin@example.edu. Every route
+was also called as a teacher and as a student.
+
+
+
+
+==============================================================================
+ROLE: admin only -- a TEACHER is not an admin here
+==============================================================================
+  teacher /admin/courses           -> 403   student -> 403   admin -> 200
+  teacher /admin/audit-log         -> 403   student -> 403   admin -> 200
+  teacher /admin/departments       -> 403   student -> 403   admin -> 200
+
+==============================================================================
+admin-002  structure with prerequisites
+==============================================================================
+   CS-C    Programming with C                 prerequisites: -
+   CSW1    Computer Science Workshop 1        prerequisites: -
+   CSW2    Computer Science Workshop 2        prerequisites: CSW1
+   PH000   Class 12 Physics                   prerequisites: -
+   PH101   Mechanics                          prerequisites: -
+
+   THIS is what makes gap attribution correct: CSW2 -> CSW1
+
+==============================================================================
+admin-002  create a department and a course with a prerequisite
+==============================================================================
+dept: 201 {'id': 4, 'name': 'Electronics & Communication'}
+course: 201 {
+ "id": 7,
+ "code": "CSW3",
+ "title": "Computer Science Workshop 3",
+ "department_id": 4,
+ "prerequisite_courses": [
+  {
+   "id": 6,
+   "code": "CSW1",
+   "title": "Computer Science Workshop 1"
+  }
+ ]
+}
+
+==============================================================================
+admin-002  a bad prerequisite FAILS rather than being dropped
+==============================================================================
+400 No course with id 999999 to use as a prerequisite.
+duplicate code -> 409
+
+
+
+==============================================================================
+admin-001  upload a syllabus PDF
+==============================================================================
+status: 201
+{
+ "id": 13,
+ "title": "CSW2 Course Syllabus",
+ "kind": "syllabus",
+ "version": 1,
+ "status": "active",
+ "ingest_status": "pending",
+ "uploaded_by": "admin@example.edu"
+}
+note: Stored and marked pending. Run backend/scripts/ingest_pdfs.py to parse, chunk and embed it -- embedd
+
+==============================================================================
+admin-001  upload a REPLACEMENT of the same title
+==============================================================================
+status: 201 | version: 2 | archived: [13]
+
+==============================================================================
+THE PREVIOUS VERSION IS ARCHIVED, NOT DELETED
+==============================================================================
+active titles      : ['CSW2 Course Syllabus v2']
+including archived : ['CSW2 Course Syllabus v2 [active]', 'CSW2 Course Syllabus v1 [archived]']
+
+versions of v2 (newest first):
+   v2  active    id=14  uploaded_by=admin@example.edu
+   v1  archived  id=13  uploaded_by=admin@example.edu
+
+==============================================================================
+ARCHIVE THE REAL DJANGO BOOK -> it leaves retrieval, then put it back
+==============================================================================
+book: Django 5 By Example (Antonio Mele) | status: active | chunks: 1938
+books visible to the student: 2 -> 1  (archived material leaves retrieval)
+restored -> active | chunks still: 1938
+
+==============================================================================
+admin-003  the audit log
+==============================================================================
+total rows: 26
+   2026-08-24T09:30:32  admin@example.edu    material.archive           material:12
+   2026-08-24T09:30:15  admin@example.edu    material.upload            material:14
+   2026-08-24T09:30:13  admin@example.edu    material.upload            material:13
+   2026-08-24T09:29:08  admin@example.edu    course.create              course:7
+   2026-08-24T09:29:07  admin@example.edu    department.create          department:4
+   2026-08-24T09:23:25  ravi@example.edu     reteach.approve            reteach:15
+   2026-08-24T09:23:17  ravi@example.edu     reteach.suggest            reteach:15
+   2026-08-24T08:44:34  ravi@example.edu     reteach.approve            reteach:14
+
+filter by action=material.upload -> 2 rows
+filter by actor=ravi -> 7 rows
+
+actions present: ['course.create', 'department.create', 'material.archive', 'material.upload', 'reteach.approve', 'reteach.edit', 'reteach.suggest', 'seed.run', 'sourced_content.approved', 'sourced_content.rejected']
+
+WHAT THIS RUN PROVES
+--------------------
+admin-002  Departments, courses and the prerequisite graph. CSW2 -> CSW1 is
+           the link that makes every gap say "should have come from Computer
+           Science Workshop 1"; get it wrong and gaps are attributed to the
+           wrong place, which is worse than not attributing them.
+           A prerequisite id that does not exist is a 400, NOT a silent drop:
+           nothing downstream can tell "no prerequisite" from "one we lost".
+           A duplicate course code is a 409.
+
+admin-001  Upload stores the file, creates the Material and versions it.
+           Re-uploading the same title produced v2 and archived v1 -- it is
+           still listed, with status "archived", not deleted. Chunks cite a
+           material by page, so deleting one would leave a student looking at
+           a citation to a book that is not there.
+           Archiving the real Django book took it out of retrieval
+           immediately: the student's course summary went from 2 books to 1,
+           while its 1,938 chunks stayed addressable. Restored afterwards.
+           Upload does NOT embed inline. Embedding a 1,190-page textbook is
+           minutes of CPU, and an HTTP request that takes minutes is a request
+           that times out; the row is marked ingest_status "pending" and the
+           response says which script to run.
+           The stored filename is derived from the title, never taken from the
+           client -- "../../.env" is a filename.
+
+admin-003  Who did what, when. 26 rows across the whole system, filterable by
+           action and by actor email. It is load-bearing rather than
+           decorative: teacher-005 reads the reteach approval time from these
+           rows, because reteach_units has no approved_at column.
+
+ROLE       Every admin route returns 403 to a TEACHER as well as to a student.
+           teacher_only admits teachers; uploading course material and
+           rewriting the prerequisite graph are institutional acts.
+
+A CONTRACT VIOLATION THIS RUN CAUGHT
+------------------------------------
+The audit actions came out as "sourced_content.approved"/"rejected" because
+they were derived from the resulting status. The contract documents
+"sourced_content.approve"/"reject". Those strings are an API surface -- an
+admin filters with ?action= -- so the derived names matched nothing anybody
+would type. Fixed to use the documented verbs, the two existing rows renamed,
+and a test now parses the verb map out of the AST and checks it against the
+documented set.
+
+CLEANED UP AFTERWARDS
+---------------------
+The CSW3 course, the Electronics & Communication department and both test
+syllabus materials created by this run were removed from the shared database,
+along with their audit rows and uploaded files.

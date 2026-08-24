@@ -274,6 +274,9 @@ Ingestion (`ingest-001`):
 | Method | Path | Notes |
 |---|---|---|
 | `POST` | `/admin/materials/{material_id}/ingest` | `202 { job_id }` — parse + chunk + embed |
+
+> **NOT BUILT.** These two need an `ingest_jobs` table that does not exist, and `ingest-001` is already delivered through `backend/scripts/ingest_pdfs.py`. `POST /admin/courses/{id}/materials` stores the file and marks it `ingest_status: "pending"`; the script does the parsing and embedding. Do not build a frontend against the two rows below.
+
 | `GET` | `/admin/ingest-jobs/{job_id}` | `{ job_id, status, pages_done, pages_total, chunk_count, error? }` |
 
 `status`: `queued` | `running` | `complete` | `failed`. Frontend polls this; there are no websockets anywhere in this build.
@@ -555,6 +558,7 @@ Every shape above is final enough to mock. Suggested order, matching `feature_li
 | 2026-08-23 | `/health` documented as always-200 with a `degraded` state; implemented in `infra-002`. |
 | 2026-08-23 | Guardrail narrowed to `/tutor/ask` only, and now requires intent + assignment match. `Gap` gains `suggested_prompts`. |
 | 2026-08-24 | Golden path complete. `POST /student/practice/generate` (needs `gap_id`; also returns `concept` and `source: generated\|seeded`), `POST /student/practice/{id}/answer`, `POST /student/misconception-diagnosis/{id}/confirm`, `GET /teacher/misconceptions/heatmap`, `GET /teacher/uncertainty-flags` and its `/resolve`. `student-004` Show Source needs no endpoint — it is the `Citation` object. |
+| 2026-08-24 | Admin built: `admin-002` departments/courses/prerequisites, `admin-001` material upload with archiving-not-deleting and version history, `admin-003` audit log. The `sourced_content` audit actions are the documented verbs (`.approve`/`.reject`), not the resulting status. The two ingest endpoints are marked NOT BUILT. |
 | 2026-08-24 | Teacher panels built: `teacher-002` reasoning paths, `teacher-003` gap map, `teacher-005` before/after (now with `measured`/`attempts_in_window`; `delta_share` null until tested), `teacher-006` reteach suggest/patch/approve **plus new `GET /teacher/reteach`** and `GET /student/assignments`, `teacher-007` verification queue. |
 | 2026-08-24 | `GET /student/mastery` is **now built** (`student-007`) — exact shape as documented; no aggregate score, no time-on-task, and nothing countable to rebuild one from. |
 | 2026-08-24 | `POST /student/syllabus-upload` is **now built** (`student-008`) — PDF/`.txt`/`.md`, ≤10 MB, same `{gaps, message}` body as `submit`, `detected_from: "syllabus_upload"`, documented 400 reasons. |

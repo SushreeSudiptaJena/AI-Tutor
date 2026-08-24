@@ -1,0 +1,482 @@
+"""Admin routes -- admin-001, admin-002, admin-003.
+
+The provenance half of the system. Everything a student is ever told comes out
+of a `Material` somebody uploaded, and these routes are where that somebody is
+recorded. The claim "curriculum-aligned" is only checkable if you can get from
+an answer, through its citation, to a file and the person who put it there.
+
+Three rules:
+
+* **Admin only.** `teacher_only` admits teachers; nothing here does. Uploading
+  course material and rewriting the prerequisite graph are institutional acts.
+
+* **Nothing is deleted, only archived.** A replaced textbook stays as a row
+  with `status: "archived"`. Chunks already cite it by page, and deleting the
+  material would leave a student looking at a citation to a book that no longer
+  exists. Archiving keeps history readable and takes the material out of
+  retrieval, which is what `retrieval.search` already filters on.
+
+* **Every mutation writes an audit row.** Not for tidiness -- `admin-003` is
+  the only place a human can see who approved what, and `teacher-005` reads
+  the reteach approval time out of the same table.
+
+Upload by a verified admin **counts as approval** for this build. There is no
+separate approval step for admin-uploaded material, per the feature plan.
+"""
+
+from __future__ import annotations
+
+import re
+import unicodedata
+from pathlib import Path
+
+from fastapi import (
+    APIRouter,
+    Depends,
+    File,
+    Form,
+    HTTPException,
+    UploadFile,
+    status,
+)
+from sqlalchemy import func, select
+from sqlalchemy.orm import Session as OrmSession
+
+from ..config import REPO_ROOT
+from ..db import get_db
+from ..deps import admin_only
+from ..models import AuditLog, Course, Department, Material, User
+from ..schemas import CourseIn, DepartmentIn
+
+router = APIRouter(prefix="/admin", tags=["admin"])
+
+MATERIAL_KINDS = ("syllabus", "textbook", "notes", "assignment")
+
+# Big enough for a real textbook. `Django 5 By Example` is 1190 pages and about
+# 20 MB, and a cap that rejects the corpus we actually run on would be a cap
+# chosen without looking.
+MAX_MATERIAL_BYTES = 80 * 1024 * 1024
+
+UPLOAD_DIR = REPO_ROOT / "backend" / "data" / "pdfs"
+
+
+def _audit(db: OrmSession, user: User, action: str, target: str, detail: dict):
+    db.add(AuditLog(actor_id=user.id, action=action, target=target, detail=detail))
+
+
+# ---------------------------------------------------------------------------
+# admin-002 -- departments, courses, prerequisites
+# ---------------------------------------------------------------------------
+
+def _course_out(course: Course) -> dict:
+    return {
+        "id": course.id,
+        "code": course.code,
+        "title": course.title,
+        "department_id": course.department_id,
+        # The reason this feature exists. Gap detection names the prior course
+        # a student should have learned something in, and it reads it from
+        # here -- get this wrong and every gap is attributed to the wrong
+        # place, which is worse than not attributing it at all.
+        "prerequisite_courses": [
+            {"id": p.id, "code": p.code, "title": p.title}
+            for p in course.prerequisites
+        ],
+    }
+
+
+@router.get("/departments")
+def list_departments(
+    db: OrmSession = Depends(get_db),
+    user: User = Depends(admin_only),
+) -> dict:
+    rows = db.scalars(select(Department).order_by(Department.name)).all()
+    return {"items": [{"id": d.id, "name": d.name} for d in rows]}
+
+
+@router.post("/departments", status_code=status.HTTP_201_CREATED)
+def create_department(
+    body: DepartmentIn,
+    db: OrmSession = Depends(get_db),
+    user: User = Depends(admin_only),
+) -> dict:
+    existing = db.scalar(select(Department).where(Department.name == body.name))
+    if existing is not None:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={"code": "conflict",
+                    "message": "A department with that name already exists.",
+                    "detail": {"id": existing.id}},
+        )
+    row = Department(name=body.name)
+    db.add(row)
+    db.flush()
+    _audit(db, user, "department.create", f"department:{row.id}", {"name": row.name})
+    db.flush()
+    return {"id": row.id, "name": row.name}
+
+
+@router.get("/courses")
+def list_courses(
+    db: OrmSession = Depends(get_db),
+    user: User = Depends(admin_only),
+) -> dict:
+    rows = db.scalars(select(Course).order_by(Course.code)).all()
+    return {"items": [_course_out(c) for c in rows]}
+
+
+@router.get("/courses/{course_id}")
+def get_course(
+    course_id: int,
+    db: OrmSession = Depends(get_db),
+    user: User = Depends(admin_only),
+) -> dict:
+    course = db.get(Course, course_id)
+    if course is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={"code": "not_found", "message": "No such course."},
+        )
+    return _course_out(course)
+
+
+@router.post("/courses", status_code=status.HTTP_201_CREATED)
+def create_course(
+    body: CourseIn,
+    db: OrmSession = Depends(get_db),
+    user: User = Depends(admin_only),
+) -> dict:
+    if db.scalar(select(Course).where(Course.code == body.code)) is not None:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={"code": "conflict",
+                    "message": f"Course {body.code} already exists."},
+        )
+    if body.department_id is not None and db.get(Department, body.department_id) is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={"code": "bad_request", "message": "No such department."},
+        )
+
+    course = Course(code=body.code, title=body.title,
+                    department_id=body.department_id)
+    db.add(course)
+    db.flush()
+
+    # Resolved before assigning, not after. A prerequisite id that does not
+    # exist has to fail here; silently dropping it would produce a course whose
+    # gap attribution is quietly wrong, and nothing downstream can tell the
+    # difference between "no prerequisite" and "a prerequisite we lost".
+    for pid in dict.fromkeys(body.prerequisite_course_ids):
+        if pid == course.id:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail={"code": "bad_request",
+                        "message": "A course cannot be its own prerequisite."},
+            )
+        prerequisite = db.get(Course, pid)
+        if prerequisite is None:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail={"code": "bad_request",
+                        "message": f"No course with id {pid} to use as a prerequisite."},
+            )
+        course.prerequisites.append(prerequisite)
+
+    db.flush()
+    _audit(db, user, "course.create", f"course:{course.id}",
+           {"code": course.code,
+            "prerequisites": [p.code for p in course.prerequisites]})
+    db.flush()
+    return _course_out(course)
+
+
+# ---------------------------------------------------------------------------
+# admin-001 -- curriculum upload and versioning
+# ---------------------------------------------------------------------------
+
+def _material_out(db: OrmSession, m: Material) -> dict:
+    uploader = db.get(User, m.uploaded_by_id) if m.uploaded_by_id else None
+    return {
+        "id": m.id,
+        "course_id": m.course_id,
+        "title": m.title,
+        "kind": m.kind,
+        "version": m.version,
+        "status": m.status,
+        "page_count": m.page_count,
+        # An email, not a name: the audit trail has to identify a person
+        # uniquely, and two teachers can share a name. This is an admin-only
+        # route, so it is not a leak of a student's identity.
+        "uploaded_by": uploader.email if uploader else None,
+        "uploaded_at": m.uploaded_at.isoformat().replace("+00:00", "Z")
+        if m.uploaded_at else None,
+        "ingest_status": m.ingest_status,
+        "chunk_count": m.chunk_count,
+    }
+
+
+def _safe_name(name: str) -> str:
+    """A filename derived from the title, not taken from the upload.
+
+    The client-supplied filename reaches the filesystem otherwise, and
+    `../../.env` is a filename. Normalising to ASCII and stripping everything
+    that is not a word character removes the traversal, the separators and the
+    Windows-reserved punctuation in one pass.
+    """
+    ascii_name = unicodedata.normalize("NFKD", name).encode("ascii", "ignore").decode()
+    cleaned = re.sub(r"[^A-Za-z0-9._-]+", "-", ascii_name).strip("-._")
+    return (cleaned or "material")[:80]
+
+
+@router.post("/courses/{course_id}/materials", status_code=status.HTTP_201_CREATED)
+def upload_material(
+    course_id: int,
+    file: UploadFile = File(...),
+    kind: str = Form(...),
+    title: str = Form(...),
+    db: OrmSession = Depends(get_db),
+    user: User = Depends(admin_only),
+) -> dict:
+    """Add material to a course, versioning any earlier copy of the same title.
+
+    Uploading a replacement does not overwrite. The previous row is archived
+    and keeps its chunks, because those chunks are what existing citations
+    point at -- deleting them would turn a student's Show Source into a
+    reference to a book that is not there any more. Archived material is
+    excluded from retrieval by `materials.status`, so it stops being quoted
+    without stopping being explicable.
+
+    The file is written to disk and the row is created with
+    `ingest_status: "pending"`. Embedding is NOT done here: it is minutes of
+    CPU for a real textbook, and an HTTP request that takes minutes is a
+    request that times out. `backend/scripts/ingest_pdfs.py` does the work.
+    """
+    course = db.get(Course, course_id)
+    if course is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={"code": "not_found", "message": "No such course."},
+        )
+    if kind not in MATERIAL_KINDS:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={"code": "bad_request",
+                    "message": f"kind must be one of {', '.join(MATERIAL_KINDS)}.",
+                    "detail": {"given": kind}},
+        )
+    title = title.strip()[:300]
+    if not title:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={"code": "bad_request", "message": "title is required."},
+        )
+
+    try:
+        data = file.file.read(MAX_MATERIAL_BYTES + 1)
+    finally:
+        file.file.close()
+    if not data:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={"code": "bad_request", "message": "That file is empty."},
+        )
+    if len(data) > MAX_MATERIAL_BYTES:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={"code": "bad_request",
+                    "message": f"That file is larger than "
+                               f"{MAX_MATERIAL_BYTES // (1024 * 1024)} MB."},
+        )
+
+    previous = db.scalars(
+        select(Material)
+        .where(Material.course_id == course_id, Material.title == title)
+        .order_by(Material.version.desc())
+    ).all()
+    version = (previous[0].version + 1) if previous else 1
+    for old in previous:
+        old.status = "archived"
+
+    UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+    suffix = Path(file.filename or "").suffix.lower()
+    if suffix not in (".pdf", ".txt", ".md", ".epub"):
+        suffix = ".pdf" if data[:5] == b"%PDF-" else ".bin"
+    path = UPLOAD_DIR / f"{course.code}-{_safe_name(title)}-v{version}{suffix}"
+    path.write_bytes(data)
+
+    material = Material(
+        course_id=course_id, title=title, kind=kind, version=version,
+        status="active", page_count=0, source_path=str(path),
+        uploaded_by_id=user.id, ingest_status="pending", chunk_count=0,
+    )
+    db.add(material)
+    db.flush()
+
+    _audit(db, user, "material.upload", f"material:{material.id}",
+           {"title": title, "kind": kind, "version": version,
+            "bytes": len(data),
+            "archived": [m.id for m in previous]})
+    db.flush()
+
+    out = _material_out(db, material)
+    out["archived_versions"] = [m.id for m in previous]
+    out["note"] = (
+        "Stored and marked pending. Run backend/scripts/ingest_pdfs.py to "
+        "parse, chunk and embed it -- embedding a textbook takes minutes and "
+        "does not belong in an HTTP request."
+    )
+    return out
+
+
+@router.get("/courses/{course_id}/materials")
+def list_materials(
+    course_id: int,
+    include_archived: bool = False,
+    db: OrmSession = Depends(get_db),
+    user: User = Depends(admin_only),
+) -> dict:
+    if db.get(Course, course_id) is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={"code": "not_found", "message": "No such course."},
+        )
+    stmt = select(Material).where(Material.course_id == course_id)
+    if not include_archived:
+        stmt = stmt.where(Material.status == "active")
+    rows = db.scalars(stmt.order_by(Material.title, Material.version.desc())).all()
+    return {"items": [_material_out(db, m) for m in rows]}
+
+
+@router.get("/materials/{material_id}")
+def get_material(
+    material_id: int,
+    db: OrmSession = Depends(get_db),
+    user: User = Depends(admin_only),
+) -> dict:
+    material = db.get(Material, material_id)
+    if material is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={"code": "not_found", "message": "No such material."},
+        )
+    return _material_out(db, material)
+
+
+@router.get("/materials/{material_id}/versions")
+def material_versions(
+    material_id: int,
+    db: OrmSession = Depends(get_db),
+    user: User = Depends(admin_only),
+) -> dict:
+    """Every version of this title in this course, newest first.
+
+    Version history is derived from (course, title) rather than from a chain of
+    ids. A `replaces_id` column would be one more thing to keep truthful, and
+    it would disagree with reality the first time somebody uploaded a
+    replacement without setting it.
+    """
+    material = db.get(Material, material_id)
+    if material is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={"code": "not_found", "message": "No such material."},
+        )
+    rows = db.scalars(
+        select(Material)
+        .where(Material.course_id == material.course_id,
+               Material.title == material.title)
+        .order_by(Material.version.desc())
+    ).all()
+    return {"items": [_material_out(db, m) for m in rows]}
+
+
+@router.post("/materials/{material_id}/archive")
+def archive_material(
+    material_id: int,
+    db: OrmSession = Depends(get_db),
+    user: User = Depends(admin_only),
+) -> dict:
+    """Take material out of retrieval without destroying what cites it.
+
+    Archiving is not a soft delete standing in for a real one. `retrieval`
+    filters on `status == "active"`, so an archived book stops being quoted
+    immediately, while its chunks stay addressable for any citation already
+    shown to a student.
+    """
+    material = db.get(Material, material_id)
+    if material is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={"code": "not_found", "message": "No such material."},
+        )
+    if material.status != "archived":
+        material.status = "archived"
+        _audit(db, user, "material.archive", f"material:{material.id}",
+               {"title": material.title, "version": material.version})
+        db.flush()
+    return _material_out(db, material)
+
+
+# ---------------------------------------------------------------------------
+# admin-003 -- the audit log
+# ---------------------------------------------------------------------------
+
+@router.get("/audit-log")
+def audit_log(
+    limit: int = 50,
+    offset: int = 0,
+    actor: str | None = None,
+    action: str | None = None,
+    db: OrmSession = Depends(get_db),
+    user: User = Depends(admin_only),
+) -> dict:
+    """Who did what, and when.
+
+    The human-in-the-loop trail. Every approval in this system -- a reteach
+    unit assigned to a class, a web source let into the corpus, a textbook
+    uploaded -- is an act by a named person, and this is where that is
+    legible. It is also load-bearing rather than decorative: `teacher-005`
+    reads the reteach approval time from these rows, because `reteach_units`
+    has no `approved_at` column.
+
+    `actor` filters on email substring, which is the identifier an admin
+    actually has to hand.
+    """
+    stmt = select(AuditLog)
+    if action:
+        stmt = stmt.where(AuditLog.action == action)
+    if actor:
+        stmt = stmt.join(User, User.id == AuditLog.actor_id).where(
+            User.email.ilike(f"%{actor.strip().lower()}%")
+        )
+
+    total = int(db.scalar(select(func.count()).select_from(stmt.subquery())) or 0)
+    rows = db.scalars(
+        stmt.order_by(AuditLog.at.desc(), AuditLog.id.desc())
+        .limit(max(1, min(limit, 200)))
+        .offset(max(0, offset))
+    ).all()
+
+    actors = {
+        u.id: u.email
+        for u in db.scalars(
+            select(User).where(User.id.in_([r.actor_id for r in rows if r.actor_id]
+                                           or [-1]))
+        ).all()
+    }
+
+    return {
+        "items": [
+            {
+                "id": r.id,
+                "actor_email": actors.get(r.actor_id),
+                "action": r.action,
+                "target": r.target,
+                "at": r.at.isoformat().replace("+00:00", "Z") if r.at else None,
+                "detail": r.detail,
+            }
+            for r in rows
+        ],
+        "total": total,
+    }

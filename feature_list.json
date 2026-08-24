@@ -573,7 +573,7 @@
       "area": "admin",
       "title": "Curriculum upload and versioning",
       "user_visible_behavior": "Admin uploads syllabus/textbooks/notes per course with chapter and page mapping; older versions stay archived.",
-      "status": "not_started",
+      "status": "passing",
       "depends_on": [
         "ingest-001",
         "auth-001"
@@ -583,8 +583,8 @@
         "Upload a PDF as admin; it appears in the course's material list.",
         "Upload a replacement; the previous version is still listed as archived, not deleted."
       ],
-      "evidence": null,
-      "notes": "Upload by a verified admin counts as approval for this build — per the feature plan."
+      "evidence": "evidence/admin-001/admin-live.txt",
+      "notes": "PASSING 2026-08-24. POST/GET /admin/courses/{id}/materials, GET /admin/materials/{id}, /versions, /archive. Re-uploading the same title makes v2 and ARCHIVES v1 rather than deleting it -- chunks cite a material by page, so deleting one leaves a student looking at a citation to a book that is not there. Verified live: archiving the real Django book took the student's course summary from 2 books to 1 while its 1,938 chunks stayed addressable, then restored. Upload does NOT embed inline: embedding a 1,190-page textbook is minutes of CPU and an HTTP request that takes minutes is one that times out, so the row is marked ingest_status 'pending' and the response names the script to run. The stored filename is derived from the title, never from the client -- '../../.env' is a filename. Version history is derived from (course, title); a replaces_id column would be one more thing to keep truthful. NOT BUILT: POST /admin/materials/{id}/ingest and GET /admin/ingest-jobs/{id} -- they need an IngestJob table that does not exist, and ingest-001 is already passing via backend/scripts/ingest_pdfs.py. Contract marked accordingly so no frontend builds against them."
     },
     {
       "id": "admin-002",
@@ -592,7 +592,7 @@
       "area": "admin",
       "title": "Course and institution structure with prerequisites",
       "user_visible_behavior": "Departments, courses, and which courses are prerequisites for which others.",
-      "status": "not_started",
+      "status": "passing",
       "depends_on": [
         "auth-001"
       ],
@@ -601,8 +601,8 @@
         "View the structure; a course shows its prerequisite courses.",
         "Gap detection for that course references the correct prior course."
       ],
-      "evidence": null,
-      "notes": "This is what makes gap detection reference the right prior course — seed it correctly."
+      "evidence": "evidence/admin-002/admin-live.txt",
+      "notes": "PASSING 2026-08-24. GET/POST /admin/departments and /admin/courses, GET /admin/courses/{id}. This is what makes gap detection name the right prior course, and it is verified end to end: CSW2 -> CSW1 is why every gap in the golden path says 'should have come from Computer Science Workshop 1'. A prerequisite id that does not exist is a 400, NOT a silent drop -- dropping it produces a course whose gap attribution is quietly wrong, and nothing downstream can tell 'no prerequisite' from 'one we lost'. A course cannot be its own prerequisite; a duplicate code is a 409."
     },
     {
       "id": "admin-003",
@@ -610,7 +610,7 @@
       "area": "admin",
       "title": "Audit log and version history",
       "user_visible_behavior": "Records who uploaded or changed what, and when.",
-      "status": "not_started",
+      "status": "passing",
       "depends_on": [
         "admin-001"
       ],
@@ -619,8 +619,8 @@
         "Perform an upload as admin.",
         "A log entry appears with actor, action and timestamp."
       ],
-      "evidence": null,
-      "notes": "The human-in-the-loop trail. Cheap to build, good to point at during the pitch."
+      "evidence": "evidence/admin-003/admin-live.txt",
+      "notes": "PASSING 2026-08-24. GET /admin/audit-log with ?limit/&offset/&actor/&action. The human-in-the-loop trail, and load-bearing rather than decorative: teacher-005 reads the reteach approval time out of these rows because reteach_units has no approved_at column. Live: 26 rows across department.create, course.create, material.upload, material.archive, reteach.suggest/edit/approve, sourced_content.approve/reject and seed.run, filterable by actor email substring. CAUGHT A CONTRACT VIOLATION: the sourced_content actions were derived from the resulting status and came out as '.approved'/'.rejected' where the contract documents '.approve'/'.reject'. Those strings are an API surface -- an admin filters with ?action= -- so the derived names matched nothing anybody would type. Fixed, the two existing rows renamed, and a test now parses the verb map out of the AST and checks it against the documented set."
     },
     {
       "id": "i18n-001",

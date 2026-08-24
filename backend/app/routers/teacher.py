@@ -552,7 +552,12 @@ def _decide_sourced(db: OrmSession, item_id: int, user: User,
         )
     row.status = new_status
     row.reject_reason = reason
-    db.add(AuditLog(actor_id=user.id, action=f"sourced_content.{new_status}",
+    # The action name is the VERB from docs/api-contract.md, not the resulting
+    # status. Deriving it from new_status wrote "sourced_content.approved",
+    # which reads fine and does not match the documented filter an admin would
+    # type into /admin/audit-log?action=.
+    verb = {"approved": "approve", "rejected": "reject"}[new_status]
+    db.add(AuditLog(actor_id=user.id, action=f"sourced_content.{verb}",
                     target=f"sourced_content:{row.id}",
                     detail={"title": row.title, "reason": reason}))
     db.flush()

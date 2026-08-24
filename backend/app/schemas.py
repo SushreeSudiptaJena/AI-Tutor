@@ -250,3 +250,40 @@ class PatchReteachIn(BaseModel):
 
     title: str | None = None
     body: str | None = None
+
+
+# --- admin (admin-001, admin-002) -------------------------------------------
+
+class DepartmentIn(BaseModel):
+    name: str
+
+    @field_validator("name")
+    @classmethod
+    def _name(cls, v: str) -> str:
+        v = v.strip()
+        if not v:
+            raise ValueError("department name is required")
+        return v[:200]
+
+
+class CourseIn(BaseModel):
+    code: str
+    title: str
+    department_id: int | None = None
+    prerequisite_course_ids: list[int] = []
+
+    @field_validator("code")
+    @classmethod
+    def _code(cls, v: str) -> str:
+        v = v.strip().upper()
+        if not v:
+            raise ValueError("course code is required")
+        return v[:20]
+
+    @field_validator("title")
+    @classmethod
+    def _title(cls, v: str) -> str:
+        v = v.strip()
+        if not v:
+            raise ValueError("course title is required")
+        return v[:200]

@@ -12,7 +12,7 @@ from fastapi.responses import JSONResponse
 from fastapi.requests import Request
 
 from . import config, db
-from .routers import auth, student, teacher, tutor
+from .routers import admin, auth, student, teacher, tutor
 
 app = FastAPI(
     title="AI Tutor",
@@ -123,6 +123,7 @@ def languages() -> dict:
 
 
 # --- routers ----------------------------------------------------------------
+app.include_router(admin.router)
 app.include_router(auth.router)
 app.include_router(student.router)
 app.include_router(teacher.router)
