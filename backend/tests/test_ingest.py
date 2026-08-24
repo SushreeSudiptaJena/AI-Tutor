@@ -227,3 +227,99 @@ def test_ingest_material_rejects_an_unknown_kind(tmp_path):
     with pytest.raises(ValueError, match="kind must be one of"):
         ingest.ingest_material(None, course_id=1, title="x", kind="homework",
                                path=tmp_path / "nope.pdf")
+
+
+# ---------------------------------------------------------------------------
+# admin-007 -- text-ish sources become citable pages
+# ---------------------------------------------------------------------------
+
+def test_a_txt_file_becomes_a_pdf_with_pages(tmp_path):
+    from app.services.ingest import ensure_fixed_pdf
+
+    src = tmp_path / "notes.txt"
+    src.write_text("Karnaugh Maps\n\nAdjacent cells differ by one variable.\n",
+                   encoding="utf-8")
+    pdf, converted = ensure_fixed_pdf(src, tmp_path)
+    assert converted and pdf.suffix == ".pdf"
+
+    import pymupdf
+
+    doc = pymupdf.open(str(pdf))
+    try:
+        assert len(doc) >= 1
+        assert "Karnaugh" in doc[0].get_text()
+    finally:
+        doc.close()
+
+
+def test_a_docx_keeps_its_table_rows(tmp_path):
+    """An assignment's questions are frequently in a table. Dropping them would
+    silently ingest half a document."""
+    import docx
+
+    from app.services.ingest import ensure_fixed_pdf
+
+    d = docx.Document()
+    d.add_paragraph("Flip-flops")
+    t = d.add_table(rows=1, cols=2)
+    t.rows[0].cells[0].text = "Q1"
+    t.rows[0].cells[1].text = "Explain setup and hold time."
+    src = tmp_path / "asg.docx"
+    d.save(str(src))
+
+    pdf, converted = ensure_fixed_pdf(src, tmp_path)
+    assert converted
+
+    import pymupdf
+
+    doc = pymupdf.open(str(pdf))
+    try:
+        text = doc[0].get_text()
+        assert "Explain setup and hold time." in text
+    finally:
+        doc.close()
+
+
+def test_an_unsupported_extension_names_what_is_supported(tmp_path):
+    import pytest
+
+    from app.services.ingest import ensure_fixed_pdf
+
+    src = tmp_path / "slides.pptx"
+    src.write_bytes(b"nope")
+    with pytest.raises(ValueError) as exc:
+        ensure_fixed_pdf(src, tmp_path)
+    assert ".pdf" in str(exc.value) and ".docx" in str(exc.value)
+
+
+def test_reflowed_page_numbers_are_ours_and_that_is_documented():
+    """A citation from a reflowed source points at OUR A4 rendering, not a
+    printed book. Silently implying otherwise is the failure mode."""
+    import inspect
+
+    from app.services import ingest
+
+    doc = inspect.getdoc(ingest.ensure_fixed_pdf) or ""
+    assert "not the publisher" in doc or "not\npage 143 of the printed book" in doc
+
+
+def test_squash_folds_a_line_broken_word_the_way_normalise_does():
+    """ingest-002. squash() is used to check a stored chunk against a FRESH
+    extraction of its page. The stored side came from normalise()d text, so if
+    squash folds hyphenation differently the two sides disagree and a correct
+    citation is reported as an error -- which is exactly what happened, to
+    three chunks, one of them in a textbook."""
+    from app.services.ingest import normalise, squash
+
+    raw = "which implements the pre-\nceding rule."
+    assert squash(raw) == squash(normalise(raw))
+    assert "preceding" in squash(raw)
+    assert "pre-ceding" not in squash(raw)
+
+
+def test_squash_keeps_a_real_hyphenated_compound():
+    """Only a hyphen at a LINE BREAK is a typesetting artefact. 'flip-flop' on
+    one line is a word."""
+    from app.services.ingest import squash
+
+    assert "flip-flop" in squash("a flip-flop stores one bit")

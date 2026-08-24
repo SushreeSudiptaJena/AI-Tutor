@@ -88,6 +88,18 @@ def squash(text: str) -> str:
     mismatch there would be a Unicode artefact, not a citation error.
     """
     folded = unicodedata.normalize("NFKC", text).replace(SOFT_HYPHEN, "")
+    folded = folded.replace("\r\n", "\n").replace("\r", "\n")
+    # The line-break hyphen has to go BEFORE whitespace is stripped, and it has
+    # to go for the same reason `normalise` drops it: "pre-\nceding" is one
+    # word that a typesetter broke, not a hyphenated compound.
+    #
+    # Without this, squash() folded one side of the comparison differently from
+    # the other -- the stored chunk came from normalised text ("preceding")
+    # while verification squashed the RAW page ("pre-ceding") -- and every
+    # chunk containing a line-broken word failed verification even though its
+    # page number was correct. Three chunks were reported as citation errors
+    # that were not, one of them in a textbook.
+    folded = re.sub(r"-\n(?=[a-z])", "", folded)
     return re.sub(r"\s+", "", folded).lower()
 
 
@@ -266,7 +278,14 @@ def parse_pdf(path: str | Path) -> ParsedDoc:
 # ---------------------------------------------------------------------------
 
 EMBED_BATCH = 64
-INGESTABLE_KINDS = ("syllabus", "textbook", "notes", "assignment")
+# Derived, not restated. This list lived in four places -- models, the admin
+# router, this module and the CLI -- and admin-007 found them disagreeing:
+# adding "reference" to the model left the CLI rejecting it. Imported here
+# rather than at the top of the file to keep the parsing half above genuinely
+# free of app imports, as the module docstring promises.
+from ..models import MATERIAL_KINDS  # noqa: E402
+
+INGESTABLE_KINDS = MATERIAL_KINDS
 
 
 @dataclass
@@ -314,7 +333,7 @@ def ingest_material(
     """
     from sqlalchemy import delete, select
 
-    from ..models import Chunk, Material
+    from ..models import MATERIAL_KINDS, Chunk, Material
     from .embed import embed_documents
 
     if kind not in INGESTABLE_KINDS:
@@ -498,8 +517,76 @@ def stub_corpus_materials(db, course_id: int | None = None) -> list[str]:
 # ---------------------------------------------------------------------------
 
 REFLOWABLE_SUFFIXES = {".epub", ".mobi", ".fb2"}
+# admin-007. PyMuPDF opens the set above directly; these three it cannot, so
+# they are read to text first and laid out the same way. They are reflowable in
+# exactly the same sense -- no page exists until we fix a paper size.
+TEXT_SUFFIXES = {".txt", ".md"}
+DOCX_SUFFIXES = {".docx"}
 LAYOUT_PAPER = "a4"
 LAYOUT_FONTSIZE = 11
+
+
+def supported_suffixes() -> set[str]:
+    """Everything ingestion can take. One place, so the upload endpoint, the
+    folder scan and the error message cannot disagree about it."""
+    return {".pdf", *REFLOWABLE_SUFFIXES, *TEXT_SUFFIXES, *DOCX_SUFFIXES}
+
+
+def _read_text_source(path: Path) -> str:
+    """Plain text out of a .txt/.md/.docx.
+
+    A .docx is a zip of XML, not something PyMuPDF can open -- python-docx
+    pulls the paragraphs out. Tables are included because an assignment's
+    questions are frequently in one, and dropping them would silently ingest
+    half a document.
+    """
+    if path.suffix.lower() in DOCX_SUFFIXES:
+        import docx
+
+        document = docx.Document(str(path))
+        parts = [p.text for p in document.paragraphs]
+        for table in document.tables:
+            for row in table.rows:
+                cells = [c.text.strip() for c in row.cells]
+                if any(cells):
+                    parts.append(" | ".join(cells))
+        return "\n".join(parts)
+    # errors="replace": a stray byte in a teacher's notes must not abort an
+    # ingest that is otherwise fine.
+    return path.read_text(encoding="utf-8", errors="replace")
+
+
+def _text_to_fixed_pdf(text: str, target: Path) -> None:
+    """Lay text out at A4/11pt so it has pages to cite.
+
+    Same bargain as an EPUB: the page numbers are reproducible and they are
+    OURS, not a publisher's.
+    """
+    import pymupdf
+
+    story = pymupdf.Story(html=_text_as_html(text))
+    writer = pymupdf.DocumentWriter(str(target))
+    rect = pymupdf.paper_rect(LAYOUT_PAPER) + (36, 36, -36, -36)  # 0.5in margins
+    more = True
+    while more:
+        device = writer.begin_page(pymupdf.paper_rect(LAYOUT_PAPER))
+        more, _ = story.place(rect)
+        story.draw(device)
+        writer.end_page()
+    writer.close()
+
+
+def _text_as_html(text: str) -> str:
+    """Paragraphs, escaped. No markdown rendering on purpose -- a heading that
+    became an <h1> would change the page count depending on how the source was
+    marked up, and page numbers have to be stable."""
+    from html import escape
+
+    paragraphs = [escape(block.strip()).replace("\n", "<br/>")
+                  for block in text.split("\n\n") if block.strip()]
+    body = "".join(f"<p>{p}</p>" for p in paragraphs) or "<p></p>"
+    return (f"<html><body style='font-family:sans-serif;"
+            f"font-size:{LAYOUT_FONTSIZE}pt'>{body}</body></html>")
 
 
 def ensure_fixed_pdf(path: str | Path, out_dir: str | Path) -> tuple[Path, bool]:
@@ -521,16 +608,25 @@ def ensure_fixed_pdf(path: str | Path, out_dir: str | Path) -> tuple[Path, bool]
     import pymupdf
 
     path, out_dir = Path(path), Path(out_dir)
-    if path.suffix.lower() == ".pdf":
+    suffix = path.suffix.lower()
+    if suffix == ".pdf":
         return path, False
-    if path.suffix.lower() not in REFLOWABLE_SUFFIXES:
-        raise ValueError(f"Cannot ingest {path.suffix!r}. Supported: .pdf, "
-                         f"{', '.join(sorted(REFLOWABLE_SUFFIXES))}")
+    if suffix not in supported_suffixes():
+        raise ValueError(
+            f"Cannot ingest {path.suffix!r}. Supported: "
+            f"{', '.join(sorted(supported_suffixes()))}"
+        )
 
     out_dir.mkdir(parents=True, exist_ok=True)
     target = out_dir / f"{path.stem}.pdf"
     if target.exists() and target.stat().st_mtime >= path.stat().st_mtime:
         return target, False
+
+    # admin-007: text-ish sources PyMuPDF cannot open. Read to text, then lay
+    # out exactly as an EPUB is, so page attribution works the same way.
+    if suffix in TEXT_SUFFIXES or suffix in DOCX_SUFFIXES:
+        _text_to_fixed_pdf(_read_text_source(path), target)
+        return target, True
 
     src = pymupdf.open(str(path))
     try:

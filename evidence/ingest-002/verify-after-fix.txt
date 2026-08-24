@@ -1,0 +1,19 @@
+  Practical C Programming (Harwani, Packt 2020)  (material 4, 1240 chunks)
+  Assignment 1 - Chapter 1  (material 5, 17 chunks)
+  Assignment 2 - HTML  (material 6, 9 chunks)
+  Assignment 3 - Chapter 2  (material 7, 10 chunks)
+  Assignment 4 - Chapter 3  (material 8, 8 chunks)
+  Assignment 5 - Chapter 4  (material 9, 5 chunks)
+  Assignment 6 - Chapter 5  (material 10, 8 chunks)
+  Assignment 7 - Chapter 6  (material 11, 8 chunks)
+  Django 5 By Example (Antonio Mele)  (material 12, 1938 chunks)
+  DLD Assignment 1 (14.10.2025)  (material 15, 6 chunks)
+  DLD Assignment 2 (24.10.2025)  (material 16, 7 chunks)
+  DLD Assignment 3 (28.11.2025)  (material 17, 5 chunks)
+  DLD Assignment 4 (06.12.2025)  (material 18, 4 chunks)
+  Fundamentals of Logic Design (Roth & Kinney)  (material 28, 2053 chunks)
+  Karnaugh Map Quick Reference  (material 29, 1 chunks)
+    [PASS] chunk 5663   p.1    [0:586]  slice=True  on_page=True
+           "Karnaugh Map Simplification: A Quick Reference A Karnaugh map arranges minterms so that ad..."
+
+PASS -- 0 chunk(s) did not verify.

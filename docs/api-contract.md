@@ -342,7 +342,40 @@ a string, not a foreign key, so the trail survives what it describes.
   "uploaded_by": "admin@example.edu", "uploaded_at": "2026-08-23T09:00:00Z",
   "ingest_status": "complete", "chunk_count": 1840 }
 ```
-`kind`: `syllabus` | `textbook` | `notes` | `assignment`. `status`: `active` | `archived`.
+`kind`: `syllabus` | `textbook` | `notes` | `assignment` | `reference`.
+`status`: `active` | `archived`.
+
+#### `reference` material, and the formats it accepts — `admin-007`
+
+`reference` is supplementary study material. It is **quotable** — it sits in
+`retrieval.LESSON_KINDS` alongside `syllabus`, `textbook` and `notes`, so a
+lesson can cite it with a page number like any book. That is exactly what
+separates it from `assignment`, which is searchable but never quoted back.
+
+Accepted uploads, for every kind:
+
+| Extension | How it is ingested |
+|---|---|
+| `.pdf` | Directly. Its page numbers are the printed ones. |
+| `.epub` `.mobi` `.fb2` | Laid out to a fixed A4 / 11pt PDF, then ingested. |
+| `.txt` `.md` | Read as text, laid out the same way. Markdown is **not** rendered — a heading becoming an `<h1>` would change the page count depending on markup, and page numbers have to be stable. |
+| `.docx` | Paragraphs **and table cells** are extracted, then laid out the same way. Tables matter: assignment questions are usually in one. |
+
+> **A page number from a reflowed source is ours, not a publisher's.** Anything
+> that is not already a PDF gets its pages from our A4/11pt rendering. Those
+> numbers are reproducible, and they will not match a printed copy. Where a real
+> PDF of the same title exists, prefer it.
+
+Anything else is rejected with a message naming what *is* supported. Upload and
+ingestion read that list from one place (`ingest.supported_suffixes()`), so they
+cannot disagree — they previously did, and `.txt`/`.md` uploads were stored,
+marked pending, and silently never ingestable.
+
+> **A link is not a material.** A URL has no pages, and a `Citation` is
+> `(doc_id, page_no, char_span)` — so a link could never be cited the way a book
+> is. External links belong in `sourced_content` (`teacher-007`), which already
+> stores a URL with a title and an excerpt and puts a teacher between it and the
+> students. Do not add a URL field to `Material`.
 
 > `kind: "assignment"` is what powers the graded-work guardrail (`rag-004`). Material uploaded as `assignment` is retrievable for *matching* but never quoted as an answer.
 
@@ -817,6 +850,7 @@ Every shape above is final enough to mock. Suggested order, matching `feature_li
 
 | When | Change |
 |---|---|
+| 2026-08-25 | **`admin-007` — new material kind `reference`**, quotable like a textbook (it is in `LESSON_KINDS`; `assignment` still is not). Ingestion now accepts `.txt`, `.md` and `.docx` alongside `.pdf`/`.epub`/`.mobi`/`.fb2`, all reflowed to A4/11pt for stable page numbers. Upload and ingestion now read one shared list, fixing a real disagreement: `.txt`/`.md` were accepted on upload and then refused by the ingester, leaving files stored, pending and un-ingestable forever. **Links are deliberately not materials** — they go to `sourced_content` (`teacher-007`). Adds a `python-docx` dependency. |
 | 2026-08-25 | **`admin-006` — `DELETE /admin/materials/{id}`.** Archiving remains the normal path; this is the escape hatch for an upload mistake. Never-ingested material deletes freely; ingested material is `409 mid_term` while its course's `term_start`/`term_end` window contains today. There is deliberately **no** "refuse if cited" check — nothing in the schema persists a `chunk_id`, so no such check could be accurate. The source file is left on disk. |
 | 2026-08-25 | **`admin-005` — a course now knows its semester, its admission batches and its term dates.** `Course` gains `semester`, `admission_batches`, `term_start`, `term_end`, all nullable so existing courses are unaffected; new `PUT /admin/courses/{id}/term`. The dates are load-bearing: `admin-006` reads them to refuse deleting ingested material mid-term. **Needs a migration** — `create_all()` does not alter an existing table, so run `backend/scripts/migrate_course_terms.py` once against the shared database. |
 | 2026-08-24 | **`admin-004` — the audit log reads as a sentence.** `GET /admin/audit-log` rows gain a `summary`; `action`, `target` and `detail` are unchanged, because `?action=` filters on those verbs. New `?include_system=true` — `seed.run` rows are hidden by default, being a developer script's output rather than governance. Purely additive. |

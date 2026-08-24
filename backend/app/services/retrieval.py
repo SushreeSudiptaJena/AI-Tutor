@@ -34,7 +34,10 @@ from ..models import Chunk, Material
 from .embed import embed_query
 
 # Kinds that may be quoted back to a student as course material.
-LESSON_KINDS = ("syllabus", "textbook", "notes")
+# "reference" is here and "assignment" is not, and that is the whole
+# distinction: reference material is given to students to learn from, graded
+# material is not something to hand back as a lesson.
+LESSON_KINDS = ("syllabus", "textbook", "notes", "reference")
 SNIPPET_CHARS = 220
 DEFAULT_K = 5
 

@@ -53,12 +53,13 @@ from sqlalchemy.orm import Session as OrmSession
 from ..config import REPO_ROOT
 from ..db import get_db
 from ..deps import admin_only
+from ..services import ingest
 from ..models import AuditLog, Chunk, Course, Department, Material, ReteachUnit, User
 from ..schemas import CourseIn, CourseTermIn, DepartmentIn
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
-MATERIAL_KINDS = ("syllabus", "textbook", "notes", "assignment")
+MATERIAL_KINDS = ("syllabus", "textbook", "notes", "assignment", "reference")
 
 # Big enough for a real textbook. `Django 5 By Example` is 1190 pages and about
 # 20 MB, and a cap that rejects the corpus we actually run on would be a cap
@@ -375,8 +376,12 @@ def upload_material(
         old.status = "archived"
 
     UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+    # admin-007: one source of truth for what ingestion can take. This list
+    # used to be its own hardcoded tuple, and it included .txt and .md that
+    # ingest.to_pdf then refused -- so such an upload was stored, marked
+    # pending, and silently never ingestable.
     suffix = Path(file.filename or "").suffix.lower()
-    if suffix not in (".pdf", ".txt", ".md", ".epub"):
+    if suffix not in ingest.supported_suffixes():
         suffix = ".pdf" if data[:5] == b"%PDF-" else ".bin"
     path = UPLOAD_DIR / f"{course.code}-{_safe_name(title)}-v{version}{suffix}"
     path.write_bytes(data)

@@ -94,8 +94,36 @@ def test_the_upload_filename_is_derived_not_taken_from_the_client():
 
 
 def test_only_the_documented_material_kinds_are_accepted():
-    assert admin.MATERIAL_KINDS == ("syllabus", "textbook", "notes", "assignment")
+    assert admin.MATERIAL_KINDS == (
+        "syllabus", "textbook", "notes", "assignment", "reference")
     assert "kind not in MATERIAL_KINDS" in _src(admin.upload_material)
+
+
+def test_the_router_and_the_model_agree_on_the_material_kinds():
+    """They are declared twice. Drifting apart means the API accepts a kind the
+    database was never told about."""
+    from app.models import MATERIAL_KINDS as MODEL_KINDS
+
+    assert admin.MATERIAL_KINDS == MODEL_KINDS
+
+
+def test_reference_material_is_quotable_and_assignment_is_not():
+    """That is the whole distinction: reference material is given to students
+    to learn from; graded material must never be handed back as a lesson."""
+    from app.services.retrieval import LESSON_KINDS
+
+    assert "reference" in LESSON_KINDS
+    assert "assignment" not in LESSON_KINDS
+
+
+def test_upload_accepts_exactly_what_ingestion_can_read():
+    """These were two separate hardcoded lists, and they disagreed: upload took
+    .txt and .md, and ingest.to_pdf then refused them -- so the file was stored,
+    marked pending, and silently never ingestable."""
+    from app.services import ingest
+
+    assert "ingest.supported_suffixes()" in _src(admin.upload_material)
+    assert {".pdf", ".epub", ".txt", ".md", ".docx"} <= ingest.supported_suffixes()
 
 
 def test_upload_does_not_embed_inline():

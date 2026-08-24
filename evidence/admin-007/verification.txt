@@ -1,0 +1,24 @@
+admin-007 -- a .docx reference, ingested and citable
+
+[1] ingest the .docx as kind=reference
+           "Karnaugh Map Simplification: A Quick Reference A Karnaugh map arranges minterms so that ad..."
+Done. Re-run backend/scripts/calibrate_threshold.py -- the refusal
+threshold is corpus-specific and the corpus just changed.
+
+[2] the DLD corpus now (textbook ingest completed in the background)
+   course 9: DLD - Digital Logic Design | semester 3 | batches [2024, 2025]
+     assignment  complete      6 chunks  DLD Assignment 1 (14.10.2025)
+     assignment  complete      7 chunks  DLD Assignment 2 (24.10.2025)
+     assignment  complete      5 chunks  DLD Assignment 3 (28.11.2025)
+     assignment  complete      4 chunks  DLD Assignment 4 (06.12.2025)
+     textbook    complete   2053 chunks  Fundamentals of Logic Design (Roth & Kinney)
+     reference   complete      1 chunks  Karnaugh Map Quick Reference
+
+[3] a reference IS quotable: retrieval returns it with a page number
+     [reference ] p.1    sim=0.806  Karnaugh Map Quick Reference
+     [textbook  ] p.158  sim=0.737  Fundamentals of Logic Design (Roth & K
+     [textbook  ] p.191  sim=0.734  Fundamentals of Logic Design (Roth & K
+
+[4] an assignment is NOT quotable, even though it is searchable
+     kinds a lesson can cite: ['textbook']
+     assignment excluded: True

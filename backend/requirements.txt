@@ -22,3 +22,4 @@ PyMuPDF>=1.24.0          # page-anchored text extraction; wheels on all platform
 
 # --- student-008: multipart syllabus upload ---
 python-multipart>=0.0.9   # FastAPI needs it for UploadFile; not a transitive dep
+python-docx==1.2.0   # admin-007: .docx is a zip of XML, not something PyMuPDF can open

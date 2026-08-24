@@ -148,7 +148,9 @@ class Session(Base):
 # Curriculum  (admin-001, ingest-001)
 # ---------------------------------------------------------------------------
 
-MATERIAL_KINDS = ("syllabus", "textbook", "notes", "assignment")
+# "reference" (admin-007) is supplementary study material -- quotable like a
+# textbook, unlike "assignment". See retrieval.LESSON_KINDS.
+MATERIAL_KINDS = ("syllabus", "textbook", "notes", "assignment", "reference")
 
 
 class Material(Base):

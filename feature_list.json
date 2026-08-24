@@ -800,7 +800,7 @@
       "area": "content",
       "title": "Digital Logic Design corpus: Roth textbook + four assignments",
       "user_visible_behavior": "A DLD student gets lessons and citations out of Roth & Kinney, and the graded-work guardrail recognises the four DLD assignments as homework.",
-      "status": "in_progress",
+      "status": "passing",
       "depends_on": [
         "ingest-001"
       ],
@@ -812,24 +812,25 @@
         "A DLD retrieval returns citations from Roth with real page numbers, and never from CSW2 or CS-C -- retrieval is course-scoped.",
         "The four assignments are kind='assignment', so they are searchable by the guardrail and never quotable as a lesson."
       ],
-      "evidence": null,
-      "notes": "IN PROGRESS 2026-08-25. Five PDFs, all with text layers (checked before ingesting): Roth & Kinney 813pp as textbook, four assignments 2-4pp each. Semester 3, admission batches 2024 and 2025 -- those are NOT yet modelled on Course; admin-005 adds them and then this course gets them set."
+      "evidence": "evidence/admin-007/verification.txt",
+      "notes": "PASSING 2026-08-25. Course DLD - Digital Logic Design (Electronics & Communication Engineering), semester 3, admission batches 2024 and 2025. Corpus: Roth & Kinney 813pp as textbook (2053 chunks), four assignments (22 chunks), and a .docx quick-reference added while verifying admin-007. All ingest_status=complete, and ingest_pdfs.py --verify now reports PASS with 0 failures across the WHOLE corpus (5300+ chunks). THE FIRST RUN WAS INTERRUPTED AND THAT TAUGHT US SOMETHING -- see ingest-003. It left material 19 with ingest_status='running', chunk_count=0 and 320 of 2053 chunks written, and because retrieval filters only on Material.status=='active' that half-written book was ANSWERING LIVE QUERIES with page-anchored citations. The partial material was deleted by hand and the ingest re-run clean. Threshold note: ingest_pdfs.py asks for calibrate_threshold.py to be re-run because the corpus changed; NOT done here, and ALIGNMENT_REFUSAL_THRESHOLD is still 0.70 measured against CSW2/CS-C. Re-measure before demoing DLD."
     },
     {
       "id": "ingest-002",
       "priority": 39,
       "area": "ingest",
-      "title": "Three chunks claim a page their text is not on",
-      "user_visible_behavior": "None today -- every affected chunk is in an assignment, and assignments are never quoted to a student. It would become visible the moment the same fault hit a textbook.",
-      "status": "not_started",
+      "title": "Verification reported correct citations as errors",
+      "user_visible_behavior": "None -- the citations were always right. The verifier that exists to prove that was the thing that was wrong.",
+      "status": "passing",
       "depends_on": [],
       "demo_mode": "live",
       "verification": [
-        "ingest_pdfs.py --verify --sample 8 reports 0 failures across every material.",
-        "The fix is in page attribution, not in the verifier -- do not relax the check to make it pass."
+        "ingest_pdfs.py --verify --sample 10 reports PASS with 0 failures across every material.",
+        "squash() folds a line-broken word the same way normalise() does, so both sides of the comparison agree.",
+        "A genuine hyphenated compound ('flip-flop' on one line) is NOT folded."
       ],
-      "evidence": null,
-      "notes": "FOUND 2026-08-25 while ingesting DLD, by running --verify rather than by reading. Three chunks report slice=True on_page=False: the text is a correct slice of the stored document, but it does not appear on the page_no it carries. chunk 1286 (material 7, CSW2 Assignment 3), chunk 1295 (material 8, CSW2 Assignment 4), chunk 3278 (material 17, DLD Assignment 3). ALL THREE ARE kind='assignment', which is why nothing is visible: LESSON_KINDS is (syllabus, textbook, notes), so an assignment chunk is searched by the graded-work guardrail and never quoted back with a citation. Suspect a chunk spanning a page boundary being attributed to the wrong side of it -- every failing span starts at or near 0. NOT fixed in this session's diff, per the working rules. Priority is real but not urgent: it is one page-attribution bug away from putting a wrong page number under 'Show Source'."
+      "evidence": "evidence/ingest-002/verify-after-fix.txt",
+      "notes": "PASSING 2026-08-25. FIRST DIAGNOSIS WAS WRONG AND IS CORRECTED HERE. Reported as three chunks claiming a page their text was not on, and logged as a page-attribution bug. It is not: the chunks were CORRECT. verify_material compares squash(stored chunk) against squash(a FRESH RAW extraction of the page). The stored side came from normalise()d text, which rejoins a word a typesetter broke across a line ('pre-\nceding' -> 'preceding'); squash did not apply that rule, so the raw side still read 'pre-ceding' and the substring check failed. Every chunk containing a line-broken word failed verification with a perfectly good page number. squash() now folds the line-break hyphen before stripping whitespace, and keeps a real compound like 'flip-flop'. SEVERITY CHANGED MID-INVESTIGATION: it was logged as invisible because all three known failures were in assignments, which are never quoted. Ingesting Roth produced a fourth in a TEXTBOOK at p.666 -- quotable -- which is what forced the real diagnosis instead of the assumed one. Whole corpus now verifies: PASS, 0 failures."
     },
     {
       "id": "ingest-003",
@@ -895,6 +896,30 @@
       ],
       "evidence": "evidence/admin-006/verification.txt",
       "notes": "PASSING 2026-08-25. Contract change, so docs/api-contract.md was edited FIRST. THE 'REFUSE IF CITED' CHECK WAS DROPPED, AND THAT IS THE MAIN FINDING. It was agreed up front, but it rests on a premise the schema does not support: NOTHING persists a chunk_id. A Citation is built from live retrieval at request time and never written down, and the only FK pointing at materials is Chunk.material_id. So an 'is it cited?' check could only ever be a guess dressed as a guarantee. A test now asserts no model gains a chunk_id, so if that ever changes this reasoning gets revisited instead of silently rotting. The term window is the honest guard, and it is what was actually asked for: never-ingested material deletes freely (an upload mistake should be fixable the day it happens); ingested material is refused while its course is mid-term; a course with no dates has no protected window, deliberately, so an unrecorded term cannot freeze an admin out. The source file is LEFT ON DISK -- deleting a row must not throw away the only copy of a book -- and the audit detail records that it was. The audit row is written BEFORE the delete and keyed by string, not FK, so the trail outlives what it describes; without that, deletion would be the one act nobody could review. admin.py's module docstring was updated: the 'nothing is deleted' rule is now bounded, not absolute, and saying otherwise would mislead the next reader. Verifying also caught the audit summary reading 'deleted something that has since been removed' -- it now takes the title from the detail dict and drops the redundant suffix on deletes. 310 tests (was 303). Re-runnable: backend/scripts/verify_admin_006.py, which builds and cleans up its own throwaway course so it never touches the demo corpus."
+    },
+    {
+      "id": "admin-007",
+      "priority": 43,
+      "area": "admin",
+      "title": "A 'reference' material kind, and the text formats it needs",
+      "user_visible_behavior": "An admin can upload supplementary reference material -- a PDF, an EPUB, a text or markdown file, or a Word document -- and students get lessons and citations out of it like any textbook.",
+      "status": "passing",
+      "depends_on": [
+        "admin-001",
+        "ingest-001"
+      ],
+      "demo_mode": "live",
+      "verification": [
+        "'reference' is accepted by POST /admin/courses/{id}/materials and appears in the kind error message.",
+        "reference material is QUOTABLE: it is in retrieval.LESSON_KINDS, so a lesson can cite it -- unlike 'assignment'.",
+        "A .txt and a .md file ingest end to end and produce page-anchored chunks.",
+        "A .docx file ingests end to end and produces page-anchored chunks.",
+        "An unsupported extension fails with a message naming what IS supported, not a stack trace.",
+        "Links are NOT a material: they go to sourced_content (teacher-007), which already has the teacher gate.",
+        "python -m pytest backend/tests -q passes and ./init.sh still passes."
+      ],
+      "evidence": "evidence/admin-007/verification.txt",
+      "notes": "PASSING 2026-08-25. Contract change, so docs/api-contract.md was edited FIRST. 'reference' is quotable -- it is in retrieval.LESSON_KINDS beside syllabus/textbook/notes, which is exactly what separates it from 'assignment' (searchable, never quoted). LINKS ARE DELIBERATELY NOT MATERIALS: a URL has no pages and a Citation is (doc_id, page_no, char_span), so a link could never be cited the way a book is; external links go to sourced_content (teacher-007), which already has a URL, a title, an excerpt and a teacher gate. Ingestion now takes .txt/.md/.docx alongside .pdf/.epub/.mobi/.fb2. .docx needs python-docx (added to requirements.txt) because a .docx is a zip of XML PyMuPDF cannot open; paragraphs AND table cells are extracted, because assignment questions are usually in a table. All reflowed sources are laid out at A4/11pt so page numbers are reproducible -- and they are OURS, not a publisher's, the same caveat the manifest already carries for EPUB. TWO REAL DISAGREEMENTS FOUND BY BUILDING IT: (1) the upload endpoint already accepted .txt/.md while ingest.to_pdf REFUSED them, so such a file was stored, marked pending and silently never ingestable -- both now read ingest.supported_suffixes(). (2) The kinds list existed in FOUR places (models, admin router, ingest service, CLI); adding 'reference' to the model left the CLI rejecting it with 'invalid choice'. INGESTABLE_KINDS now derives from MATERIAL_KINDS and a test asserts all three agree. Verified live: a .docx reference ingested into DLD and came back as the TOP retrieval hit at 0.806 similarity with a page number, while assignments stayed excluded from lesson retrieval. 319 tests (was 310)."
     }
   ]
 }
