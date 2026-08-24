@@ -771,6 +771,28 @@
       ],
       "evidence": "evidence/teacher-008/verification.txt",
       "notes": "PASSING 2026-08-24. Contract + schema change, so docs/api-contract.md was edited FIRST. ReteachUnit was keyed to a misconception with a NOT NULL FK, so the gap map -- which ranks CONCEPTS, not wrong beliefs -- had nothing to hang a unit on. misconception_id is now nullable, concept_id is added, exactly one is set, and a new `target` field says which so a frontend never infers a kind from a null. create_all() does NOT alter an existing table, so this needed explicit idempotent ALTERs in backend/scripts/migrate_reteach_targets.py -- the no-Alembic tradeoff -- run once against the shared Neon database. The two kinds get different prompts: a misconception unit argues against a belief the class already holds, a prerequisite unit teaches something they were never taught, so reteach_prerequisite.md is a sibling of reteach_suggest.md, not a reuse. TWO THINGS ONLY RUNNING IT FOUND. (1) Taken literally, 'the top three of each' produced TWO units against the real corpus: one misconception refused at 43% and two gaps were already covered by a misconception unit -- every one of those a correct decision, and still an empty-looking panel, which is the opposite of what was asked for. So a row that yields no unit now advances to the next candidate instead of consuming a slot, bounded at 8 rows deep per ranking; the run then filled 3/3 and 3/3. (2) Coverage of an overlapping gap was only recorded when a unit was CREATED, so the second run skipped the covering misconception as already_drafted, forgot the overlap, and drafted the duplicate the first run had correctly declined. Coverage is a fact about the unit existing; regression test added. Final live run: 5 created + 1 seeded = 6 drafts, nothing assigned, GET /student/assignments unchanged, and a second press created nothing. 288 tests (was 285). Re-runnable: backend/scripts/verify_teacher_008.py."
+    },
+    {
+      "id": "admin-004",
+      "priority": 37,
+      "area": "admin",
+      "title": "The audit log reads as a sentence, and stops being mostly seed noise",
+      "user_visible_behavior": "An admin opening the audit log sees 'Priya archived Django 5 By Example (version 1)' rather than material.archive / material:12 / {\"version\": 1}, and sees real governance actions instead of a page of re-seed rows from the last rehearsal.",
+      "status": "passing",
+      "depends_on": [
+        "admin-003"
+      ],
+      "demo_mode": "live",
+      "verification": [
+        "GET /admin/audit-log returns a `summary` on every row that names the actor, the act and the thing acted on, with no dotted verbs or prefixed ids in it.",
+        "The machine fields -- action, target, detail -- are all still present and unchanged, because ?action= filters on them and the contract documents those exact verbs.",
+        "seed.run rows are absent from the default listing and `total` reflects that; ?include_system=true brings them back.",
+        "An action with no summary template still produces a readable line rather than a crash or a blank.",
+        "Summaries resolve material and reteach titles in batched queries, not one lookup per row.",
+        "python -m pytest backend/tests -q passes and ./init.sh still passes."
+      ],
+      "evidence": "evidence/admin-004/audit-log.txt",
+      "notes": "PASSING 2026-08-24. Contract change (additive field + one query param), so docs/api-contract.md was edited FIRST. Raised as 'the audit log seems very technical'. Two separate problems behind that. (1) The payload was machine-shaped: action=material.archive / target=material:12 / detail={'version': 1}. (2) The log was 21 seed.run rows out of 52 -- a developer script writing into the governance trail an admin reads, so 'who changed the syllabus' meant scrolling past twenty re-seeds. The dotted verbs are UNCHANGED and stay: ?action= filters on them and the contract is what an admin types them from, so renaming would break the filter and the contract at once. `summary` is added alongside. seed.run is hidden by default and never deleted; ?include_system=true brings it back, and ?action=seed.run still returns it -- filtering for a thing and getting nothing back would be the endpoint lying. WHAT VERIFYING FOUND: an audit row outlives what it points at. A pruned reteach unit fell through to printing `reteach:32` back -- the exact technical noise the field exists to remove -- so the fallback now reads the subject out of the detail dict and says '(since removed)'. Titles are resolved in two batched queries for the whole page, not one lookup per row (perf-001). 295 tests (was 288)."
     }
   ]
 }

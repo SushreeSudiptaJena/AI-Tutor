@@ -1,0 +1,34 @@
+admin-004 -- GET /admin/audit-log
+
+=== BEFORE (what the raw fields look like) ===
+   action   "reteach.suggest"
+   target   "reteach:39"
+   detail   {"concept": "one-to-many"}
+
+=== AFTER (summary, added alongside) ===
+total, system rows hidden: 31
+   - ravi@example.edu drafted a reteach unit for “One-to-Many Relationships (Django)”
+   - ravi@example.edu drafted a reteach unit for “Foreign key placement in one-to-many relationships”
+   - ravi@example.edu drafted a reteach unit for “Reteach: URL paths and routing”
+   - ravi@example.edu drafted a reteach unit for “Introducing Python Virtual Environments”
+   - ravi@example.edu drafted a reteach unit for “Reteach: HTTP methods, GET and POST”
+   - ravi@example.edu drafted a reteach unit for “Reteach: Assumes the server remembers the previous request without being told”
+   - ravi@example.edu drafted a reteach unit for “Understanding filter() returns a QuerySet”
+   - ravi@example.edu drafted a reteach unit for “one to many” (since removed)
+   - ravi@example.edu drafted a reteach unit for “foreign key on the one side” (since removed)
+   - ravi@example.edu drafted a reteach unit for “http methods” (since removed)
+   - ravi@example.edu drafted a reteach unit for “filter returns object” (since removed)
+   - ravi@example.edu drafted a reteach unit for “one to many” (since removed)
+
+  no dotted verb leaked into any summary: True
+  no raw prefixed id in any summary   : True
+  machine fields still on every row   : True
+  seed.run in the default listing     : False
+
+=== ?include_system=true ===
+total with system rows: 52
+
+=== ?action=seed.run must still return them ===
+total: 21
+   - admin@example.edu re-seeded course CSW2
+   - admin@example.edu re-seeded course CSW2

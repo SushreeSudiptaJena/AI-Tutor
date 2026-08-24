@@ -45,7 +45,7 @@ from sqlalchemy.orm import Session as OrmSession
 from ..config import REPO_ROOT
 from ..db import get_db
 from ..deps import admin_only
-from ..models import AuditLog, Course, Department, Material, User
+from ..models import AuditLog, Course, Department, Material, ReteachUnit, User
 from ..schemas import CourseIn, DepartmentIn
 
 router = APIRouter(prefix="/admin", tags=["admin"])
@@ -422,12 +422,102 @@ def archive_material(
 # admin-003 -- the audit log
 # ---------------------------------------------------------------------------
 
+# Written by seed.py, which is a developer script. It is not curriculum
+# governance, and on a rehearsal day it outnumbered every real row put together
+# -- an admin looking for "who changed the syllabus" scrolled past twenty
+# re-seeds first. Hidden by default, never deleted.
+SYSTEM_ACTIONS = ("seed.run",)
+
+# Present tense reads wrong in a log; these are all things that already happened.
+_ACTION_PHRASE = {
+    "material.upload": "uploaded",
+    "material.archive": "archived",
+    "material.ingest": "ingested",
+    "course.create": "created the course",
+    "reteach.suggest": "drafted a reteach unit for",
+    "reteach.edit": "edited the reteach unit",
+    "reteach.approve": "approved and assigned the reteach unit",
+    "sourced_content.approve": "approved the web source",
+    "sourced_content.reject": "rejected the web source",
+    "seed.run": "re-seeded",
+}
+
+
+def _audit_titles(db: OrmSession, rows) -> dict[str, str]:
+    """Resolve `material:12` / `reteach:39` to the titles they name.
+
+    Batched by kind -- two queries for the whole page, not one per row. See
+    perf-001: a per-row lookup is a network round trip.
+    """
+    wanted: dict[str, set[int]] = {}
+    for r in rows:
+        kind, _, ident = (r.target or "").partition(":")
+        if ident.isdigit():
+            wanted.setdefault(kind, set()).add(int(ident))
+
+    titles: dict[str, str] = {}
+    if wanted.get("material"):
+        for m in db.scalars(
+            select(Material).where(Material.id.in_(wanted["material"]))
+        ).all():
+            titles[f"material:{m.id}"] = m.title
+    if wanted.get("reteach"):
+        for u in db.scalars(
+            select(ReteachUnit).where(ReteachUnit.id.in_(wanted["reteach"]))
+        ).all():
+            titles[f"reteach:{u.id}"] = u.title
+    return titles
+
+
+def _audit_summary(row, actor_email: str | None, titles: dict[str, str]) -> str:
+    """One readable sentence. Never raises, never returns empty.
+
+    A verb with no phrase here still has to render: a new action appearing as a
+    blank row would look like corrupted data rather than like an unmapped verb.
+    """
+    who = actor_email or "system"
+    phrase = _ACTION_PHRASE.get(row.action)
+    target = row.target or ""
+    name = titles.get(target)
+
+    detail = row.detail if isinstance(row.detail, dict) else {}
+
+    if name:
+        what = f"“{name}”"
+    elif target.startswith("course:"):
+        what = f"course {target.split(':', 1)[1]}"
+    elif detail.get("concept") or detail.get("misconception") or detail.get("name"):
+        # The row outlives what it points at -- a reteach unit can be pruned,
+        # and printing the raw `reteach:32` back is the exact technical noise
+        # this field exists to remove. The detail dict still names the subject.
+        subject = detail.get("concept") or detail.get("misconception") or detail["name"]
+        what = f"“{str(subject).replace('-', ' ')}” (since removed)"
+    elif target:
+        what = "something that has since been removed"
+    else:
+        what = ""
+
+    extras = []
+    if "version" in detail:
+        extras.append(f"version {detail['version']}")
+    if detail.get("reason"):
+        extras.append(f"reason: {detail['reason']}")
+    tail = f" ({', '.join(extras)})" if extras else ""
+
+    if phrase is None:
+        # Unmapped verb. Still a sentence, and it names the raw action so an
+        # admin can search for it.
+        return f"{who} performed {row.action}{(' on ' + what) if what else ''}{tail}"
+    return f"{who} {phrase} {what}".strip() + tail
+
+
 @router.get("/audit-log")
 def audit_log(
     limit: int = 50,
     offset: int = 0,
     actor: str | None = None,
     action: str | None = None,
+    include_system: bool = False,
     db: OrmSession = Depends(get_db),
     user: User = Depends(admin_only),
 ) -> dict:
@@ -446,6 +536,10 @@ def audit_log(
     stmt = select(AuditLog)
     if action:
         stmt = stmt.where(AuditLog.action == action)
+    elif not include_system:
+        # Only when no explicit action was asked for: `?action=seed.run` must
+        # still return seed rows, or the filter would silently lie.
+        stmt = stmt.where(AuditLog.action.notin_(SYSTEM_ACTIONS))
     if actor:
         stmt = stmt.join(User, User.id == AuditLog.actor_id).where(
             User.email.ilike(f"%{actor.strip().lower()}%")
@@ -466,15 +560,21 @@ def audit_log(
         ).all()
     }
 
+    titles = _audit_titles(db, rows)
+
     return {
         "items": [
             {
                 "id": r.id,
                 "actor_email": actors.get(r.actor_id),
+                # The machine fields stay exactly as they were: `?action=`
+                # filters on these verbs and the contract is what an admin
+                # types them from. `summary` is added, not a replacement.
                 "action": r.action,
                 "target": r.target,
                 "at": r.at.isoformat().replace("+00:00", "Z") if r.at else None,
                 "detail": r.detail,
+                "summary": _audit_summary(r, actors.get(r.actor_id), titles),
             }
             for r in rows
         ],

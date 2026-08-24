@@ -191,3 +191,82 @@ def test_audit_actions_match_the_names_the_contract_documents():
 
     missing = documented - written - {"material.ingest"}
     assert not missing, f"documented audit actions never written: {sorted(missing)}"
+
+
+# ---------------------------------------------------------------------------
+# admin-004 -- the audit log reads as a sentence
+# ---------------------------------------------------------------------------
+
+class _Row:
+    def __init__(self, action, target=None, detail=None):
+        self.action, self.target, self.detail = action, target, detail
+        self.id, self.actor_id, self.at = 1, 1, None
+
+
+def test_every_audit_row_gets_a_readable_summary():
+    from app.routers.admin import _audit_summary
+
+    cases = [
+        _Row("material.archive", "material:12", {"version": 1}),
+        _Row("reteach.approve", "reteach:7", {}),
+        _Row("course.create", "course:5", {"code": "CSW2"}),
+        _Row("sourced_content.reject", "sourced:3", {"reason": "not peer reviewed"}),
+    ]
+    for row in cases:
+        summary = _audit_summary(row, "priya@example.edu", {"material:12": "Django 5"})
+        assert summary and summary[0].isalnum(), summary
+        assert row.action not in summary, "the dotted verb must not leak into prose"
+
+
+def test_an_unmapped_action_still_renders_a_sentence():
+    """A new verb appearing as a blank row would look like corrupted data."""
+    from app.routers.admin import _audit_summary
+
+    summary = _audit_summary(_Row("something.new", "thing:1"), "a@b.c", {})
+    assert "something.new" in summary and summary.startswith("a@b.c")
+
+
+def test_a_summary_never_prints_a_raw_prefixed_id_when_it_can_avoid_it():
+    """The row outlives what it points at. Printing `reteach:32` back is the
+    exact technical noise this field exists to remove."""
+    from app.routers.admin import _audit_summary
+
+    summary = _audit_summary(
+        _Row("reteach.suggest", "reteach:32", {"concept": "one-to-many"}), "a@b.c", {})
+    assert "reteach:32" not in summary
+    assert "one to many" in summary
+
+
+def test_the_machine_fields_survive_alongside_the_summary():
+    """?action= filters on the dotted verbs and the contract is what an admin
+    types them from. Renaming them would break the filter and the contract."""
+    source = inspect.getsource(admin.audit_log)
+    body = source[source.index("return {"):]
+    for field in ('"action": r.action', '"target": r.target',
+                  '"detail": r.detail', '"summary"'):
+        assert field in body, field
+
+
+def test_seed_runs_are_hidden_by_default_but_not_deleted():
+    from app.routers.admin import SYSTEM_ACTIONS
+
+    assert "seed.run" in SYSTEM_ACTIONS
+    source = inspect.getsource(admin.audit_log)
+    assert "notin_(SYSTEM_ACTIONS)" in source
+    assert "delete" not in source.lower()
+
+
+def test_asking_for_a_system_action_explicitly_still_returns_it():
+    """Otherwise ?action=seed.run would come back empty and the filter would be
+    silently lying."""
+    source = inspect.getsource(admin.audit_log)
+    assert "elif not include_system" in source, (
+        "the system filter must not apply when an explicit action was requested"
+    )
+
+
+def test_audit_titles_are_resolved_in_batches():
+    """perf-001: a per-row lookup is a network round trip."""
+    source = inspect.getsource(admin._audit_titles)
+    assert source.count(".in_(") == 2
+    assert "db.get(" not in source

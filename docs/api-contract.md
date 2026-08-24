@@ -292,13 +292,32 @@ Audit log (`admin-003`):
 
 | Method | Path | Notes |
 |---|---|---|
-| `GET` | `/admin/audit-log` | `?limit=&offset=&actor=&action=` |
+| `GET` | `/admin/audit-log` | `?limit=&offset=&actor=&action=&include_system=` |
 
 ```json
 { "id": 88, "actor_email": "admin@example.edu", "action": "material.upload",
-  "target": "material:4", "at": "2026-08-23T09:00:00Z", "detail": { "version": 2 } }
+  "target": "material:4", "at": "2026-08-23T09:00:00Z", "detail": { "version": 2 },
+  "summary": "admin@example.edu uploaded “Django 5 By Example” (version 2)" }
 ```
-Actions: `material.upload` · `material.archive` · `material.ingest` · `course.create` · `reteach.approve` · `sourced_content.approve` · `sourced_content.reject`.
+Actions: `material.upload` · `material.archive` · `material.ingest` · `course.create` · `reteach.suggest` · `reteach.edit` · `reteach.approve` · `sourced_content.approve` · `sourced_content.reject`.
+
+#### `summary`, and why the machine fields stay — `admin-004`
+
+`summary` is a plain sentence naming the actor, the act, and the thing acted
+on, with ids resolved to titles. It is **added, not a replacement**: `action`,
+`target` and `detail` keep their exact values, because `?action=` filters on
+those dotted verbs and this document is what an admin types them from. Renaming
+them to read nicely would break the filter and the contract at once.
+
+Render `summary` and keep the rest behind a "details" affordance. An action with
+no template still produces a readable line rather than a blank — a new verb must
+never render as an empty row.
+
+**`seed.run` is hidden by default.** It is written by `seed.py`, which is a
+developer script, not curriculum governance — and on a rehearsal day it
+outnumbered every real row put together. `?include_system=true` brings it back,
+and `total` reflects whichever set you asked for. Nothing is deleted; the row is
+still there for anyone who wants it.
 
 ---
 
@@ -726,6 +745,7 @@ Every shape above is final enough to mock. Suggested order, matching `feature_li
 
 | When | Change |
 |---|---|
+| 2026-08-24 | **`admin-004` — the audit log reads as a sentence.** `GET /admin/audit-log` rows gain a `summary`; `action`, `target` and `detail` are unchanged, because `?action=` filters on those verbs. New `?include_system=true` — `seed.run` rows are hidden by default, being a developer script's output rather than governance. Purely additive. |
 | 2026-08-24 | **`teacher-008` — a reteach unit can now target a prerequisite concept, not only a misconception.** `ReteachUnit.misconception_id` becomes **nullable**, `concept_id` is added, exactly one is set, and a new `target` field says which. New `POST /teacher/reteach/suggest-top` drafts the top three of the heatmap and the top three of the gap map in one call and reports what it skipped and why. `POST /teacher/reteach/suggest` now accepts `{ concept_id }` as well. Everything stays a `draft` — the batch never assigns. **This one needs a migration**: `create_all()` does not alter an existing table, so run `backend/scripts/migrate_reteach_targets.py` once against the shared database. |
 | 2026-08-24 | **`student-009` — answers are now readable back, so a reload does not wipe them.** `GET /student/diagnostic` gains `submitted_at` and a `your_answer` on every item; new `GET /student/practice/{practice_set_id}` returns a set with `your_answer`, `correct` and the pending `diagnosis` (now carrying `confirmed`); `Gap` gains `latest_practice_set_id` so a client can find the set to resume. All additive — no existing field changed shape or meaning. The no-score rule is intact: diagnostic **correctness is still never stored**, only the answer text, so there remains nothing countable in the database and `correct_answer` still never leaves the server. |
 | 2026-08-23 | Initial draft covering all 32 features. |
