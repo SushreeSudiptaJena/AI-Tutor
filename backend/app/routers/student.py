@@ -25,13 +25,14 @@ from fastapi import (
     UploadFile,
     status,
 )
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session as OrmSession
 
 from ..db import get_db
 from ..deps import current_user
 from ..models import (
     Attempt,
+    AuditLog,
     Chunk,
     Concept,
     Course,
@@ -39,9 +40,11 @@ from ..models import (
     Gap,
     Mastery,
     Material,
+    Misconception,
     MisconceptionDiagnosis,
     PracticeItem,
     PracticeSet,
+    ReteachUnit,
     Topic,
     User,
 )
@@ -540,6 +543,81 @@ def mastery(
             {"topic_id": t.id, "topic": t.name, "concepts": by_topic[t.id]}
             for t in topics
             if by_topic.get(t.id)
+        ]
+    }
+
+
+# ---------------------------------------------------------------------------
+# teacher-006 (student half) -- what a teacher actually approved
+# ---------------------------------------------------------------------------
+
+@router.get("/assignments")
+def assignments(
+    db: OrmSession = Depends(get_db),
+    user: User = Depends(current_user),
+) -> dict:
+    """Reteach units a teacher has approved, for the student they were written
+    about.
+
+    The other side of the approval gate. `teacher-006` is only a
+    human-in-the-loop story if approval actually leads somewhere, and until
+    this existed an approved unit went nowhere -- the gate opened onto a wall.
+
+    `status == "assigned"` is the whole access rule, and it is applied in the
+    query rather than checked afterwards. A draft is not filtered out of a
+    fetched list; it is never fetched.
+
+    Scoped to the student's course through the misconception's topic, so a
+    reteach approved for the Django class does not appear for a physics
+    student.
+
+    `citations` is deliberately empty rather than absent. A unit's citations
+    are gathered while it is being drafted and there is nowhere to keep them --
+    `reteach_units` has no column for them, and adding one means a schema
+    change nobody can afford mid-build. An empty list is honest; inventing
+    sources at read time would not be.
+    """
+    stmt = (
+        select(ReteachUnit, Misconception)
+        .join(Misconception, Misconception.id == ReteachUnit.misconception_id)
+        .where(ReteachUnit.status == "assigned")
+        .order_by(ReteachUnit.id.desc())
+    )
+    if user.course_id is not None:
+        stmt = stmt.join(Topic, Topic.id == Misconception.topic_id).where(
+            Topic.course_id == user.course_id
+        )
+
+    rows = db.execute(stmt).all()
+
+    # Approval time lives in the audit log, because reteach_units has no
+    # approved_at column. Same source teacher-005 reads its boundary from, so
+    # the two panels cannot disagree about when a reteach happened.
+    stamps = {
+        target: at
+        for target, at in db.execute(
+            select(AuditLog.target, func.min(AuditLog.at))
+            .where(AuditLog.action == "reteach.approve")
+            .group_by(AuditLog.target)
+        ).all()
+    }
+
+    return {
+        "items": [
+            {
+                "id": unit.id,
+                "title": unit.title,
+                "body": unit.body,
+                "assigned_at": (
+                    stamps[f"reteach:{unit.id}"].isoformat().replace("+00:00", "Z")
+                    if f"reteach:{unit.id}" in stamps else None
+                ),
+                "citations": [],
+                # No misconception label. The student is being taught the
+                # thing, not told a machine decided they believe the wrong
+                # version of it.
+            }
+            for unit, _ in rows
         ]
     }
 

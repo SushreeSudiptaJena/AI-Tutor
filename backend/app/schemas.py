@@ -232,3 +232,21 @@ class ConfirmDiagnosisIn(BaseModel):
 
 class ResolveFlagIn(BaseModel):
     note: str | None = None
+
+
+# --- teacher-006 / teacher-007 -------------------------------------------
+
+class RejectSourcedIn(BaseModel):
+    reason: str | None = None
+
+
+class SuggestReteachIn(BaseModel):
+    misconception_id: int
+
+
+class PatchReteachIn(BaseModel):
+    """Both optional: a teacher who only fixes the title should not have to
+    resend the body they did not touch."""
+
+    title: str | None = None
+    body: str | None = None

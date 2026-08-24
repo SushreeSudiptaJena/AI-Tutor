@@ -281,3 +281,37 @@ def test_a_concept_nobody_has_been_asked_about_is_untested_not_missing():
 def test_mastery_reads_every_state_in_one_query_not_one_per_concept():
     source = inspect.getsource(student.mastery)
     assert source.count("select(Mastery)") == 1
+
+
+# ---------------------------------------------------------------------------
+# teacher-006, student half -- GET /student/assignments
+# ---------------------------------------------------------------------------
+
+def test_only_assigned_reteach_units_reach_a_student():
+    """The access rule is applied in the query, not checked afterwards. A
+    draft is not filtered out of a fetched list; it is never fetched."""
+    source = inspect.getsource(student.assignments)
+    assert 'ReteachUnit.status == "assigned"' in source
+
+
+def test_assignments_are_scoped_to_the_students_course():
+    source = inspect.getsource(student.assignments)
+    assert "Topic.course_id == user.course_id" in source
+
+
+def test_an_assignment_never_names_the_misconception_behind_it():
+    """The student is being taught the thing, not told a machine decided they
+    believe the wrong version of it."""
+    source = inspect.getsource(student.assignments)
+    body = source[source.index("return {"):]
+    code = "\n".join(ln for ln in body.splitlines()
+                     if not ln.strip().startswith("#"))
+    for banned in ("label", "misconception", "confirmed"):
+        assert banned not in code.lower(), f"{banned!r} leaked into an assignment"
+
+
+def test_assigned_at_comes_from_the_same_audit_row_teacher_005_reads():
+    """If the two panels read approval time from different places they can
+    disagree about when a reteach happened."""
+    source = inspect.getsource(student.assignments)
+    assert '"reteach.approve"' in source

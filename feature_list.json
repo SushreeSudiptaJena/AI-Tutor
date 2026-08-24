@@ -461,7 +461,7 @@
       "area": "teacher",
       "title": "Reasoning-path breakdown",
       "user_visible_behavior": "For a given problem, the top confirmed error patterns, each with one anonymized example.",
-      "status": "not_started",
+      "status": "passing",
       "depends_on": [
         "teacher-001"
       ],
@@ -471,8 +471,8 @@
         "Error patterns are ranked and each shows one example.",
         "No student name or identifier appears anywhere."
       ],
-      "evidence": null,
-      "notes": "Anonymization is a judging point — verify no names leak in the API response, not just the UI."
+      "evidence": "evidence/teacher-002/panels-live.txt",
+      "notes": "PASSING 2026-08-24. GET /teacher/problems/{problem_type}/reasoning-paths. A heatmap cell says 14 students got this wrong; this says HOW, which is the only version a teacher can teach against, because two students with the same wrong answer for different reasons need different lessons. The example is a real answer a real student typed, taken from a confirmed diagnosis. The query selects Attempt.answer rather than the Attempt row, so user_id is never in the function's scope -- a test asserts `select(Attempt)` does not appear."
     },
     {
       "id": "teacher-003",
@@ -480,7 +480,7 @@
       "area": "teacher",
       "title": "Prerequisite gap map",
       "user_visible_behavior": "Class-level view of which foundational concepts a chunk of students are missing, tied to the current topic.",
-      "status": "not_started",
+      "status": "passing",
       "depends_on": [
         "student-002"
       ],
@@ -489,8 +489,8 @@
         "Open the gap map for a topic.",
         "Foundational concepts are shown with the share of the class missing each."
       ],
-      "evidence": null,
-      "notes": null
+      "evidence": "evidence/teacher-003/panels-live.txt",
+      "notes": "PASSING 2026-08-24. GET /teacher/gap-map. The companion to the heatmap: the heatmap is what students get wrong NOW, this is what they never learned, and it names the earlier course it should have come from. Counts DISTINCT STUDENTS, not gap rows. Closed gaps are excluded -- a closed gap is no longer missing, and counting it would make a class look permanently broken however much of it got fixed. Live: 11/26 missing one-to-many, all attributed to CSW1."
     },
     {
       "id": "teacher-004",
@@ -516,7 +516,7 @@
       "area": "teacher",
       "title": "Before/after reteach tracking",
       "user_visible_behavior": "Shows whether a specific misconception is shrinking after a targeted reteach — not whether overall scores rose.",
-      "status": "not_started",
+      "status": "passing",
       "depends_on": [
         "teacher-001"
       ],
@@ -525,8 +525,8 @@
         "Open a misconception that has a seeded reteach event.",
         "Before and after frequencies are both shown, with the delta."
       ],
-      "evidence": null,
-      "notes": "Seed two time buckets. Do not build a real longitudinal pipeline in 36 hours."
+      "evidence": "evidence/teacher-005/panels-live.txt",
+      "notes": "PASSING 2026-08-24. GET /teacher/misconceptions/{id}/before-after. The one panel that can say the intervention did NOT work, which is the only reason the rest of the dashboard is worth trusting. The reteach moment is read from the audit log rather than a column: reteach_units has no approved_at, and adding one means reset_db.py, which drops 3,000+ embeddings. BUG FOUND AND FIXED IN ITS OWN VERIFICATION: it reported delta_share -0.3462 seconds after approval, because zero confirmations in the after-window became a share of zero and subtracted into a triumphant negative delta -- while nobody had been asked yet. Zero evidence and zero occurrences are not the same measurement. Now counts attempts on that problem_type inside the window and returns delta_share null with an explanatory note until somebody has actually been tested. Verified in both states."
     },
     {
       "id": "teacher-006",
@@ -534,7 +534,7 @@
       "area": "teacher",
       "title": "Auto-suggested reteach unit with teacher approval",
       "user_visible_behavior": "AI proposes a short lesson or practice set for the class's most common misconception; the teacher approves or edits before assigning.",
-      "status": "not_started",
+      "status": "passing",
       "depends_on": [
         "teacher-001",
         "infra-004"
@@ -545,8 +545,8 @@
         "Edit the text, then approve.",
         "It becomes assigned; without approval it is never visible to a student."
       ],
-      "evidence": null,
-      "notes": "The approval gate is the human-in-the-loop story. Never auto-assign."
+      "evidence": "evidence/teacher-006/panels-live.txt",
+      "notes": "PASSING 2026-08-24. POST /teacher/reteach/suggest, PATCH /teacher/reteach/{id}, POST /teacher/reteach/{id}/approve, plus GET /teacher/reteach (NOT in the frozen contract, added because without it a teacher who reloaded the page could not reach an existing unit, including the seeded draft -- contract updated). ALWAYS a draft; only approve assigns. An approved unit is FROZEN against edits (409): otherwise what was approved and what students received could differ with nothing recording that they diverged. Drafting REFUSES with 422 when the corpus cannot support it -- an unsupported unit is invented content wearing a teacher's name once approved. Live: 80% alignment, cited pp. 79/83/177 of the Django book, named the intuition behind the misconception and the case where it breaks; practice items attached WITHOUT their answer key, because a teacher-facing screen is still a screen. Re-suggesting replaces the existing draft rather than stacking another up."
     },
     {
       "id": "teacher-007",
@@ -554,7 +554,7 @@
       "area": "teacher",
       "title": "AI-sourced content verification queue",
       "user_visible_behavior": "Material the AI found via web search sits in a queue for teacher approval before any student can see it.",
-      "status": "not_started",
+      "status": "passing",
       "depends_on": [
         "rag-003"
       ],
@@ -564,8 +564,8 @@
         "Approve one; it becomes available.",
         "Confirm a pending item cannot be reached from any student view."
       ],
-      "evidence": null,
-      "notes": "Seed the items. Do NOT build live web search in 36 hours — the queue itself is the point."
+      "evidence": "evidence/teacher-007/panels-live.txt",
+      "notes": "PASSING 2026-08-24. GET /teacher/verification-queue plus approve and reject. Seeded -- there is no live web search, and the queue IS the feature: nothing from outside the knowledge base reaches a student without a teacher saying yes, which is what makes 'curriculum-aligned' mean anything. Pending items are unreachable from every student endpoint structurally, not by care: sourced_content has no relationship to any table a student route reads. A rejection keeps its reason (there is already a column), unlike a resolved uncertainty flag (there is not)."
     },
     {
       "id": "admin-001",

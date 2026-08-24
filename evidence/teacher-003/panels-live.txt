@@ -1,0 +1,308 @@
+teacher-002 / 003 / 005 / 006 / 007 -- the dashboard panels, live
+=================================================================
+One run against the real database and the real provider chain, course CSW2,
+signed in as ravi@example.edu (teacher). Every payload below was also checked
+for student identity and every route was called as a student.
+
+
+
+
+==============================================================================
+teacher-003  GET /teacher/gap-map?course_id=5
+==============================================================================
+class_size: 26
+    11 (0.423)  One-to-many relationships                     <- Computer Science Workshop 1
+     8 (0.308)  HTTP methods, GET and POST                    <- Computer Science Workshop 1
+     6 (0.231)  Filtering and querying records                <- Computer Science Workshop 1
+     5 (0.192)  Virtual environments and package isolation    <- Computer Science Workshop 1
+     4 (0.154)  URL paths and routing                         <- Computer Science Workshop 1
+
+==============================================================================
+teacher-002  GET /teacher/problems/{problem_type}/reasoning-paths
+==============================================================================
+
+  problem_type = foreign-key-placement
+       9  Puts the foreign key on the one side of a one-to-many relationship
+          answered: 'On the author table, pointing at the post'
+          because:  Reasons that the author owns the posts, so the reference belongs on the author. A single column cannot hold ma...
+
+  problem_type = http-method-choice
+       7  Chooses GET for a request that changes server state
+          answered: 'GET, because it is a simpler request'
+          because:  Picks the method by convenience rather than by meaning. GET is supposed to be safe and repeatable, so using it...
+
+==============================================================================
+teacher-007  GET /teacher/verification-queue
+==============================================================================
+   [pending] How Database Indexes Actually Work
+       for gap: Database indexes  | https://example.org/sql-index-basics
+   [pending] Asynchronous Views in Django
+       for gap: Asynchronous views  | https://example.org/django-async-views
+
+  approve one ->
+    200 approved
+  reject the other with a reason ->
+    200 rejected | This blog post is wrong about lazy evaluation.
+  pending queue now: 0
+
+==============================================================================
+teacher-005  GET /teacher/misconceptions/{id}/before-after (no reteach yet)
+==============================================================================
+misconception: Puts the foreign key on the one side of a one-to-many relationship
+{
+  "misconception_id": 19,
+  "label": "Puts the foreign key on the one side of a one-to-many relationship",
+  "before": {
+    "window": "all time",
+    "confirmed_count": 9,
+    "share": 0.3462
+  },
+  "after": null,
+  "reteach_at": null,
+  "delta_share": null
+}
+
+==============================================================================
+ANONYMISATION + ROLE
+==============================================================================
+no student identity anywhere: True
+  student GET /teacher/gap-map                                     -> 403
+  student GET /teacher/problems/x/reasoning-paths                  -> 403
+  student GET /teacher/verification-queue                          -> 403
+  student GET /teacher/misconceptions/19/before-after              -> 403
+  404 on unknown misconception -> 404
+
+
+top misconception: Puts the foreign key on the one side of a one-to-many relationship | confirmed: 9
+
+==============================================================================
+BEFORE-AFTER, before any reteach
+==============================================================================
+after: None | reteach_at: None | delta: None
+
+==============================================================================
+teacher-006  POST /teacher/reteach/suggest
+==============================================================================
+status: 201
+id: 14 | status: draft | approved_by: None
+alignment: 80 %
+
+TITLE: Foreign key placement in one-to-many relationships
+
+BODY:
+ First, acknowledge the intuition that the author “owns” the posts, so it feels natural to put a reference on the author side; that expectation is why many students adopt the opposite model. Second, point out the concrete failure: a single column on the author table could only store one post ID, so an author with two posts would have no place to record the second reference. The course material shows the opposite – Django creates an author_id column on the blog_post table (page 83) and the Comment model stores a post foreign key on each comment (page 177), exactly because the many side holds the key. Finally, reinforce the correct model: define the foreign key in the “many” model (Post) as models.ForeignKey(User, on_delete=models.CASCADE); this generates the foreign‑key column on the many‑side table, allowing any number of posts to point to the same author. Tell students to always look for
+
+citations: [('Django 5 By Example (Anton', 79), ('Django 5 By Example (Anton', 83), ('Django 5 By Example (Anton', 177), ('Django 5 By Example (Anton', 826)]
+practice_items: 1 | first: One author writes many posts, and every post has exactly one author. W
+no correct_answer in practice items: True
+
+==============================================================================
+A DRAFT IS INVISIBLE TO STUDENTS
+==============================================================================
+student GET /teacher/reteach -> 403
+draft title appears in any student payload: False
+
+==============================================================================
+PATCH the draft, then approve
+==============================================================================
+patched title -> Which side carries the foreign key | status: draft
+approved -> 200 | status: assigned | approved_by: 2
+
+==============================================================================
+AN APPROVED UNIT IS FROZEN
+==============================================================================
+409 conflict | This unit has been approved and can no longer be edited. Students may already ha
+
+==============================================================================
+teacher-005 now has a boundary to measure against
+==============================================================================
+{
+  "misconception_id": 19,
+  "label": "Puts the foreign key on the one side of a one-to-many relationship",
+  "before": {
+    "window": "before 2026-08-24T08:44:34.130814Z",
+    "confirmed_count": 9,
+    "share": 0.3462
+  },
+  "after": {
+    "window": "since 2026-08-24T08:44:34.130814Z",
+    "confirmed_count": 0,
+    "share": 0.0
+  },
+  "reteach_at": "2026-08-24T08:44:34.130814Z",
+  "delta_share": -0.3462
+}
+
+==============================================================================
+teacher-005 -- THE BUG THIS RUN FOUND, AND THE FIX
+==============================================================================
+The run above ends with before/after reporting delta_share -0.3462 seconds
+after the reteach was approved. That is the panel lying by arithmetic: zero
+confirmations in the "after" window divides into a share of zero, which
+subtracts into a triumphant negative delta -- while what actually happened is
+that nobody had been asked yet. Zero evidence and zero occurrences are not the
+same measurement, and the panel could not tell them apart.
+
+Fixed by counting attempts on that problem_type inside the window. Verified
+both states:
+
+
+
+
+==============================================================================
+JUST AFTER APPROVAL -- nobody has been asked yet
+==============================================================================
+{
+  "misconception_id": 19,
+  "label": "Puts the foreign key on the one side of a one-to-many relationship",
+  "before": {
+    "window": "before 2026-08-24T08:44:34.130814Z",
+    "confirmed_count": 9,
+    "share": 0.3462
+  },
+  "after": {
+    "window": "since 2026-08-24T08:44:34.130814Z",
+    "confirmed_count": 0,
+    "share": 0.0,
+    "attempts_in_window": 0,
+    "measured": false
+  },
+  "reteach_at": "2026-08-24T08:44:34.130814Z",
+  "delta_share": null,
+  "note": "Nobody has attempted this kind of problem since the reteach was approved, so there is nothing to compare yet."
+}
+
+==============================================================================
+NOW A REAL ATTEMPT ON THAT KIND OF PROBLEM
+==============================================================================
+student has that gap: True
+item: In a Django blog app, each Author can write many Posts. Where should you place the ForeignKey f
+answered CORRECTLY: In the Post model, a ForeignKey to Author
+
+==============================================================================
+BEFORE-AFTER NOW THAT THE WINDOW HAS EVIDENCE IN IT
+==============================================================================
+{
+  "misconception_id": 19,
+  "label": "Puts the foreign key on the one side of a one-to-many relationship",
+  "before": {
+    "window": "before 2026-08-24T08:44:34.130814Z",
+    "confirmed_count": 9,
+    "share": 0.3462
+  },
+  "after": {
+    "window": "since 2026-08-24T08:44:34.130814Z",
+    "confirmed_count": 0,
+    "share": 0.0,
+    "attempts_in_window": 2,
+    "measured": true
+  },
+  "reteach_at": "2026-08-24T08:44:34.130814Z",
+  "delta_share": -0.3462,
+  "note": null
+}
+
+WHAT THIS RUN PROVES
+--------------------
+teacher-003  Gap map counts distinct STUDENTS, not gap rows, excludes closed
+             gaps, and names the prior course each prerequisite should have
+             come from -- "11 students never learned this, and it was supposed
+             to come from CSW1" is a different conversation from "11 students
+             are struggling".
+teacher-002  Reasoning paths show HOW students got a problem wrong, with a
+             real answer a real student typed. The query selects
+             Attempt.answer, never the Attempt row, so user_id is never even
+             in scope.
+teacher-007  The verification queue approves and rejects, and a rejection
+             keeps its reason. Pending items are unreachable from every
+             student endpoint -- structurally, since sourced_content has no
+             relationship to any table a student route reads.
+teacher-006  A suggested unit is ALWAYS a draft. It cited real pages (79, 83,
+             177) of the Django book at 80% alignment, named the intuition
+             behind the misconception, gave the case where it breaks, and
+             carried the seeded practice items WITHOUT their answer key.
+             A draft is invisible to students; an approved unit is frozen
+             against further edits (409), because otherwise what was approved
+             and what students received could diverge with nothing recording
+             it.
+teacher-005  Reports no delta until somebody has actually been tested, and
+             reports the delta whatever its sign once they have.
+
+ANONYMISATION   No user_id, student_id, email or full_name in any payload.
+ROLE            Every teacher route returns 403 to a signed-in student.
+
+==============================================================================
+teacher-006, THE STUDENT HALF -- GET /student/assignments
+==============================================================================
+Found during verification: `GET /student/assignments` was in the frozen
+contract and had never been built, so an approved reteach unit went nowhere.
+The approval gate is only a human-in-the-loop story if approval leads
+somewhere; until this existed the gate opened onto a wall. Built and verified.
+
+Also found: the 422 refusal branch in suggest_reteach read `report`, which is
+only bound on the SUCCESS path, so an honest refusal raised UnboundLocalError
+and became a 500. Fixed to read exc.report. The branch is not rare -- it fired
+on the second misconception tried.
+
+
+
+
+
+
+==============================================================================
+THE 422 PATH IS REAL, NOT THEORETICAL
+==============================================================================
+misconception: Chooses GET for a request that changes server state
+status: 422
+{
+  "error": {
+    "code": "insufficient_evidence",
+    "message": "The approved course material does not cover this well enough to build a reteach unit from. Writing one anyway would put invented content behind your name.",
+    "detail": {
+      "alignment_percent": 43
+    }
+  }
+}
+
+-> the corpus cannot teach against this one, so no unit is drafted
+
+==============================================================================
+A MISCONCEPTION THE CORPUS CAN SUPPORT
+==============================================================================
+drafted for: Puts the foreign key on the one side of a one-to-many relationship
+
+id: 15 | status: draft | alignment: 80 %
+title: Foreign key placement in one-to-many relationships
+
+==============================================================================
+THE STUDENT CANNOT SEE THE DRAFT
+==============================================================================
+student sees ids: [14]
+draft 15 visible: False
+
+==============================================================================
+APPROVE -> IT APPEARS
+==============================================================================
+status: assigned | approved_by: 2
+student sees ids: [15, 14]
+title: Foreign key placement in one-to-many relationships | assigned_at: 2026-08-24T09:23:25.812565Z
+fields: ['assigned_at', 'body', 'citations', 'id', 'title']
+names no misconception or diagnosis: True
+
+WHAT THE STUDENT HALF PROVES
+----------------------------
+- A misconception the corpus cannot teach against is REFUSED at 43% alignment,
+  with no unit drafted. Writing one anyway would put invented content behind a
+  teacher's name the moment they approved it.
+- A draft is invisible to the student it was written about. The rule is in the
+  query (status == "assigned"), so a draft is never fetched rather than being
+  fetched and filtered.
+- Approving it makes it appear, with assigned_at read from the same audit row
+  teacher-005 uses for its before/after boundary -- so the two panels cannot
+  disagree about when a reteach happened.
+- The payload names no misconception, no diagnosis, no confirmed count. The
+  student is being taught the thing, not told a machine decided they believe
+  the wrong version of it.
+- citations[] is empty by design: a unit's citations are gathered while it is
+  drafted and reteach_units has no column to keep them in. An empty list is
+  honest; inventing sources at read time would not be.

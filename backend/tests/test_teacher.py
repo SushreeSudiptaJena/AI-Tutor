@@ -121,3 +121,120 @@ def test_the_heatmap_is_scoped_to_a_course():
 def test_the_heatmap_falls_back_to_the_teachers_own_course():
     source = _sql_of(teacher.heatmap)
     assert "course_id if course_id is not None else user.course_id" in source
+
+
+# ---------------------------------------------------------------------------
+# teacher-002/003/005/006/007 -- the panels
+# ---------------------------------------------------------------------------
+
+def test_no_teacher_route_selects_a_student_identity():
+    """The anonymisation guarantee, asserted against every route in the file
+    rather than against the four that existed when it was written."""
+    import inspect as _i
+
+    for name, fn in vars(teacher).items():
+        if not callable(fn) or not getattr(fn, "__module__", "") == teacher.__name__:
+            continue
+        try:
+            source = _i.getsource(fn)
+        except (OSError, TypeError):
+            continue
+        if "return {" not in source:
+            continue
+        body = source[source.index("return {"):]
+        for banned in ("user_id", "student_id", ".email", "full_name"):
+            assert banned not in body, f"{name}() leaks {banned!r}"
+
+
+def test_the_gap_map_counts_students_not_gap_rows():
+    source = _sql_of(teacher.gap_map)
+    assert "func.count(func.distinct(Gap.user_id))" in source
+
+
+def test_the_gap_map_excludes_closed_gaps():
+    """A closed gap is no longer missing. Leaving it in makes a class look
+    permanently broken however much of it gets fixed."""
+    assert 'Gap.status != "closed"' in _sql_of(teacher.gap_map)
+
+
+def test_the_gap_map_names_the_course_a_prerequisite_came_from():
+    source = _sql_of(teacher.gap_map)
+    assert "prerequisite_course_id" in source and "prerequisite_course" in source
+
+
+def test_reasoning_paths_selects_only_the_answer_column_from_an_attempt():
+    """Selecting the Attempt row would put user_id in scope, one careless edit
+    away from the response."""
+    source = _sql_of(teacher.reasoning_paths)
+    assert "select(Attempt.answer)" in source
+    assert "select(Attempt)" not in source
+
+
+def test_reasoning_paths_counts_only_confirmed_diagnoses():
+    assert "MisconceptionDiagnosis.confirmed.is_(True)" in _sql_of(teacher.reasoning_paths)
+
+
+def test_before_after_reports_no_delta_until_somebody_has_been_tested():
+    """Without this the panel lies by arithmetic: a reteach approved seconds
+    ago has zero confirmations after it, which becomes a share of zero, which
+    subtracts into a triumphant negative delta -- when nobody has been asked."""
+    source = _sql_of(teacher.before_after)
+    assert "attempts_in_window" in source and '"measured"' in source
+    assert "if tested else None" in source
+
+
+def test_before_after_is_null_not_zero_before_any_reteach():
+    source = _sql_of(teacher.before_after)
+    assert '"after": None' in source
+
+
+def test_a_reteach_unit_is_created_as_a_draft_and_never_assigned():
+    """The approval gate is the human-in-the-loop story. Never auto-assign."""
+    source = _sql_of(teacher.suggest_reteach)
+    assert 'unit.status = "draft"' in source
+    assert '"assigned"' not in source
+
+
+def test_only_approve_can_assign_a_reteach_unit():
+    assert 'unit.status = "assigned"' in _sql_of(teacher.approve_reteach)
+    assert 'unit.status = "assigned"' not in _sql_of(teacher.patch_reteach)
+
+
+def test_an_approved_reteach_unit_cannot_be_edited():
+    """Otherwise the thing approved and the thing students received could
+    differ with nothing recording that they diverged."""
+    source = _sql_of(teacher.patch_reteach)
+    assert 'unit.status != "draft"' in source
+    assert "HTTP_409_CONFLICT" in source
+
+
+def test_approval_writes_the_audit_row_before_after_depends_on():
+    """reteach_units has no approved_at column; teacher-005 reads the moment
+    from the audit log. If this action string changes, before/after silently
+    stops finding a boundary."""
+    assert '"reteach.approve"' in _sql_of(teacher.approve_reteach)
+    assert '"reteach.approve"' in _sql_of(teacher._reteach_approved_at)
+
+
+def test_a_reteach_unit_never_ships_a_practice_answer_key():
+    source = _sql_of(teacher._reteach_out)
+    body = source[source.index("return {"):]
+    # Comments stripped: the line that says correct_answer is deliberately
+    # absent should not be the thing that fails the check for it.
+    code = "\n".join(ln for ln in body.splitlines()
+                     if not ln.strip().startswith("#"))
+    assert "correct_answer" not in code
+
+
+def test_drafting_refuses_when_the_corpus_cannot_support_it():
+    """An unsupported unit is invented content wearing a teacher's name once
+    approved -- the exact thing 'curriculum-aligned' rules out."""
+    from app.services import reteach as reteach_service
+
+    source = _sql_of(reteach_service.draft)
+    assert "if not report.sufficient:" in source
+    assert "raise NotSupported" in source
+
+
+def test_the_verification_queue_stores_a_rejection_reason():
+    assert "reject_reason" in _sql_of(teacher._decide_sourced)

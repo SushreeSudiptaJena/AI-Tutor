@@ -403,7 +403,7 @@ Branch on `outcome`: `answered` · `insufficient_evidence` · `graded_work_refus
 SSE frames, if built: `event: token` with `data: {"text":"…"}`, then a final `event: done` carrying the complete `TutorResponse` (the alignment badge can only render after the stream ends, since the evidence check needs the full answer).
 
 ### Assigned reteach
-`GET /student/assignments` → `{ items: [{ id, title, body, assigned_at, citations }] }`. Only teacher-approved units appear here.
+`GET /student/assignments` → `{ items: [{ id, title, body, assigned_at, citations }] }`. Only teacher-approved units appear here. **Built `teacher-006`.** `citations[]` is empty: a unit's citations are gathered when it is drafted and there is no column to keep them in, so the student gets the teacher-approved prose without invented sources. `assigned_at` is read from the approval audit row.
 
 ---
 
@@ -456,9 +456,17 @@ Rows are written automatically by `rag-003`. No separate wiring.
 ```
 `after` is `null` when no reteach has happened yet.
 
+`after` also carries `attempts_in_window` and `measured`. **`delta_share` is
+`null` until `measured` is true**, with a `note` saying why. A reteach approved
+a minute ago has zero confirmations after it, which would otherwise divide into
+a share of zero and subtract into a flattering negative delta — while nobody
+has actually been asked. Zero evidence and zero occurrences are not the same
+measurement.
+
 ### Auto-suggested reteach — `teacher-006`
 | Method | Path | Notes |
 |---|---|---|
+| `GET` | `/teacher/reteach` | `?status_filter=draft` — **added after the freeze.** Without it there is no way to reach a unit that already exists: `suggest` returns one once and `PATCH` needs an id, so a reloaded page lost it. |
 | `POST` | `/teacher/reteach/suggest` | `{ misconception_id }` → `ReteachUnit` (`status: "draft"`) |
 | `PATCH` | `/teacher/reteach/{id}` | `{ title?, body? }` |
 | `POST` | `/teacher/reteach/{id}/approve` | → `status: "assigned"` |
@@ -470,7 +478,18 @@ Rows are written automatically by `rag-003`. No separate wiring.
   "status": "draft", "approved_by": null }
 ```
 
-> A `draft` unit is **never** visible at `GET /student/assignments`. The approval gate is the human-in-the-loop story — never auto-assign.
+> A `draft` unit is **never** visible at `GET /student/assignments`. Enforced by the query, which filters `status == "assigned"`. The approval gate is the human-in-the-loop story — never auto-assign.
+
+`PATCH` on an **approved** unit is `409 conflict`. Otherwise what a teacher
+approved and what students received could differ with nothing recording that
+they diverged; un-approve and re-approve leaves two audit rows instead.
+
+`suggest` returns `422 insufficient_evidence` when the approved corpus cannot
+support a unit on that misconception — an unsupported unit becomes invented
+content wearing a teacher's name the moment it is approved. The response also
+carries `evidence` (the same `EvidenceReport` as a lesson) and `citations[]`.
+`practice_items[]` never include `correct_answer`; a teacher-facing screen is
+still a screen.
 
 ### AI-sourced content verification queue — `teacher-007`
 | Method | Path | Notes |
@@ -536,6 +555,7 @@ Every shape above is final enough to mock. Suggested order, matching `feature_li
 | 2026-08-23 | `/health` documented as always-200 with a `degraded` state; implemented in `infra-002`. |
 | 2026-08-23 | Guardrail narrowed to `/tutor/ask` only, and now requires intent + assignment match. `Gap` gains `suggested_prompts`. |
 | 2026-08-24 | Golden path complete. `POST /student/practice/generate` (needs `gap_id`; also returns `concept` and `source: generated\|seeded`), `POST /student/practice/{id}/answer`, `POST /student/misconception-diagnosis/{id}/confirm`, `GET /teacher/misconceptions/heatmap`, `GET /teacher/uncertainty-flags` and its `/resolve`. `student-004` Show Source needs no endpoint — it is the `Citation` object. |
+| 2026-08-24 | Teacher panels built: `teacher-002` reasoning paths, `teacher-003` gap map, `teacher-005` before/after (now with `measured`/`attempts_in_window`; `delta_share` null until tested), `teacher-006` reteach suggest/patch/approve **plus new `GET /teacher/reteach`** and `GET /student/assignments`, `teacher-007` verification queue. |
 | 2026-08-24 | `GET /student/mastery` is **now built** (`student-007`) — exact shape as documented; no aggregate score, no time-on-task, and nothing countable to rebuild one from. |
 | 2026-08-24 | `POST /student/syllabus-upload` is **now built** (`student-008`) — PDF/`.txt`/`.md`, ≤10 MB, same `{gaps, message}` body as `submit`, `detected_from: "syllabus_upload"`, documented 400 reasons. |
 | 2026-08-24 | `POST /tutor/ask` now returns `graded_work_refused` (`rag-004`). `GET /student/course-summary`, `GET /student/diagnostic`, `POST /student/diagnostic/{id}/submit`, `GET /student/gaps` and `GET /student/gaps/{id}/lesson` implemented. `diagnostic_id` **is the course id** — a course has exactly one diagnostic. `POST /student/syllabus-upload` is documented but **not built**. A resource `404` now keeps its own message instead of "No such route." |
