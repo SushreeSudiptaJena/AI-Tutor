@@ -527,7 +527,13 @@ Documented here so nobody goes looking for an endpoint that was never meant to e
 
 ## Accessibility — `a11y-001`
 
-**No endpoints.** Read-aloud uses the browser's `speechSynthesis` on `TutorResponse.body`; font size and high contrast are client-side state. The only server involvement is `preferred_language` on `User`.
+**Almost no endpoints.** Font size and high contrast are client-side state, and the only other server involvement is `preferred_language` on `User`.
+
+**Read-aloud must use `TutorResponse.speech_text`, not `body`.** `body` is markdown, and read aloud its citation markers become spoken numbers — "…returns model instances when executed **four**" — while `**bold**` and backticks are noise or odd pauses depending on the engine. `speech_text` is the same answer with the markdown removed and the citation markers dropped; the citations themselves are still in `citations[]` and still on screen. It is present on **every** `TutorResponse`, including both refusals, and is built from the translated body, so a Hindi answer is spoken in Hindi.
+
+```js
+speechSynthesis.speak(new SpeechSynthesisUtterance(response.speech_text))
+```
 
 ---
 
@@ -560,6 +566,7 @@ Every shape above is final enough to mock. Suggested order, matching `feature_li
 | 2026-08-23 | `/health` documented as always-200 with a `degraded` state; implemented in `infra-002`. |
 | 2026-08-23 | Guardrail narrowed to `/tutor/ask` only, and now requires intent + assignment match. `Gap` gains `suggested_prompts`. |
 | 2026-08-24 | Golden path complete. `POST /student/practice/generate` (needs `gap_id`; also returns `concept` and `source: generated\|seeded`), `POST /student/practice/{id}/answer`, `POST /student/misconception-diagnosis/{id}/confirm`, `GET /teacher/misconceptions/heatmap`, `GET /teacher/uncertainty-flags` and its `/resolve`. `student-004` Show Source needs no endpoint — it is the `Citation` object. |
+| 2026-08-24 | **`TutorResponse` gains `speech_text`** (`a11y-001`, backend half). Read-aloud must use it instead of `body`: `body` is markdown, and `[4]` is spoken as "four" mid-sentence. Present on every outcome, including refusals. |
 | 2026-08-24 | `i18n-001` built and verified live: Hindi in, Hindi out, identical citations and an identical alignment score. Response `language` now reports what was produced. Both routes fall back to `User.preferred_language` instead of defaulting to `en`. |
 | 2026-08-24 | Admin built: `admin-002` departments/courses/prerequisites, `admin-001` material upload with archiving-not-deleting and version history, `admin-003` audit log. The `sourced_content` audit actions are the documented verbs (`.approve`/`.reject`), not the resulting status. The two ingest endpoints are marked NOT BUILT. |
 | 2026-08-24 | Teacher panels built: `teacher-002` reasoning paths, `teacher-003` gap map, `teacher-005` before/after (now with `measured`/`attempts_in_window`; `delta_share` null until tested), `teacher-006` reteach suggest/patch/approve **plus new `GET /teacher/reteach`** and `GET /student/assignments`, `teacher-007` verification queue. |

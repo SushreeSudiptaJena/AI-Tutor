@@ -649,7 +649,7 @@
       "area": "a11y",
       "title": "Accessible interaction — read-aloud, font size, contrast",
       "user_visible_behavior": "Student can have any explanation read aloud, enlarge text, and switch to high contrast.",
-      "status": "not_started",
+      "status": "blocked",
       "depends_on": [
         "student-003"
       ],
@@ -660,8 +660,8 @@
         "Toggle high contrast; text remains readable throughout.",
         "Tab through the student dashboard using only the keyboard and reach every control."
       ],
-      "evidence": null,
-      "notes": "speechSynthesis is free and needs no API. shadcn/Radix gives keyboard nav and ARIA for free. ~40 min for a whole judging criterion."
+      "evidence": "evidence/a11y-001/backend-half.txt",
+      "notes": "BLOCKED 2026-08-24 on the frontend, NOT passing. All four verification steps are UI actions -- click read-aloud, increase font size, toggle contrast, tab the dashboard -- and frontend/src/pages/{student,teacher,admin}/ each contain only a .gitkeep. There are no pages yet and they belong to teammates 2/3/4. THE BACKEND HALF IS DONE AND VERIFIED. Asking what read-aloud is actually pointed at turned up a real server-side bug: the contract aims it at TutorResponse.body, which is MARKDOWN, so speechSynthesis says '...returns model instances when executed FOUR' -- a wrong sentence, four times in one answer -- and the bold/backtick markers are noise or odd pauses depending on the engine. Measured on a real answer: 20 markdown markers and 4 citation markers. Every TutorResponse now carries `speech_text`: the same answer with markdown stripped and citation markers dropped (a listening student cannot click [4], and the citations are still on screen and still in citations[]). Done server-side on purpose -- one implementation instead of one per page, across three owners. Present on gap lessons and on BOTH refusals, because a student who cannot see the screen still needs to hear why they were refused, and built from the TRANSLATED body so a Hindi answer is spoken in Hindi. 13 tests in test_speech.py. STILL OWED, frontend, ~40 min: a read-aloud button calling speechSynthesis on response.speech_text (NOT body), font-size and high-contrast client state, and keyboard reachability -- shadcn/Radix gives ARIA and focus handling for free. Contract updated so nobody wires it to the wrong field."
     },
     {
       "id": "demo-001",

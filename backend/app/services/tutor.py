@@ -26,7 +26,7 @@ from sqlalchemy.orm import Session as OrmSession
 from .. import prompts
 from ..models import UncertaintyFlag
 from ..providers import complete
-from . import evidence, guardrail, language as lang, retrieval
+from . import evidence, guardrail, language as lang, retrieval, speech
 
 REFUSAL_BODY = (
     "I don't have approved course material covering this, so I'm not going to "
@@ -91,6 +91,7 @@ def ask(
             "outcome": "graded_work_refused",
             "language": produced,
             "body": body,
+            "speech_text": speech.for_speech(body),
             "hints": [lang.from_english(h, target)[0] for h in hints],
             "citations": cites,
             "matched_assignment": verdict.matched_assignment,
@@ -117,6 +118,7 @@ def ask(
             "outcome": "insufficient_evidence",
             "language": produced,
             "body": body,
+            "speech_text": speech.for_speech(body),
             "citations": [],
             "evidence": report.to_dict(),
             "uncertainty_flag_id": flag.id,
@@ -141,6 +143,9 @@ def ask(
         "outcome": "answered",
         "language": produced,
         "body": body,
+        # a11y-001. The same answer with the markdown taken out, because
+        # read-aloud points at this response and "[4]" is spoken as "four".
+        "speech_text": speech.for_speech(body),
         # Never empty on an answered response -- that is the whole point of the
         # build, and `sufficient` cannot be true with no hits.
         "citations": cites,
@@ -202,6 +207,7 @@ def lesson(
             "outcome": "insufficient_evidence",
             "language": produced,
             "body": body,
+            "speech_text": speech.for_speech(body),
             "citations": [],
             "evidence": report.to_dict(),
             "uncertainty_flag_id": flag.id,
@@ -219,6 +225,7 @@ def lesson(
         "outcome": "answered",
         "language": produced,
         "body": body,
+        "speech_text": speech.for_speech(body),
         "citations": cites,
         "evidence": report.to_dict(),
     }

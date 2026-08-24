@@ -1,0 +1,108 @@
+a11y-001 -- the BACKEND half only. This feature is NOT passing.
+===============================================================
+a11y-001 is documented as client-side: read-aloud, font size, high contrast and
+keyboard navigation all live in the browser. All four of its verification steps
+are UI actions:
+
+    Click read-aloud on a lesson; browser speechSynthesis speaks it.
+    Increase font size; layout does not break.
+    Toggle high contrast; text remains readable throughout.
+    Tab through the student dashboard using only the keyboard.
+
+None of them can be performed. frontend/src/pages/{student,teacher,admin}/ each
+contain a single .gitkeep -- there are no pages yet, and they are owned by
+teammates 2, 3 and 4. So this feature is BLOCKED, not passing.
+
+What IS deliverable from the backend was found by asking what read-aloud is
+actually pointed at.
+
+
+
+
+==============================================================================
+a11y-001 BACKEND HALF -- speech_text on every TutorResponse
+==============================================================================
+fields: ['body', 'citations', 'evidence', 'language', 'outcome', 'speech_text']
+
+--- body: what the screen renders ---
+A Django QuerySet is the object the ORM uses to represent a **set of database queries** that will return model instances when executed [4]. Think of it as a “recipe” for fetching rows: you can start with `Post.objects.all()` and then chain filters, orderings, or annotations without touching the database yet.
+
+QuerySets are **laz
+
+--- speech_text: what speechSynthesis is handed ---
+A Django QuerySet is the object the ORM uses to represent a set of database queries that will return model instances when executed. Think of it as a "recipe" for fetching rows: you can start with Post.objects.all() and then chain filters, orderings, or annotations without touching the database yet.
+
+QuerySets are lazy: creating 
+
+markdown markers  body: 20 -> speech_text: 0
+citation markers  body: ['[4]', '[2]', '[1]', '[3]'] -> speech_text: []
+citations still available separately: 4 entries
+
+-> read aloud, the body says '...when executed FOUR.'  speech_text does not.
+
+==============================================================================
+A GAP LESSON, AND A REFUSAL
+==============================================================================
+lesson has speech_text: True | markers stripped: True
+
+refusal outcome: insufficient_evidence | has speech_text: True
+spoken refusal: I don't have approved course material covering this, so I'm not going to guess at it. I've flagged it for your teacher.
+-> a student who cannot see the screen still hears WHY they were refused
+
+==============================================================================
+IN HINDI -- spoken in the language actually produced
+==============================================================================
+language: hi | speech_text is Hindi: True
+citation markers in Hindi speech_text: []
+
+ एक जैंगो क्वेरीसेट डेटाबेस से डेटा प्राप्त करने के लिए ORM द्वारा उपयोग किया जाने वाला मूल ऑब्जेक्ट है। यह डेटाबेस क्वेरी के संग्रह का प्रतिनिधित्व करता है जो मूल्यांकन पर मॉडल उदाहरण लौटाएगा। इसे SQL SELECT स्टेटमेंट के
+
+==============================================================================
+THE SERVER'S OTHER a11y CONTRIBUTION: preferred_language
+==============================================================================
+User.preferred_language: en
+languages offered: ['en', 'hi', 'bn', 'ta', 'te', 'mr']
+
+THE PROBLEM THIS FOUND
+----------------------
+The contract points read-aloud at `TutorResponse.body`. That field is markdown,
+because it renders as a lesson card. Markdown read aloud is not the same
+document, and the citation markers are the worst of it:
+
+    body:         "...will return model instances when executed [4]."
+    spoken aloud: "...will return model instances when executed FOUR."
+
+That is not a formatting blemish, it is a wrong sentence, and it happens four
+times in a single answer. `**lazy**` and `` `Post.objects.all()` `` are either
+silence with an odd pause or a run of punctuation names depending on the engine.
+
+Measured on a real answer: 20 markdown markers and 4 citation markers.
+
+THE FIX
+-------
+Every `TutorResponse` now carries `speech_text` alongside `body` -- the same
+answer with the markdown removed and the citation markers dropped. Done on the
+server rather than in the browser deliberately: one implementation instead of
+one per page, and the pages belong to three different people.
+
+Citation markers are REMOVED rather than spoken. A listening student cannot
+click "[4]" anyway, and the citation list is still on screen and still in
+`citations[]`. Silence beats a stray number.
+
+Verified: 20 markers -> 0, citations still available separately, present on gap
+lessons and on refusals too -- a student who cannot see the screen still needs
+to hear why they were refused -- and built from the TRANSLATED body, so a Hindi
+answer is spoken in Hindi.
+
+WHAT IS STILL OWED, AND BY WHOM
+-------------------------------
+Frontend (teammates 2/3/4), roughly 40 minutes per the feature notes:
+  - a read-aloud button calling speechSynthesis.speak(new
+    SpeechSynthesisUtterance(response.speech_text))  <- speech_text, not body
+  - font-size control, client-side state
+  - high-contrast toggle, client-side state
+  - keyboard reachability; shadcn/Radix gives ARIA and focus handling for free
+
+The server's only other involvement, per the contract, is
+`User.preferred_language`, which exists and is now actually honoured by both
+answer routes (see i18n-001).
