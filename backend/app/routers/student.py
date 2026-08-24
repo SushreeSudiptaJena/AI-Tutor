@@ -26,7 +26,7 @@ from fastapi import (
     status,
 )
 from sqlalchemy import func, select
-from sqlalchemy.orm import Session as OrmSession
+from sqlalchemy.orm import Session as OrmSession, selectinload
 
 from ..db import get_db
 from ..deps import current_user
@@ -92,12 +92,12 @@ def _suggested_prompts(concept_name: str, topic_name: str | None) -> list[str]:
 
 
 def _gap_out(db: OrmSession, gap: Gap) -> dict:
+    # Read through the relationships rather than issuing our own db.get(): a
+    # caller that eager-loaded them (see list_gaps) then pays no query at all,
+    # and one that did not pays exactly what the db.get() cost before.
     concept = gap.concept
-    topic = db.get(Topic, concept.topic_id) if concept else None
-    prerequisite = (
-        db.get(Course, concept.prerequisite_course_id)
-        if concept and concept.prerequisite_course_id else None
-    )
+    topic = concept.topic if concept else None
+    prerequisite = concept.prerequisite_course if concept else None
     return {
         "id": gap.id,
         "concept": concept.name if concept else "",
@@ -142,20 +142,30 @@ def course_summary(
         .order_by(Material.id)
     ).all()
 
-    books = []
-    for m in materials:
-        chapters = db.execute(
-            select(Chunk.chapter)
-            .where(Chunk.material_id == m.id, Chunk.chapter.is_not(None))
-            .group_by(Chunk.chapter)
-            .order_by(Chunk.chapter)
-        ).all()
-        books.append({
+    # Chapters for every book in one query, not one query per book. Same rows,
+    # same order, one round trip instead of N.
+    chapters_by_material: dict[int, list[str]] = {}
+    if materials:
+        for material_id, chapter in db.execute(
+            select(Chunk.material_id, Chunk.chapter)
+            .where(
+                Chunk.material_id.in_([m.id for m in materials]),
+                Chunk.chapter.is_not(None),
+            )
+            .group_by(Chunk.material_id, Chunk.chapter)
+            .order_by(Chunk.material_id, Chunk.chapter)
+        ).all():
+            chapters_by_material.setdefault(material_id, []).append(chapter)
+
+    books = [
+        {
             "material_id": m.id,
             "title": m.title,
             "pages": f"1–{m.page_count}" if m.page_count else None,
-            "chapters": [c[0] for c in chapters],
-        })
+            "chapters": chapters_by_material.get(m.id, []),
+        }
+        for m in materials
+    ]
 
     topics = db.scalars(
         select(Topic).where(Topic.course_id == course.id).order_by(Topic.id)
@@ -190,6 +200,10 @@ def get_diagnostic(
     course = _course(db, user)
     items = db.scalars(
         select(DiagnosticItem)
+        # `item.concept.name` below is read for every item. Lazily, that was one
+        # network round trip per question -- eight questions, eight round trips,
+        # and this endpoint measured 12 queries for 8 items.
+        .options(selectinload(DiagnosticItem.concept))
         .where(DiagnosticItem.course_id == course.id)
         .order_by(DiagnosticItem.id)
     ).all()
@@ -436,7 +450,16 @@ def list_gaps(
     user: User = Depends(current_user),
 ) -> dict:
     gaps = db.scalars(
-        select(Gap).where(Gap.user_id == user.id).order_by(Gap.id)
+        select(Gap)
+        # _gap_out reads gap.concept, concept.topic and concept.prerequisite_course.
+        # Loaded lazily that is three round trips per gap; loaded here it is two
+        # for the whole list, however many gaps there are.
+        .options(
+            selectinload(Gap.concept).selectinload(Concept.topic),
+            selectinload(Gap.concept).selectinload(Concept.prerequisite_course),
+        )
+        .where(Gap.user_id == user.id)
+        .order_by(Gap.id)
     ).all()
     return {"items": [_gap_out(db, g) for g in gaps]}
 

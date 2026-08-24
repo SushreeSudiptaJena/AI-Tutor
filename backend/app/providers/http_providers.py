@@ -19,7 +19,13 @@ import httpx
 from .. import config
 from .base import ProviderError
 
-TIMEOUT = httpx.Timeout(connect=5.0, read=45.0, write=10.0, pool=5.0)
+# A read timeout is the budget for ONE vendor, and the chain is five deep. At
+# read=45 a single rate-limited provider held a click for 45 seconds before the
+# fallback was even tried, and two of them outlasted any judge's patience. Our
+# real calls answer in 1-3s, so 18s is already ~6x the observed worst case: it
+# still tolerates a slow-but-working vendor and fails over from a dead one fast
+# enough that the chain reads as resilience rather than as a hang.
+TIMEOUT = httpx.Timeout(connect=5.0, read=18.0, write=10.0, pool=5.0)
 
 
 def _schema_instruction(json_schema: dict | None) -> str:

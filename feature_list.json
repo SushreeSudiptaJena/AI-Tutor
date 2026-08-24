@@ -699,6 +699,24 @@
       ],
       "evidence": "evidence/infra-006/prune-verification.txt",
       "notes": "PASSING 2026-08-24. seed.py upserts by natural key and never deleted, so content removed from a seed file lingered forever -- that is how 'model-fields' surfaced in GET /student/mastery as a concept no seed file defined. Now prunes concepts, misconceptions, seeded practice items and topics; diagnostic_items are exempt because seed_items() already deletes and recreates them wholesale. NOTHING WITH DEPENDENTS IS EVER DELETED -- verified live both ways: an orphan concept was pruned, and a concept carrying one student mastery row was KEPT and reported. A seed file is not the authority to delete a student's history, and a content lead who removed something by mistake should see it said out loud rather than find it later as missing data. Removing a concept the other seed files still reference never reaches the prune at all: validate() refuses first. FOUND AND FIXED DURING ITS OWN VERIFICATION: the first run deleted ten retired PH101 practice items because the practice pass was not course-scoped. Right outcome, wrong rule -- practice.json describes one course, so two teammates seeding two courses would have wiped each other's content. All four passes are now scoped to the course being seeded, and a test asserts that count."
+    },
+    {
+      "id": "perf-001",
+      "priority": 34,
+      "area": "infra",
+      "title": "Request latency: kill the N+1 round trips and the connection stalls",
+      "user_visible_behavior": "A click responds in about a second instead of several, and stops taking a minute when more than one person is using the app.",
+      "status": "passing",
+      "depends_on": [],
+      "demo_mode": "live",
+      "verification": [
+        "Instrument SQLAlchemy before/after_cursor_execute and count queries per request: /student/diagnostic is 4 (was 12), /student/gaps, /student/mastery and /student/course-summary are 5 (was 6), and none of them grows with the number of items, gaps or books.",
+        "Restart the backend and time the first GET /health -- it includes the one-time parallel pool warm (~5-6s). Every request after it finds an already-open connection.",
+        "python -m pytest backend/tests -q passes, and the suite does NOT pay the pool warm (it is off under pytest).",
+        "./init.sh still passes."
+      ],
+      "evidence": "evidence/perf-001/measurements.txt",
+      "notes": "PASSING 2026-08-24. Found while debugging a report of one-minute clicks on the local dev harness, but NONE of it is harness-specific -- the real frontend calls the same endpoints and will make it worse, because React pages fetch several of them in parallel on mount. Root cause is not the app code: /languages (no DB) answers in 7ms while /health (one SELECT 1) took 1.6-5.6s. Opening a Neon connection costs ~3.5s; running a query on an open one costs ~0.12s, a 30x gap, so the fix is that no request may ever open a connection. Fixed: current_user did two round trips (Session then User) on every authenticated call and now does one joined query; get_diagnostic lazily loaded item.concept per item (8 questions = 8 extra round trips) and now uses selectinload; list_gaps/_gap_out lazily loaded concept+topic+prerequisite_course per gap and are now eager-loaded flat; course_summary ran one chapters query per book and now runs one for all books; the pool went 5+5 to 20+5 with pool_timeout 30->10 and is pre-warmed in parallel at first use (71s sequential vs 6s parallel -- that is what makes warming viable); provider read timeout went 45s to 18s per vendor across a 5-deep chain. Also killed three stale uvicorns left on ports 8011/8012/8013 from the previous day, all competing for the same database -- claude-progress.md already warns about this. NOT FIXED, on purpose: get_db() still holds a pooled connection across the whole provider call, so a practice/lesson request occupies one for 5-45s -- releasing and reopening the session around the LLM call touches every router and is not a 36-hour change; the bigger warm pool makes it survivable instead. AND the round-trip floor is not fixable from this repo: the compute is a shared 0.25 vCPU ~4000km away and queries largely serialise (20 concurrent SELECT 1 on warm connections took 1.36s total), so ~5 queries per request is a hard floor of roughly half a second. DEMO STEP: curl /health once after starting the backend, so the pool is warm before anyone clicks."
     }
   ]
 }

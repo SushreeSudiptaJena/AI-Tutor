@@ -1,0 +1,6 @@
+AFTER perf-001 -- query count per request (deterministic; wall clock is not)
+endpoint                       code queries   was
+/student/course-summary        200  5         6
+/student/gaps                  200  5         6
+/student/mastery               200  5         6
+/student/diagnostic            200  4         12

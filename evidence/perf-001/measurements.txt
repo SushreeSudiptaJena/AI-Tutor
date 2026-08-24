@@ -1,0 +1,177 @@
+perf-001 -- why every click took seconds, and a click under load took a minute
+Measured 2026-08-24 on the demo laptop against the shared Neon database
+(ep-dry-credit-azo3aw2p-pooler.c-3.ap-southeast-1.aws.neon.tech).
+
+Reported symptom: "everything loads super duper slow, I click a button and it
+responds after 1 minute."
+
+
+=============================================================================
+1. IT IS NOT THE APP CODE
+=============================================================================
+
+$ curl -w "%{time_total}" http://127.0.0.1:8000/languages     # no DB touch
+0.007700s
+
+$ curl -w "%{time_total}" http://127.0.0.1:8000/health        # one SELECT 1
+5.593640s
+1.632776s
+2.053674s
+
+An endpoint that touches nothing answers in 7ms. FastAPI, uvicorn and the sync
+threadpool are not the problem.
+
+
+=============================================================================
+2. THE REAL COST IS OPENING A CONNECTION, NOT RUNNING A QUERY
+=============================================================================
+
+$ python -c "... time engine.connect() then repeated SELECT 1 ..."
+connect #1: 7.174s
+  query 0: 0.223s
+  query 1: 0.119s
+  query 2: 0.129s
+  query 3: 0.454s
+  query 4: 0.115s
+count chunks: 0.140s
+connect #2 (pooled): 0.701s
+
+Opening 20 connections one after another:
+  open conn  0: 4.10s
+  open conn  1: 3.12s
+  open conn  2: 2.86s
+  open conn 19: 3.28s
+  opened 20 sequentially in 71.2s
+
+Then 20 concurrent queries on those already-open connections:
+  fastest 0.116s  slowest 1.356s  total 1.36s
+
+~3.5s to open a connection. ~0.12s to run a query on one. A 30x gap. Any
+request that has to open a connection has already lost.
+
+Connects are latency-bound, so they parallelise:
+  20 PARALLEL connects: total 5.98s | per-conn fastest 3.15s slowest 5.95s
+71.2s sequential vs 5.98s parallel. This is what makes warming viable.
+
+
+=============================================================================
+3. WHERE THE WALL CLOCK WENT, PER REQUEST (before)
+=============================================================================
+
+Instrumented with SQLAlchemy before/after_cursor_execute:
+
+/student/course-summary   wall 1.97s |  6 queries | 1.64s in DB | 0.33s elsewhere
+/student/gaps             wall 2.76s |  6 queries | 2.47s in DB | 0.29s elsewhere
+/student/mastery          wall 2.14s |  6 queries | 1.43s in DB | 0.71s elsewhere
+/student/diagnostic       wall 3.70s | 12 queries | 3.40s in DB | 0.30s elsewhere
+/student/gaps/486/lesson  wall 5.63s |  6 queries | 4.32s in DB | 1.32s elsewhere
+
+85-90% of every request was sequential round trips to Neon. Not the LLM
+(groq answered a small prompt in 0.83-2.27s), not embeddings (fastembed cold
+load 1.35s, warm 0.11s).
+
+
+=============================================================================
+4. THE FOUR THINGS THAT TURNED 3 SECONDS INTO 60
+=============================================================================
+
+(a) FOUR uvicorn servers were running against the same database -- port 8000
+    plus 8011, 8012 and 8013 left over from the previous day. Each held its own
+    pool. claude-progress.md already warns "Watch for stale servers."
+
+(b) pool_size=5, max_overflow=5 = 10 connections, and get_db() is request-
+    scoped, so a request holds its connection across the whole provider call.
+    Three students clicking "practise this" plus a teacher tab polling the
+    heatmap every 3s exhausted the pool; everyone else then blocked on
+    SQLAlchemy's default pool_timeout=30 BEFORE their request even started.
+    30s of queueing + 2-5s of real work is the reported minute.
+
+(c) Neon autosuspends its compute; the first connection afterwards cost 7.17s.
+
+(d) providers/http_providers.py had read=45.0 per vendor across a 5-deep
+    chain. One rate-limited provider held a click for 45s before the fallback
+    was tried.
+
+Concurrency check before the fixes -- 20 concurrent /student/gaps:
+  fastest 1.120014s   slowest 6.373364s
+on an endpoint with no LLM call in it at all.
+
+
+=============================================================================
+5. WHAT CHANGED
+=============================================================================
+
+deps.py       current_user did two round trips (Session, then User). Now one
+              joined query. Saves one round trip on EVERY authenticated call.
+
+student.py    get_diagnostic lazily loaded item.concept per item -- 8 questions
+              meant 8 extra round trips. Now selectinload.
+              list_gaps / _gap_out lazily loaded concept, topic and
+              prerequisite_course per gap -- 3 round trips per gap. Now
+              eager-loaded, flat regardless of gap count.
+              course_summary ran one chapters query per book. Now one query
+              for all books.
+
+db.py         pool_size 5 -> 20, max_overflow 5 -> 5 (deliberately small: an
+              overflow connection is closed on return, so a burst reaching
+              into overflow pays the 3.5s open cost again and again),
+              pool_timeout 30 -> 10, pool_recycle=1800.
+              New warm_pool(): opens POOL_SIZE connections in parallel at first
+              use (~6s once) so no request ever pays a handshake. Off under
+              pytest and when DB_WARM_POOL=0.
+
+http_providers.py  read timeout 45.0 -> 18.0 per vendor. Real calls answer in
+              1-3s, so 18s is ~6x the observed worst case and still fails over
+              from a dead vendor before a judge gives up.
+
+
+=============================================================================
+6. AFTER
+=============================================================================
+
+Query counts (deterministic -- see query-counts.txt):
+  /student/course-summary   6 -> 5
+  /student/gaps             6 -> 5   (and now flat as gap count grows)
+  /student/mastery          6 -> 5
+  /student/diagnostic      12 -> 4   (8 items no longer cost 8 queries)
+
+Single-user medians over HTTP, 9 samples each:
+  /student/course-summary   1.72s
+  /student/gaps             1.27s
+  /student/mastery          1.09s
+  /student/diagnostic       1.72s
+
+Server start: first /health 5.28s (includes the one-time parallel pool warm),
+every subsequent request finds a warm connection.
+
+  272 passed, 1 warning in 12.05s
+  ./init.sh -> Verification passed.
+
+
+=============================================================================
+7. WHAT IS *NOT* FIXED, AND IS NOT FIXABLE HERE
+=============================================================================
+
+The database is ~4,000 km away on a free tier with a shared 0.25 vCPU compute.
+Queries do not parallelise much: 20 concurrent SELECT 1 on warm connections
+took 1.36s total, i.e. they largely serialise at ~0.12s each. So a request that
+needs 5 queries has a hard floor of roughly half a second, and 20 concurrent
+clients cost ~100 serialised queries no matter how the pool is configured.
+
+Repeated 20-client bursts after the fixes, showing how noisy the link is:
+  burst 1: fastest 0.930438s  slowest 16.863890s
+  burst 2: fastest 1.377949s  slowest  6.727350s
+  burst 3: fastest 0.931415s  slowest  4.723349s
+
+Two structural items remain, both deliberately NOT done here:
+
+  * get_db() holds a pooled connection across provider calls. Releasing the
+    session before the LLM call and reopening after would free a connection for
+    5-45s per practice/lesson request. It touches every router and is not a
+    36-hour change; the larger warm pool makes it survivable at demo scale.
+
+  * The only real cure for the round-trip floor is putting the API in the same
+    region as the database. Nothing in this repo can do that.
+
+Demo guidance: hit /health once after starting the backend. That warms the pool
+before the first person clicks anything.

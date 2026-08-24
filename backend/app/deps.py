@@ -39,14 +39,18 @@ def current_user(
     if scheme.lower() != "bearer" or not token.strip():
         raise _unauthenticated("Expected 'Authorization: Bearer <token>'.")
 
-    session = db.scalar(select(Session).where(Session.token == token.strip()))
-    if session is None:
-        # Covers an invalid token and one invalidated by logout. Same message
-        # either way -- distinguishing them tells an attacker which is which.
-        raise _unauthenticated("Invalid or expired token.")
-
-    user = db.get(User, session.user_id)
+    # One round trip, not two. This runs on every authenticated request, and the
+    # database is remote -- a second lookup for the User cost a whole network
+    # round trip (~130-450ms measured against Neon) on literally every call.
+    user = db.scalar(
+        select(User)
+        .join(Session, Session.user_id == User.id)
+        .where(Session.token == token.strip())
+    )
     if user is None:
+        # Covers an unknown token, one invalidated by logout, and a session
+        # whose user is gone. Same message for all three -- distinguishing them
+        # tells an attacker which is which.
         raise _unauthenticated("Invalid or expired token.")
     return user
 
