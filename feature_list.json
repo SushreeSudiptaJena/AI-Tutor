@@ -144,7 +144,7 @@
       "area": "auth",
       "title": "Forgot password — UI only",
       "user_visible_behavior": "Login page has a 'Forgot password?' link opening a screen that accepts an email and shows a confirmation message.",
-      "status": "not_started",
+      "status": "blocked",
       "depends_on": [
         "auth-001"
       ],
@@ -155,7 +155,7 @@
         "No network request is made and no backend route exists."
       ],
       "evidence": null,
-      "notes": "EXPLICITLY UI-ONLY per team decision. Do not build email sending or reset tokens."
+      "notes": "EXPLICITLY UI-ONLY per team decision. Do not build email sending or reset tokens. BLOCKED 2026-08-24 on the frontend, and correctly so: the contract lists it under \"Features with no HTTP surface\" as client-side only, deliberately no route. There is nothing for the backend to build. It needs an auth screen, which is teammate 4's file. Recording it as blocked rather than not_started so nobody picks it up expecting backend work."
     },
     {
       "id": "ingest-001",
