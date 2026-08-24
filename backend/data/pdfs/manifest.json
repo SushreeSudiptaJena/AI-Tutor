@@ -27,7 +27,12 @@
     "before ingestion, because 'page 143' means nothing until a paper size and a",
     "font size are fixed. Those page numbers are reproducible but they are OUR",
     "rendering's, not the printed book's. Where a real PDF of the same title",
-    "exists, prefer it -- its pages match a physical copy."
+    "exists, prefer it -- its pages match a physical copy.",
+    "",
+    "Assignments are uploaded by the admin THROUGHOUT the semester, not in one",
+    "batch at the start. Re-running the script skips material already ingested,",
+    "so dropping in this week's assignment costs only that assignment -- not a",
+    "re-embed of the whole textbook. Use --reingest when a file's contents change."
   ],
   "files": [
     {
@@ -36,6 +41,62 @@
       "kind": "textbook",
       "course": "CS-C",
       "note": "5th-semester CSE core reading for Programming with C, 2024-25 admission batch. Source is an EPUB, so cited pages are this A4/11pt rendering's."
+    },
+    {
+      "file": "django-5-by-example-mele.pdf",
+      "title": "Django 5 By Example (Antonio Mele)",
+      "kind": "textbook",
+      "course": "CSW2",
+      "note": "Semester 4, Computer Science Workshop 2, admission batches 2024 and 2025."
+    },
+    {
+      "file": "cw2-assignment1-chapter1.pdf",
+      "title": "Assignment 1 - Chapter 1",
+      "kind": "assignment",
+      "course": "CSW2",
+      "note": "Graded work. Searchable so rag-004 can recognise it; never quoted as a lesson."
+    },
+    {
+      "file": "cw2-assignment2-html.pdf",
+      "title": "Assignment 2 - HTML",
+      "kind": "assignment",
+      "course": "CSW2",
+      "note": "Graded work. Searchable so rag-004 can recognise it; never quoted as a lesson."
+    },
+    {
+      "file": "cw2-assignment3-chapter2.pdf",
+      "title": "Assignment 3 - Chapter 2",
+      "kind": "assignment",
+      "course": "CSW2",
+      "note": "Graded work. Searchable so rag-004 can recognise it; never quoted as a lesson."
+    },
+    {
+      "file": "cw2-assignment4-chapter3.pdf",
+      "title": "Assignment 4 - Chapter 3",
+      "kind": "assignment",
+      "course": "CSW2",
+      "note": "Graded work. Searchable so rag-004 can recognise it; never quoted as a lesson."
+    },
+    {
+      "file": "cw2-assignment5-chapter4.pdf",
+      "title": "Assignment 5 - Chapter 4",
+      "kind": "assignment",
+      "course": "CSW2",
+      "note": "Graded work. Searchable so rag-004 can recognise it; never quoted as a lesson."
+    },
+    {
+      "file": "cw2-assignment6-chapter5.pdf",
+      "title": "Assignment 6 - Chapter 5",
+      "kind": "assignment",
+      "course": "CSW2",
+      "note": "Graded work. Searchable so rag-004 can recognise it; never quoted as a lesson."
+    },
+    {
+      "file": "cw2-assignment7-chapter6.pdf",
+      "title": "Assignment 7 - Chapter 6",
+      "kind": "assignment",
+      "course": "CSW2",
+      "note": "Graded work. Searchable so rag-004 can recognise it; never quoted as a lesson."
     }
   ]
 }

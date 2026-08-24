@@ -17,6 +17,7 @@ Flags:
     --course CODE     course code                (default: the seeded primary)
     --course-title T  create that course if the code is unknown
     --department NAME department for a course created that way
+    --reingest        re-embed material already in the database
     --dry-run         parse and report; write nothing
     --verify          re-check chunks already in the database against the PDFs
     --sample N        chunks to verify per material  (default 3)
@@ -159,12 +160,36 @@ def do_dry_run(plan: list[dict]) -> None:
         print()
 
 
+def already_ingested(db, course_id: int, title: str) -> bool:
+    """True if this material is already in the database and complete.
+
+    Assignments arrive throughout the semester, not in one batch at the start.
+    An admin dropping assignment 8 into the folder in November must not pay to
+    re-embed a 900-page textbook that has not changed -- that is twenty minutes
+    of CPU to add four pages. Skipping is therefore the default, and
+    `--reingest` is how you say a file's *contents* changed.
+    """
+    row = db.scalar(
+        select(Material).where(
+            Material.course_id == course_id,
+            Material.title == title,
+            Material.ingest_status == "complete",
+            Material.chunk_count > 0,
+        )
+    )
+    return row is not None
+
+
 def do_ingest(db, plan: list[dict], default_course: Course, args) -> None:
     admin = db.scalar(select(User).where(User.role == "admin"))
 
     for item in plan:
         course = resolve_course(db, item["course"]) if item["course"] else default_course
         print(f"\n  {item['path'].name}  ->  {course.code}  ({item['kind']})")
+
+        if not args.reingest and already_ingested(db, course.id, item["title"]):
+            print(f"    already ingested, skipped. Pass --reingest if the file changed.")
+            continue
 
         pdf, converted = ingest.ensure_fixed_pdf(item["path"], item["path"].parent)
         if converted:
@@ -257,6 +282,8 @@ def main() -> None:
     ap.add_argument("--course")
     ap.add_argument("--course-title", help="create the course if --course is unknown")
     ap.add_argument("--department", help="department for a newly created course")
+    ap.add_argument("--reingest", action="store_true",
+                    help="re-embed material already in the database")
     ap.add_argument("--dry-run", action="store_true")
     ap.add_argument("--verify", action="store_true")
     ap.add_argument("--sample", type=int, default=3)

@@ -1,0 +1,56 @@
+infra-005 -- Cloudflare tunnel + VITE_API_BASE wiring for the remote team
+=========================================================================
+date   : 2026-08-24T04:16:29Z
+tunnel : https://equally-fits-retreat-baker.trycloudflare.com
+binary : cloudflared version 2026.8.2 (built 2026-08-14T04:22 UTC)
+
+Every request below goes through the PUBLIC tunnel URL, not localhost, and
+carries an Origin header, so the CORS path is exercised exactly as a
+teammate's browser would exercise it.
+
+--- 1. /health through the tunnel ---
+{"status":"ok","db":"ok"}  HTTP 200
+
+--- 2. CORS preflight from the vite dev origin ---
+  HTTP/1.1 200 OK
+  Access-Control-Allow-Origin: http://localhost:5173
+  access-control-allow-credentials: true
+  access-control-allow-headers: content-type,authorization
+  access-control-allow-methods: DELETE, GET, HEAD, OPTIONS, PATCH, POST, PUT
+
+--- 3. CORS preflight from a disallowed origin ---
+  HTTP/1.1 400 Bad Request
+  Access-Control-Allow-Origin headers returned: 0
+  (zero means the browser refuses the response - which is the point)
+
+--- 4. login through the tunnel ---
+  user  : cs-c-demo@example.edu | role student | course_id 4
+  token : e0d02e16b77c...
+
+--- 5. wrong password through the tunnel ---
+  HTTP 401  (expect 401)
+
+--- 6. authenticated GET /auth/me through the tunnel ---
+  {"id":29,"email":"cs-c-demo@example.edu","full_name":"CS-C Demo","role":"student","course_id":4,"preferred_language":"en"}  <- HTTP 200
+
+--- 7. the real feature: POST /tutor/ask through the tunnel ---
+  outcome  : answered
+  alignment: 87%
+  citation : Practical C Programming (Harwani, Packt 2020) p.224
+  citation : Practical C Programming (Harwani, Packt 2020) p.225
+  citation : Practical C Programming (Harwani, Packt 2020) p.237
+  citation : Practical C Programming (Harwani, Packt 2020) p.242
+  body     : To start a thread you need the POSIX thread library. First include its header:  ```c #include <pthread.h> ```  ...
+
+--- What is NOT certified here ---
+  Verification step 2 says a TEAMMATE loads the app and logs in against the
+  remote backend. That needs a second person on a second machine and cannot
+  be self-certified, exactly like infra-001. Everything that person's
+  browser would do has been done above from an HTTP client: the tunnel
+  resolves publicly, CORS admits the vite dev origin and refuses others,
+  login works, and an authenticated feature call returns real data.
+
+  Known flakiness: a quick tunnel occasionally hands out a hostname that
+  never resolves in DNS. It presents as curl code 000 while cloudflared
+  reports a healthy connection. Restarting gives a different hostname and
+  it works; ./tunnel.sh now says so rather than leaving you to guess.
