@@ -17,7 +17,7 @@ Every session **reads this first** and **writes to it last**.
 | **Current blocker** | None for new work. `infra-001`, `infra-003` and `infra-005` each need a second person to finish verifying; none blocks anything downstream. |
 | **Demo course** | **CSW2 — Computer Science Workshop 2 (Django).** Not physics. Every citation in the demo now opens a real page of a real ingested PDF. |
 | **Golden path status** | **COMPLETE, and re-verified end to end on CSW2.** diagnostic → gap attributed to CSW1 → lesson with alignment score + page-anchored citations → generated practice → wrong answer → specific misconception → confirm → teacher heatmap increments; deny leaves it unchanged. |
-| **Last verified** | 2026-08-24 — 281 tests pass, `./init.sh` green, golden path re-run clean (heatmap 7 → 8). **31 of 37 features passing; the other 6 are all blocked on other people, not on code.** |
+| **Last verified** | 2026-08-25 — 319 tests pass, `./init.sh` green, `ingest_pdfs.py --verify` PASS with 0 failures across the whole corpus. **38 of 45 features passing; 6 blocked on other people, 1 (`ingest-003`) open and real.** |
 | **Demo script** | `docs/demo-script.md` — written, and it is what `demo-001` runs. Rehearse the exact questions in it **while online**: the disk cache is what makes the offline fallback show real answers. |
 | **Student surface is complete** | `student-001` … `student-009` all passing. The API contract has no unbuilt student endpoint left. `student-009` added answer read-back: `GET /student/diagnostic` carries `your_answer` + `submitted_at`, `GET /student/practice/{id}` replays a set with its answers and any pending misconception question, and `Gap` carries `latest_practice_set_id`. **A reload no longer wipes a student's answers.** |
 
@@ -54,6 +54,19 @@ Every session **reads this first** and **writes to it last**.
 ## Session Record
 
 *Newest entry at the top. One entry per session.*
+
+### Session 015 — 2026-08-25 — DLD corpus, admin-005/006/007, and a verifier that was lying
+
+| | |
+|---|---|
+| **Goal** | Seven things raised by the owner: strip docs from git (left to them), where archived material lives, an admin delete endpoint, a `reference` material kind, missing auth tests, why not GLM 5.3, and ingest a Digital Logic Design corpus. |
+| **Completed** | `content-002` (DLD corpus), `admin-005` (semester / admission batches / term window), `admin-006` (guarded delete), `admin-007` (`reference` kind + .txt/.md/.docx ingestion), and `ingest-002` (verifier fix). 319 tests (was 310). Two migrations written and run. |
+| **Verification run** | Each feature verified live with a re-runnable script; `ingest_pdfs.py --verify` now reports **PASS, 0 failures across 5,300+ chunks** where it previously reported 3. |
+| **Evidence recorded** | `evidence/admin-005/`, `evidence/admin-006/`, `evidence/admin-007/`, `evidence/ingest-002/` |
+| **Commits** | Four. |
+| **What verifying found that reading would not have** | **A half-ingested textbook was answering live queries.** The first DLD ingest was interrupted; `retrieval` filters only on `Material.status == 'active'` and never looks at `ingest_status`, so 320 of 2053 chunks served page-anchored citations from a fraction of a book. Logged as `ingest-003`; the partial material was deleted by hand. **The citation verifier was itself wrong.** Three chunks were reported as claiming a page their text was not on — the chunks were correct. `squash()` did not fold a line-broken word the way `normalise()` does, so `"pre-
+ceding"` vs `"preceding"` failed every chunk containing one. I logged that as invisible because all three were in assignments, which are never quoted; ingesting Roth produced a fourth **in a textbook**, which forced the real diagnosis instead of the assumed one. **The material-kinds list lived in four places** and adding `reference` to the model left the CLI rejecting it. **Upload accepted `.txt`/`.md` that the ingester refused**, so such a file was stored, pending, and un-ingestable forever. **`admin-005`'s date validation had a hole** before `admin-006` existed to fall in it: sending `term_end` alone against a stored `term_start` would have written a window in which `in_term()` is false for every date. |
+| **Known risks** | **Two migrations must be run by anyone restoring an older dump**: `migrate_reteach_targets.py` and `migrate_course_terms.py`. **`ALIGNMENT_REFUSAL_THRESHOLD` is stale** — still 0.70, measured against CSW2/CS-C only, and the corpus grew by 2,076 chunks; re-run `calibrate_threshold.py` before demoing DLD. **`ingest-003` is unfixed and is the sharpest one left**: retrieval has no completeness guard, so any interrupted ingest silently serves a partial book. **`admin-006`'s "refuse if cited" guard does not exist and cannot** — nothing persists a `chunk_id`. Auth tests still assert role guards by source inspection, never by a live 403 (raised by the owner, not yet tracked). |
 
 ### Session 014 — 2026-08-24 — teacher-008, admin-004, and three answers
 
