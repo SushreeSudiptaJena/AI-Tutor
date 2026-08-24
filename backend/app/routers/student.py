@@ -448,7 +448,7 @@ def list_gaps(
 @router.get("/gaps/{gap_id}/lesson")
 def gap_lesson(
     gap_id: int,
-    language: str = "en",
+    language: str | None = None,
     db: OrmSession = Depends(get_db),
     user: User = Depends(current_user),
 ) -> dict:
@@ -457,6 +457,11 @@ def gap_lesson(
     Ownership is checked before anything else: a gap id is a small integer, and
     without this check changing it in the URL would read another student's gap
     list back to you one lesson at a time.
+
+    `language` falls back to the student's saved preference rather than to
+    English. Defaulting to `en` meant a student who had set their language to
+    Hindi still got English lessons unless the frontend remembered to append a
+    query parameter -- the preference existed and did nothing.
     """
     gap = db.get(Gap, gap_id)
     if gap is None or gap.user_id != user.id:
@@ -475,7 +480,7 @@ def gap_lesson(
         concept.name if concept else "",
         course_id=user.course_id,
         topic_name=topic.name if topic else None,
-        language=language,
+        language=language or user.preferred_language,
     )
 
 

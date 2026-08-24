@@ -141,7 +141,9 @@ class TutorAskIn(BaseModel):
     user, so nobody can read another course's material by editing the body."""
 
     question: str
-    language: str = "en"
+    # None, not "en": the fallback is the student's saved preference, and the
+    # router is the only place that knows it.
+    language: str | None = None
     topic_id: int | None = None
 
     @field_validator("question")
@@ -154,8 +156,12 @@ class TutorAskIn(BaseModel):
 
     @field_validator("language")
     @classmethod
-    def _lang(cls, v: str) -> str:
-        v = v.strip().lower() or "en"
+    def _lang(cls, v: str | None) -> str | None:
+        if v is None:
+            return None
+        v = v.strip().lower()
+        if not v:
+            return None
         if not re.match(r"^[a-z]{2}$", v):
             raise ValueError("language must be a two-letter code")
         return v

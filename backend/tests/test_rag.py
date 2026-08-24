@@ -354,11 +354,60 @@ def test_the_guardrail_outcome_is_not_reachable_from_this_service(fake_llm, patc
     assert tutor.ask(FakeDB(), "solve question 3", course_id=7)["outcome"] == "answered"
 
 
-def test_language_reports_what_was_actually_produced(fake_llm, patched_search):
-    """Claiming 'hi' while returning English would be a lie the UI renders."""
+def test_language_reports_what_was_actually_produced(fake_llm, patched_search,
+                                                     monkeypatch):
+    """Claiming 'hi' while returning English would be a lie the UI renders.
+
+    `translate()` returns its input unchanged when the call fails, so "we asked
+    for Hindi" and "we got Hindi" are different facts. The response reports the
+    second one. Both directions are patched here rather than left to the real
+    provider -- this suite makes no network calls, and before i18n-001 was
+    wired this test was quietly reaching Sarvam.
+    """
+    from app.services import language as lang
+
     patched_search["hits"] = [hit(0.88)]
+
+    # Translation unavailable -> English, and said so.
+    monkeypatch.setattr(lang, "available", lambda: False)
     out = tutor.ask(FakeDB(), "what is a pointer?", course_id=7, language="hi")
     assert out["language"] == "en"
+    assert out["outcome"] == "answered"
+
+    # Translation available but a no-op (the failure mode that matters) -> still en.
+    monkeypatch.setattr(lang, "available", lambda: True)
+    monkeypatch.setattr(lang.translate_sarvam, "translate",
+                        lambda text, **kw: text)
+    out = tutor.ask(FakeDB(), "what is a pointer?", course_id=7, language="hi")
+    assert out["language"] == "en", "an unchanged translation is not a translation"
+
+    # Translation actually happens -> reported as hi.
+    monkeypatch.setattr(lang.translate_sarvam, "translate",
+                        lambda text, **kw: f"[{kw.get('to')}] {text}")
+    out = tutor.ask(FakeDB(), "what is a pointer?", course_id=7, language="hi")
+    assert out["language"] == "hi"
+    assert out["body"].startswith("[hi] ")
+
+
+def test_translation_never_touches_citations_or_the_alignment_score(
+        fake_llm, patched_search, monkeypatch):
+    """The badge must not drift between languages. It is computed on the
+    English text, before anything is translated out, and citations name an
+    English book and page whatever the student reads in."""
+    from app.services import language as lang
+
+    patched_search["hits"] = [hit(0.88)]
+    monkeypatch.setattr(lang, "available", lambda: False)
+    english = tutor.ask(FakeDB(), "what is a pointer?", course_id=7, language="en")
+
+    monkeypatch.setattr(lang, "available", lambda: True)
+    monkeypatch.setattr(lang.translate_sarvam, "translate",
+                        lambda text, **kw: f"[{kw.get('to')}] {text}")
+    hindi = tutor.ask(FakeDB(), "what is a pointer?", course_id=7, language="hi")
+
+    assert hindi["evidence"] == english["evidence"]
+    assert hindi["citations"] == english["citations"]
+    assert hindi["body"] != english["body"]
 
 
 # ---------------------------------------------------------------------------

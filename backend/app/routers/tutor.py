@@ -49,6 +49,6 @@ def ask(
         db,
         body.question,
         course_id=user.course_id,
-        language=body.language,
+        language=body.language or user.preferred_language,
         topic_id=body.topic_id,
     )

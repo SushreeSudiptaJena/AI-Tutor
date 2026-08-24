@@ -628,7 +628,7 @@
       "area": "i18n",
       "title": "Multilingual interaction via Sarvam",
       "user_visible_behavior": "Student picks a language; questions and explanations work in it, with citations preserved.",
-      "status": "not_started",
+      "status": "passing",
       "depends_on": [
         "rag-002",
         "infra-004"
@@ -640,8 +640,8 @@
         "Citations still resolve to the correct English source book and page.",
         "The alignment score is unchanged from the English equivalent question."
       ],
-      "evidence": null,
-      "notes": "Pipeline: translate to English -> retrieve -> answer in English -> translate back. Vector space stays English-only."
+      "evidence": "evidence/i18n-001/multilingual-live.txt",
+      "notes": "PASSING 2026-08-24 live against the real Sarvam API. Pipeline: translate in -> retrieve in English -> answer in English -> translate out. The vector space stays English-only, which is why no multilingual embedding model is needed. Verified: a Hindi question is answered in Hindi (Devanagari checked in the body, not just the language field), citations are IDENTICAL to the English run and still name the English book and pages, and the alignment score does not move with the answer's language -- the same English question scored 88%/0.8238 whether answered in en or hi, with byte-identical evidence and citations. A genuinely Hindi question also scored 88% citing the same pages. Gap lessons score identically across languages because the concept name is English on both paths. BUG FOUND AND FIXED DURING VERIFICATION: the request's `language` was passed as the SOURCE of the inbound translation. `language` means 'the language I want to read in', so an English question sent with language=hi was translated as though it were Hindi -- not a no-op: Sarvam rewords it, the reworded text is what gets embedded, and it retrieves different passages. The same English question scored 88% with language=en and 82% with language=hi, with different citations. Inbound translation now always auto-detects. ALSO FIXED: `language` defaulted to 'en' on both routes, so a student's saved preferred_language did nothing unless the frontend appended a query parameter. Both now fall back to the preference. The reported language is what was PRODUCED, not requested -- translate() returns its input unchanged on failure, so labelling English prose 'hi' would claim a translation that did not happen. CHUNKING IS LOAD-BEARING: Sarvam takes ~1000 chars and a lesson runs to 2-3k, so text is split on paragraph then sentence boundaries. Without it the tail is silently dropped, and a failed call is indistinguishable from 'already English'. 16 tests in test_language.py; a pre-existing test in test_rag.py was quietly making live Sarvam calls and now patches the provider."
     },
     {
       "id": "a11y-001",

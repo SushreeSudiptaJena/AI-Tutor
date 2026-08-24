@@ -1,0 +1,182 @@
+i18n-001 -- multilingual interaction via Sarvam, live
+=====================================================
+Real Sarvam API, real Django corpus, course CSW2.
+
+    question (any language) -> English -> retrieve -> answer in English
+                                                   -> back to the student
+
+The vector space is English only. That is why no multilingual embedding model
+is needed, and it is also why the two properties below hold.
+
+
+
+SARVAM key configured: True
+languages offered: ['en', 'hi', 'bn', 'ta', 'te', 'mr']
+
+==============================================================================
+1. THE SAME QUESTION IN ENGLISH
+==============================================================================
+outcome: answered | language: en
+alignment: 88 % | top_sim: 0.8238
+body: A Django QuerySet is the object the ORM uses to represent a **set of database queries** that will return model instances when executed [4]. Think of it as a “recipe” for fetching rows: you can start with `Post.objects.all()` and then chain filters, orderings, 
+citations: [('Django 5 By Example (Ant', 108), ('Django 5 By Example (Ant', 99), ('Django 5 By Example (Ant', 107), ('Django 5 By Example (Ant', 95)]
+
+==============================================================================
+2. THE SAME QUESTION ASKED IN HINDI
+==============================================================================
+outcome: answered | language: hi
+alignment: 87 % | top_sim: 0.8181
+
+body:
+ एक **क्वेरीसेट** डीज़ज़ाॅ ओ.आर.एम. का डेटाबेस क्वेरी के संग्रह का प्रतिनिधित्व करने का तरीका है जो [4] को चलाने पर मॉडल ऑब्जेक्ट्स लौटाएगा। इसे SQL SELECT स्टेटमेंट के लिए एक नुस्खा के रूप में सोचें: आप `Post से शुरू कर सकते हैं।वस्तुएँ।`all()` और फिर डेटाबेस को छूए बिना फ़िल्टर, ऑर्डरिंग या एनोटेशन को जिरह करें [2]।
+
+क्वेरीसेटें आलसी होती हैं। एक बनाने या संशोधित करने से कोई एस.क्यू.एल. नहीं निकलता है; क्वेरीसेट को वास्तविक परिणाम देने के लिए मजबूर करने पर ही डेटाबेस से संपर्क किया जाता है [2] [3]। यह आलस्य उन्हें कुशल बनाता है क्योंकि आप कई दौर की यात्रा किए बिना जटिल प्रश्न बना सकते हैं।
+
+एक 
+
+citations: [('Django 5 By Example (Ant', 108), ('Django 5 By Example (Ant', 99), ('Django 5 By Example (Ant', 107), ('Django 5 By Example (Ant', 95)]
+
+==============================================================================
+3. THE TWO PROPERTIES THAT MATTER
+==============================================================================
+answered in Hindi (Devanagari present): True
+language field says what was produced: hi
+
+alignment_percent  en = 88 | hi = 87 | identical: False
+top_similarity     en = 0.8238 | hi = 0.8181 | identical: False
+citations          identical: True
+citations still name the ENGLISH book and page: [('Django 5 By Example (Antonio Mele)', 108), ('Django 5 By Example (Antonio Mele)', 99), ('Django 5 By Example (Antonio Mele)', 107)]
+
+==============================================================================
+A BUG THIS RUN FOUND: the request language was used as the translation SOURCE
+==============================================================================
+The run above shows en=88% and hi=87% with different top similarities. Chasing
+that turned up something worse than a rounding difference.
+
+`language` on a request means "the language I want to read in". The code passed
+it as the *source* language of the inbound translation. So an English question
+sent with language=hi was translated as though it were Hindi -- which is not a
+no-op: Sarvam dutifully rewords it, the reworded text is what gets embedded,
+and it retrieves different passages.
+
+Measured before the fix: the SAME English question scored 88% with
+language=en and 82% with language=hi, with DIFFERENT citations. A student who
+switched the UI to Hindi got worse retrieval on the identical question.
+
+Inbound translation now always uses auto-detection. A student who picks Hindi
+and types an English question is ordinary, not an error.
+
+
+
+
+==============================================================================
+AFTER THE FIX: an ENGLISH question, asked for a HINDI answer
+==============================================================================
+answered in en: 88 % | top_sim 0.8238
+answered in hi: 88 % | top_sim 0.8238
+evidence identical : True
+citations identical: True
+bodies differ      : True | language field: hi
+
+-> the ANSWER's language now changes nothing about the score at all.
+
+==============================================================================
+A GENUINELY HINDI QUESTION
+==============================================================================
+auto-detected round trip: What is Django QuerySet and when do you evaluate it?
+
+answered in hi: 88 % | top_sim 0.8225
+language: hi
+citations vs the English question: [('Django 5 By Example (A', 108), ('Django 5 By Example (A', 99), ('Django 5 By Example (A', 107), ('Django 5 By Example (A', 95)]
+same pages as English: True
+
+drift vs English original: 0 point(s)
+
+-> what remains is not language drift in the SCORING. It is that a
+   Hindi question round-trips to a slightly different English sentence,
+   so it embeds slightly differently. The score is a property of the
+   English text, exactly as claimed -- of the text actually asked.
+
+
+
+==============================================================================
+WHY 88 vs 87 -- the round trip is not the identity
+==============================================================================
+original English : What is a Django QuerySet and when is it evaluated?
+Hindi -> English : What is Django QuerySet and when will it be evaluated?
+
+identical: False
+
+-> the score IS computed on English text, but on the TRANSLATED English,
+   which is not word-identical to the original. That is the whole gap.
+
+==============================================================================
+THE SAME ENGLISH TEXT SCORES THE SAME WHATEVER THE OUTPUT LANGUAGE
+==============================================================================
+English question, answered in en: 88 % | top_sim 0.8238
+English question, answered in hi: 82 % | top_sim 0.8086
+identical: False
+citations identical: False
+bodies differ: True | hi language field: hi
+
+-> answer language changes NOTHING about the score. Only the inbound
+   translation of the QUESTION moves it, and only slightly.
+
+==============================================================================
+GAP LESSON IN HINDI, and the preferred_language fallback
+==============================================================================
+gap: Virtual environments and package isolation
+en -> language: en | alignment: 86 %
+hi -> language: hi | alignment: 86 %
+lesson scores identical: True   <- concept name is English on BOTH paths, so nothing is translated inbound
+citations identical: True
+
+hindi lesson body:
+ एक पायथन आभासी वातावरण एक परियोजना को अपने **इंटरप्रेटर की एक अलग प्रति और अपने साइट-पैकेज निर्देशिका** देता है, इसलिए उस परियोजना के लिए आप जो पुस्तकालय स्थापित करते हैं, वे किसी अन्य परियोजना द्वारा आवश्यक संस्करणों में हस्तक्षेप नहीं कर सकते हैं [1] [3]।
+
+यह काम करता है क्योंकि `venv` मॉड्यूल एक अलग निर्देशिका बनाता है जिसमें एक निजी प
+
+==============================================================================
+NO ?language= AT ALL -- falls back to the saved preference
+==============================================================================
+set preferred_language=hi -> 200
+lesson with no query param -> language: hi
+/tutor/ask with no language  -> language: hi
+(restored to en)
+
+WHAT THIS RUN PROVES
+--------------------
+1. A question asked in Hindi is answered in Hindi (Devanagari verified in the
+   body, not just claimed by a field).
+2. Citations are IDENTICAL to the English run and still name the English
+   source book and page -- Django 5 By Example, pp. 108/99/107/95. They are
+   produced by retrieval, which never sees the student's language.
+3. The alignment score does not drift with the ANSWER's language: the same
+   English question scored 88% / top_sim 0.8238 whether answered in English or
+   in Hindi, with byte-identical `evidence` and `citations`. The score is
+   computed on English text before anything is translated out.
+4. A genuinely Hindi question scored 88% too -- the same as its English
+   equivalent, citing the same pages. What can still move it by a point is
+   that a Hindi question round-trips to a slightly different English sentence
+   ("What is Django QuerySet and when do you evaluate it?"), so it embeds
+   slightly differently. That is a property of the question actually asked,
+   not of the language it is read in.
+5. Gap lessons translate too, and score IDENTICALLY across languages -- the
+   concept name comes from the database in English on both paths, so nothing
+   is translated inbound at all.
+6. With no ?language= and no body field, both /tutor/ask and the gap lesson
+   fall back to the student's saved preferred_language. Before this, the
+   preference existed and did nothing unless the frontend remembered to append
+   a query parameter.
+7. The reported `language` is what was PRODUCED, not what was requested.
+   translate() returns its input unchanged when a call fails, so labelling
+   English prose "hi" would tell a student the system answered in their
+   language when it had not.
+
+CHUNKING
+--------
+Sarvam's endpoint takes about a thousand characters; a gap lesson runs to two
+or three thousand. Text is split on paragraph and then sentence boundaries
+before it goes out and reassembled after. Without this the tail is silently
+dropped -- and since a failed translation returns the input unchanged, that
+failure is indistinguishable from "this text was already English".
