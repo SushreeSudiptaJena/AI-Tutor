@@ -311,13 +311,33 @@ Actions: `material.upload` · `material.archive` · `material.ingest` · `course
 |---|---|---|
 | `GET` | `/student/diagnostic` | `{ diagnostic_id, items: [PracticeItem] }` |
 | `POST` | `/student/diagnostic/{diagnostic_id}/submit` | `{ answers: [{ item_id, answer }] }` |
-| `POST` | `/student/syllabus-upload` | `multipart`: `file` — alternative entry for incoming students |
+| `POST` | `/student/syllabus-upload` | `multipart`: `file` — alternative entry for incoming students. **Built `student-008`.** PDF, `.txt` or `.md`; ≤10 MB. Returns the same `{ gaps, message }` body as `submit`. |
 | `GET` | `/student/gaps` | `{ items: [Gap] }` |
 
 Both submit paths return:
 ```json
 { "gaps": [ /* Gap */ ], "message": "Found 3 prerequisite gaps." }
 ```
+
+A `Gap` from the upload carries `"detected_from": "syllabus_upload"` instead of
+`"diagnostic"`. Nothing else differs — the same rows, the same
+`GET /student/gaps`, the same `GET /student/gaps/{id}/lesson`. The field is for
+the teacher's benefit, not for the frontend to branch on.
+
+`POST /student/syllabus-upload` failure modes, all `400 bad_request` with the
+reason in `error.detail.reason`:
+
+| `reason` | When |
+|---|---|
+| `no_text_found` | The file has no text layer — a scan or a photo of a syllabus. **Not** treated as "covers nothing"; the student is asked for a text-based file. |
+| `unsupported_type` | The bytes are not text and not a PDF (e.g. `.docx`). Judged by content, never by file extension. |
+| `empty_file` | Zero bytes. |
+| `file_too_large` | Over 10 MB. |
+| `unreadable_pdf` | The PDF exists but will not open. |
+
+A provider outage returns `503 provider_unavailable`. It never falls back to an
+empty verdict, because "no gaps found" and "we could not check" must not look
+alike to a student.
 
 > **There is no score, percentage, or grade in this response, by design.** The problem statement asks for a gap list, not a grade. Frontend must not compute one from `answers`.
 
@@ -510,5 +530,6 @@ Every shape above is final enough to mock. Suggested order, matching `feature_li
 | 2026-08-23 | `/health` documented as always-200 with a `degraded` state; implemented in `infra-002`. |
 | 2026-08-23 | Guardrail narrowed to `/tutor/ask` only, and now requires intent + assignment match. `Gap` gains `suggested_prompts`. |
 | 2026-08-24 | Golden path complete. `POST /student/practice/generate` (needs `gap_id`; also returns `concept` and `source: generated\|seeded`), `POST /student/practice/{id}/answer`, `POST /student/misconception-diagnosis/{id}/confirm`, `GET /teacher/misconceptions/heatmap`, `GET /teacher/uncertainty-flags` and its `/resolve`. `student-004` Show Source needs no endpoint — it is the `Citation` object. |
+| 2026-08-24 | `POST /student/syllabus-upload` is **now built** (`student-008`) — PDF/`.txt`/`.md`, ≤10 MB, same `{gaps, message}` body as `submit`, `detected_from: "syllabus_upload"`, documented 400 reasons. |
 | 2026-08-24 | `POST /tutor/ask` now returns `graded_work_refused` (`rag-004`). `GET /student/course-summary`, `GET /student/diagnostic`, `POST /student/diagnostic/{id}/submit`, `GET /student/gaps` and `GET /student/gaps/{id}/lesson` implemented. `diagnostic_id` **is the course id** — a course has exactly one diagnostic. `POST /student/syllabus-upload` is documented but **not built**. A resource `404` now keeps its own message instead of "No such route." |
 | 2026-08-24 | `EvidenceReport.threshold` example corrected 0.35 → 0.68 (0.35 is below the embedding similarity floor, so refusal could never fire) and `reason` values documented. `POST /tutor/ask` implemented for `answered` and `insufficient_evidence`; `graded_work_refused` still pending `rag-004`. |

@@ -396,6 +396,29 @@
       "notes": "GOLDEN PATH step 4 -- the single most important feature in the build. PASSING 2026-08-24 live. The generated item was 30 N at 30 degrees; correct horizontal component 30cos30 = 26 N, and a student reaching for sine gets 30sin30 = 15 N. Answering 15 N produced the SPECIFIC diagnosis 'Uses sine where cosine is required when resolving along the horizontal', not a generic one. THIS IS THE CASE SEEDED REGEXES CANNOT COVER: sin-cos-swap's pattern is ^5(\\.0+)?\\s*N$, welded to the seeded 10 N question, and it would never have matched 15 N -- the demo's key moment would have silently produced nothing. Diagnosis order is declared-distractor first (exact), then the seeded regex, then none; regexes are only ever matched within the same problem_type, because velocity-implies-force matches almost any answer ending in N and would otherwise diagnose every wrong answer in the app. Confirm wrote the row and the heatmap went 7 to 8; Deny left it at 8. No diagnosis is returned when nothing matches -- a generic diagnosis is worse than none, because the student is asked to confirm reasoning that was never theirs."
     },
     {
+      "id": "student-008",
+      "priority": 20,
+      "area": "student",
+      "title": "Syllabus upload — alternative diagnostic entry for incoming students",
+      "user_visible_behavior": "An incoming student uploads the syllabus of what they have already studied instead of sitting the diagnostic, and gets back the same named prerequisite gap list.",
+      "status": "passing",
+      "depends_on": [
+        "student-002",
+        "infra-004",
+        "ingest-001"
+      ],
+      "demo_mode": "live",
+      "verification": [
+        "POST /student/syllabus-upload with a PDF returns the same {gaps, message} shape as diagnostic submit, and no score.",
+        "A syllabus that covers a prerequisite produces NO gap for it; one that omits it produces a gap with detected_from='syllabus_upload'.",
+        "Gaps written this way are indistinguishable downstream: GET /student/gaps returns them and GET /student/gaps/{id}/lesson teaches them.",
+        "A scanned/image-only PDF with no extractable text is rejected with 400, not silently treated as a syllabus covering nothing.",
+        "Unauthenticated request is 401."
+      ],
+      "evidence": "evidence/student-008/syllabus-upload-live.txt",
+      "notes": "PASSING 2026-08-24. Documented in docs/api-contract.md since hour 4 and never built -- a frontend teammate reading the contract would have built against a 404. Contract now updated with the response, the detected_from value and the 400 reasons. VERIFIED WITH THREE SYLLABI, chosen so a rubber stamp in either direction fails: a real CSW1 -> 0 gaps; an ECE numerical-methods course -> all 8; and the one that matters, a Python-OOP-and-venv course with no web or DB content -> EXACTLY the 6 it does not teach, identical as .txt and as a real PDF. THE DANGEROUS FAILURE IS THE QUIET ONE and it is guarded three ways: a scanned PDF (valid, no text layer) is refused with no_text_found rather than read as 'covers nothing'; a concept missing from the model's reply counts as NOT covered; and a provider outage is a 503, never an empty verdict. Each of those, done the other way, returns a confident-looking gap list built from no evidence. The coverage bias deliberately runs OPPOSITE to guardrail.py: there, doubt resolves toward answering, because a wrong refusal blocks a student who came to learn; here, doubt resolves toward creating the gap, because a false gap is a skippable lesson the student can see is wrong, while a false coverage is a real gap nobody ever finds. No mastery is written -- a syllabus is evidence of exposure, not learning. BUG FOUND AND FIXED DURING VERIFICATION: _plain_text() gated on the file extension, so a plain-text syllabus named .pdf was rejected, contradicting extract_text()'s own docstring. Type is now decided by the printable-character ratio after decoding -- latin-1 decodes any bytes, so 'it decoded' was never evidence it was text. Adds python-multipart to requirements.txt (FastAPI needs it for UploadFile and it is not a transitive dependency). 23 tests in test_syllabus.py."
+    },
+    {
       "id": "student-007",
       "priority": 19,
       "area": "student",

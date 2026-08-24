@@ -1,0 +1,162 @@
+student-008 -- POST /student/syllabus-upload, live
+==================================================
+The alternative diagnostic entry for an incoming student, documented in
+docs/api-contract.md since hour 4 and never built until now. Run against the
+real provider chain (PROVIDER=groq) and the real database, course CSW2.
+
+Three syllabi, chosen so that a rubber stamp in EITHER direction fails:
+  A  a genuine CSW1 syllabus            -> must produce NO gaps
+  B  an ECE numerical-methods course    -> must produce ALL 8 gaps
+  C  Python OOP + venv, no web, no DB   -> must produce EXACTLY 6
+
+C is the one that matters. A and B are each passable by a model that always
+answers the same way; only C requires an actual judgement.
+
+
+
+PROVIDER = groq  (live, not mock)
+
+==============================================================================
+401 - the endpoint requires a signed-in student
+==============================================================================
+no token -> 401 unauthenticated
+
+==============================================================================
+CASE A - a REAL CSW1 syllabus (covers all 8 prerequisites)
+==============================================================================
+status: 200 | message: No prerequisite gaps found.
+   (no gaps -- this student arrives prepared)
+
+no score in the response: True
+
+==============================================================================
+CASE B - an ECE course that never teaches the web or relational data
+==============================================================================
+status: 200 | message: Found 8 prerequisite gaps.
+   GAP: Class inheritance in Python | detected_from: syllabus_upload
+   GAP: Virtual environments and package isolation | detected_from: syllabus_upload
+   GAP: The HTTP request and response cycle | detected_from: syllabus_upload
+   GAP: HTTP methods, GET and POST | detected_from: syllabus_upload
+   GAP: URL paths and routing | detected_from: syllabus_upload
+   GAP: Primary keys and foreign keys | detected_from: syllabus_upload
+   GAP: One-to-many relationships | detected_from: syllabus_upload
+   GAP: Filtering and querying records | detected_from: syllabus_upload
+
+
+
+==============================================================================
+CASE C - PARTIAL: teaches Python OOP and venv; no web, no databases
+==============================================================================
+The discriminating case. A rubber stamp in either direction fails it:
+it must cover exactly 2 of the 8 and gap the other 6.
+
+status: 200 | message: Found 6 prerequisite gaps.
+(sent with filename .pdf and content-type application/pdf while the bytes
+ are plain text -- the sniffer reads the bytes, so it parses anyway)
+
+   covered  Class inheritance in Python
+   covered  Virtual environments and package isolation
+   GAP      The HTTP request and response cycle
+   GAP      HTTP methods, GET and POST
+   GAP      URL paths and routing
+   GAP      Primary keys and foreign keys
+   GAP      One-to-many relationships
+   GAP      Filtering and querying records
+
+covered exactly the two the syllabus teaches: True
+
+==============================================================================
+DOWNSTREAM - a gap from an upload is taught like any other
+==============================================================================
+gap: The HTTP request and response cycle | detected_from: syllabus_upload
+appears in GET /student/gaps: True
+lesson outcome: answered | alignment: 77% | citations: 5
+body: The HTTP request/response cycle is the step‑by‑step exchange that starts when a browser asks for a URL and ends when the browser receives an HTML page (or other data) back from the server.    When you type a URL such as `https://domain.com/
+
+==============================================================================
+A SCANNED SYLLABUS IS REFUSED, NOT READ AS 'COVERS NOTHING'
+==============================================================================
+status: 400
+{
+  "error": {
+    "code": "bad_request",
+    "message": "That PDF could not be opened: Failed to open stream",
+    "detail": {
+      "reason": "unreadable_pdf"
+    }
+  }
+}
+
+==============================================================================
+A WORD DOCUMENT IS REFUSED BY ITS BYTES
+==============================================================================
+status: 400 | unsupported_type
+
+==============================================================================
+A REAL, VALID, TEXT-FREE PDF -- the scanned-syllabus case
+==============================================================================
+(the earlier 'scan.pdf' above was not a valid PDF, so it exercised the wrong
+ branch -- unreadable_pdf rather than no_text_found. Redone properly here.)
+
+
+
+the fake scan is a VALID pdf: 2 pages, extracted text = ''
+
+POST /student/syllabus-upload -> 400
+{
+  "error": {
+    "code": "bad_request",
+    "message": "I could not read any text from that file. If it is a scan or a photo of a syllabus, the text is an image -- please upload a text-based PDF, or paste the syllabus into a .txt file.",
+    "detail": {
+      "reason": "no_text_found"
+    }
+  }
+}
+
+refused rather than returning a maximal gap list from zero evidence: True
+
+==============================================================================
+THE SAME SYLLABUS AS A REAL PDF WITH A TEXT LAYER
+==============================================================================
+
+
+built a real PDF: 2075 bytes
+POST /student/syllabus-upload -> 200 | Found 6 prerequisite gaps.
+
+same verdict as the .txt of the same syllabus:
+   covered  Class inheritance in Python
+   covered  Virtual environments and package isolation
+   GAP      The HTTP request and response cycle
+   GAP      HTTP methods, GET and POST
+   GAP      URL paths and routing
+   GAP      Primary keys and foreign keys
+   GAP      One-to-many relationships
+   GAP      Filtering and querying records
+
+WHAT THIS RUN PROVES
+--------------------
+1. The endpoint exists and matches the contract: multipart `file`, and the same
+   {gaps, message} shape as POST /diagnostic/{id}/submit. No score.
+2. It is a judgement, not a rubber stamp. Case C covered exactly the two
+   prerequisites its syllabus teaches (class inheritance, virtual environments)
+   and gapped the other six, in both .txt and real-PDF form.
+3. Gaps from an upload are indistinguishable downstream: GET /student/gaps
+   lists them and GET /student/gaps/{id}/lesson taught one at 77% alignment
+   with 5 citations. Only detected_from differs, and that is for the teacher.
+4. A scanned syllabus -- a VALID PDF with no text layer, which is what a phone
+   photo becomes -- is refused with no_text_found. This is the failure that
+   matters most: read as "a syllabus covering nothing", it would have returned
+   a maximal 8-gap list built from zero evidence and looked like a real result.
+5. A .docx is refused by its bytes, and a text file named .pdf still reads.
+   The extension is never consulted.
+
+THE BUG THIS RUN FOUND
+----------------------
+Case C failed on the first attempt with 400 unsupported_type. `_plain_text()`
+was gating on the file extension, so a plain-text syllabus named `.pdf` was
+rejected -- directly contradicting the promise in `extract_text`'s own
+docstring that byte-sniffing makes the extension irrelevant. The extension
+check was there to reject .docx; that is a property of the bytes, so it is now
+done by measuring the ratio of printable characters after decoding. latin-1
+decodes any byte sequence, so "it decoded" was never evidence that the upload
+was text.

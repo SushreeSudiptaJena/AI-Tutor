@@ -11,6 +11,7 @@ network, keeping the no-DB/no-network rule for pytest.
 from __future__ import annotations
 
 import json
+import re
 
 from .base import ProviderError  # noqa: F401  (kept for interface symmetry)
 
@@ -91,6 +92,31 @@ class MockProvider:
         # Scaffolded hints for the graded-work guardrail (rag-004).
         if "hints" in props:
             return {"hints": _HINTS}
+
+        # Syllabus coverage (student-008). The generic array fallback below
+        # would return [], which the service reads as "no verdict for any
+        # concept" and therefore "every prerequisite is a gap" -- a maximal gap
+        # list with the wifi off, which looks like a real result and is not one.
+        # So the mock answers the shape properly: it marks a prerequisite
+        # covered when its slug or name actually appears in the uploaded text,
+        # which makes the offline path exercise both branches.
+        if "concepts" in props:
+            # Only the uploaded syllabus counts. Searching the whole prompt
+            # matched every concept against its own name in the listing above,
+            # so everything came back covered and no gap was ever produced.
+            marker = "syllabus the student uploaded"
+            lowered = prompt.lower()
+            seen = lowered[lowered.rindex(marker):] if marker in lowered else lowered
+            covered = []
+            for slug in re.findall(r"^- `([a-z0-9-]+)`", prompt, re.MULTILINE):
+                words = [w for w in slug.split("-") if len(w) > 3]
+                hit = bool(words) and all(w in seen for w in words)
+                covered.append({
+                    "slug": slug,
+                    "covered": hit,
+                    "evidence": f"mock: matched {slug!r} in the upload" if hit else "",
+                })
+            return {"concepts": covered}
 
         # Generic explanation object.
         out: dict = {}

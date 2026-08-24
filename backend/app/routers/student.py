@@ -16,7 +16,15 @@ Three rules run through the whole file:
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException, Response, status
+from fastapi import (
+    APIRouter,
+    Depends,
+    File,
+    HTTPException,
+    Response,
+    UploadFile,
+    status,
+)
 from sqlalchemy import select
 from sqlalchemy.orm import Session as OrmSession
 
@@ -43,7 +51,8 @@ from ..schemas import (
     PracticeAnswerIn,
     PracticeGenerateIn,
 )
-from ..services import practice, retrieval, tutor
+from ..providers import AllProvidersFailed
+from ..services import practice, retrieval, syllabus, tutor
 
 router = APIRouter(prefix="/student", tags=["student"])
 
@@ -295,13 +304,126 @@ def submit_diagnostic(
 
     db.flush()
 
-    count = len(gaps)
     return {
         "gaps": [_gap_out(db, g) for g in gaps],
-        "message": (
-            "No prerequisite gaps found." if count == 0
-            else f"Found {count} prerequisite gap{'' if count == 1 else 's'}."
-        ),
+        "message": _gap_message(len(gaps)),
+    }
+
+
+
+# ---------------------------------------------------------------------------
+# student-008 -- the other way in
+# ---------------------------------------------------------------------------
+
+def _gap_message(count: int) -> str:
+    """Both entries into the gap list say the same thing the same way.
+
+    Duplicating this string once was already a bug waiting to happen: the
+    frontend shows it verbatim, and "Found 1 prerequisite gaps." is the kind of
+    detail a judge notices out loud.
+    """
+    if count == 0:
+        return "No prerequisite gaps found."
+    return f"Found {count} prerequisite gap{'' if count == 1 else 's'}."
+
+
+@router.post("/syllabus-upload")
+def syllabus_upload(
+    file: UploadFile = File(...),
+    db: OrmSession = Depends(get_db),
+    user: User = Depends(current_user),
+) -> dict:
+    """The alternative entry for an incoming student.
+
+    Rather than sitting the diagnostic, the student uploads the syllabus of
+    what they have **already studied**; we compare it against this course's
+    prerequisites and open a gap for every one it does not cover. The response
+    is byte-identical in shape to `POST /diagnostic/{id}/submit`, because from
+    the frontend's side this is the same screen reached a different way.
+
+    Gaps written here are indistinguishable downstream on purpose -- the same
+    rows, read by the same dashboard, taught by the same lesson endpoint. Only
+    `detected_from` differs, and that is for the teacher, not for the logic.
+
+    No mastery is written. The diagnostic writes mastery because it has
+    *answers*; a syllabus is evidence that a topic was taught, not that this
+    student learned it. Recording "solid" from a syllabus line would be a
+    measurement we never took. See `services/syllabus.py`.
+
+    And no score, the same as everywhere else in this file.
+    """
+    course = _course(db, user)
+
+    try:
+        raw = file.file.read(syllabus.MAX_UPLOAD_BYTES + 1)
+    finally:
+        file.file.close()
+
+    try:
+        text = syllabus.extract_text(file.filename or "", raw)
+    except syllabus.SyllabusError as exc:
+        # A file we cannot read is the student's problem to fix, and they can
+        # only fix it if they are told which problem it is -- "scan, not text"
+        # and "wrong file type" need different actions from them.
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={"code": "bad_request", "message": exc.message,
+                    "detail": {"reason": exc.code}},
+        )
+
+    # Only prerequisites. Current-course concepts are what this course is about
+    # to teach; finding them absent from a prior syllabus is expected, not a
+    # gap, and reporting them would bury the real gaps in noise.
+    concepts = db.scalars(
+        select(Concept)
+        .where(Concept.prerequisite_course_id.is_not(None))
+        .join(Topic, Topic.id == Concept.topic_id)
+        .where(Topic.course_id == course.id)
+        .order_by(Concept.id)
+    ).all()
+
+    listing = [
+        {"slug": c.slug, "name": c.name,
+         "topic": (db.get(Topic, c.topic_id).name if c.topic_id else None)}
+        for c in concepts
+    ]
+
+    try:
+        verdicts = syllabus.assess(listing, text)
+    except AllProvidersFailed as exc:
+        # Never fall back to "covered nothing". That would hand back a maximal
+        # gap list built from zero evidence and look exactly like a real result.
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail={"code": "provider_unavailable",
+                    "message": "I could not read the syllabus just now. "
+                               "Please try again in a moment.",
+                    "detail": {"attempts": [name for name, _ in exc.attempts]}},
+        )
+
+    by_slug = {c.slug: c for c in concepts}
+    gaps: list[Gap] = []
+    for verdict in verdicts:
+        if verdict.covered:
+            continue
+        concept = by_slug.get(verdict.slug)
+        if concept is None:
+            continue
+        gap = db.scalar(
+            select(Gap).where(Gap.user_id == user.id, Gap.concept_id == concept.id)
+        )
+        if gap is None:
+            gap = Gap(user_id=user.id, concept_id=concept.id,
+                      detected_from="syllabus_upload")
+            db.add(gap)
+        gap.status = "open"
+        gaps.append(gap)
+
+    db.flush()
+
+    return {
+        "gaps": [_gap_out(db, g) for g in gaps],
+        "message": _gap_message(len(gaps)),
     }
 
 

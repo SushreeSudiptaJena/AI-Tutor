@@ -19,3 +19,6 @@ fastembed>=0.4.0             # ONNX runtime, ~150MB instead of torch's ~2.5GB
 
 # --- ingest-001: PDF parsing ---
 PyMuPDF>=1.24.0          # page-anchored text extraction; wheels on all platforms
+
+# --- student-008: multipart syllabus upload ---
+python-multipart>=0.0.9   # FastAPI needs it for UploadFile; not a transitive dep
