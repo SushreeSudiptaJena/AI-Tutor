@@ -15,17 +15,29 @@ import re
 
 from .base import ProviderError  # noqa: F401  (kept for interface symmetry)
 
+# SUBJECT-NEUTRAL ON PURPOSE. These used to be Newton's-laws text, left over
+# from when the demo course was physics, and offline that was actively
+# dangerous: an unrehearsed question under PROVIDER=mock came back with
+# "draw a free-body diagram... apply F_net = m a" while the response claimed
+# 80% alignment and carried five real citations to a DJANGO textbook. Confident
+# prose about the wrong subject, wearing the right sources.
+#
+# A mock answer must never assert subject matter it cannot possibly know. It
+# says what it IS instead, so a demo running on it is obvious rather than
+# quietly wrong.
 _EXPLANATION = (
-    "Motion does not require a force; only a change in motion does. When a block "
-    "slides at constant velocity, the applied push and the friction force are equal "
-    "in magnitude and opposite in direction, so they cancel. The net force is "
-    "therefore zero even though the block is moving."
+    "[offline placeholder] This response came from the mock provider, so it is "
+    "not a real answer to this question -- the model was not reachable and this "
+    "exact question has not been asked before, so there was nothing cached to "
+    "replay. The citations shown alongside it ARE real: they come from the "
+    "approved course material by vector search, which needs no network. Ask "
+    "this question once while online and it will be cached and answer properly."
 )
 
 _HINTS = [
-    "Start by drawing a free-body diagram and labelling every force.",
-    "Resolve each force into components along and perpendicular to the motion.",
-    "Ask what the acceleration must be, then apply F_net = m a.",
+    "[offline placeholder] Re-read the question and name exactly what is being asked for.",
+    "[offline placeholder] Find the passage in the cited material that covers it.",
+    "[offline placeholder] Write down what you already know before looking for what you do not.",
 ]
 
 
@@ -79,14 +91,25 @@ class MockProvider:
         # the demo's weakest moment -- a wrong answer, and silence. With the
         # wifi off, the mock still has to hand back something diagnosable.
         if "items" in props:
+            # The distractor must name a misconception that EXISTS in the
+            # seeded set, or a wrong answer produces silence -- the demo's
+            # weakest moment. This one used to be a physics item mapped to
+            # `velocity-implies-force`, which no longer exists anywhere, so
+            # offline the wrong answer was diagnosed as nothing at all.
             return {"items": [{
-                "prompt": "A 2 kg block slides at constant velocity across a rough floor. "
-                          "What is the net force on it?",
+                "prompt": "A form on a page creates a new blog post when submitted. "
+                          "Which HTTP method should it use?",
                 "kind": "mcq",
-                "options": ["0 N", "6 N", "20 N", "24 N"],
-                "correct_answer": "0 N",
-                "problem_type": "net-force-constant-velocity",
-                "distractors": {"6 N": "velocity-implies-force"},
+                "options": [
+                    "POST, because the request changes server state",
+                    "GET, because it is a simpler request",
+                    "Either one; the method makes no difference",
+                    "PUT, because a post is being written",
+                ],
+                "correct_answer": "POST, because the request changes server state",
+                "problem_type": "http-method-choice",
+                "distractors": {"GET, because it is a simpler request":
+                                "get-for-state-change"},
             }]}
 
         # Scaffolded hints for the graded-work guardrail (rag-004).

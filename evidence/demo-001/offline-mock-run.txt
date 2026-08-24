@@ -1,0 +1,234 @@
+demo-001 -- backend-side rehearsal. This feature is NOT passing.
+================================================================
+demo-001 needs two laptops and a second operator. What one person can verify
+from the backend has been verified, twice: once on the live provider chain and
+once fully offline with PROVIDER=mock.
+
+==============================================================================
+PART 1 -- the golden path, live, from a clean state
+==============================================================================
+
+
+
+==============================================================================
+STEP 1 - student logs in
+==============================================================================
+CSW2 - Computer Science Workshop 2 | 1 book(s)
+
+==============================================================================
+STEP 2 - diagnostic, wrong on HTTP methods (the bar that will grow)
+==============================================================================
+Found 1 prerequisite gap.
+  gap 486: HTTP methods, GET and POST  <- Computer Science Workshop 1
+
+==============================================================================
+STEP 3 - the gap lesson, with its alignment score and real citations
+==============================================================================
+outcome: answered | alignment: 66 % | language: en
+body: **GET and POST are two of the most common HTTP methods.**   A **GET** request asks a server to *retrieve* a representation of a resource, while a **POST** request asks the server to *create* or *process* data that you send with th
+  cite: Django 5 By Example (Antonio Mele) p.1010
+  cite: Django 5 By Example (Antonio Mele) p.445
+  cite: Django 5 By Example (Antonio Mele) p.447
+has speech_text: True
+
+==============================================================================
+STEP 4 - practice generated for that gap
+==============================================================================
+items: 4 | source: generated
+first: A web page includes a button that enrolls the user in a course by sending a request to /api/enroll/. Which HTT
+
+==============================================================================
+STEP 5 - a wrong answer, and the specific misconception behind it
+==============================================================================
+Traceback (most recent call last):
+  File "<stdin>", line 49, in <module>
+StopIteration
+
+
+gap under test: 486 HTTP methods, GET and POST
+
+==============================================================================
+TEACHER HEATMAP BEFORE
+==============================================================================
+     9  Puts the foreign key on the one side of a one-to-m
+     7  Chooses GET for a request that changes server stat
+     5  Believes a filter returns a single record rather t
+     4  Treats a class attribute as if every instance had 
+     3  Believes an input without a name attribute is stil
+     2  Assumes the server remembers the previous request 
+
+==============================================================================
+STEP 5 - a wrong answer, and the misconception behind it
+==============================================================================
+item: A web page includes a button that enrolls the user in a course by sending a request to /api/enroll/. Which HTTP method should be u
+   - GET
+   - POST
+   - PUT
+   - DELETE
+
+answered: 'GET'  -> correct: False
+DIAGNOSIS: Chooses GET for a request that changes server state
+asked: That answer usually comes from this reasoning: chooses GET for a request that changes server state. Does that match your thinking?
+
+==============================================================================
+STEP 6 - the student CONFIRMS it
+==============================================================================
+status: 204 (204 by contract)
+
+==============================================================================
+STEP 7 - the teacher's heatmap, live
+==============================================================================
+     9 ->   9  Puts the foreign key on the one side of a one-to-m
+     7 ->   8  Chooses GET for a request that changes server stat   <== LIVE INCREMENT
+     5 ->   5  Believes a filter returns a single record rather t
+     4 ->   4  Treats a class attribute as if every instance had 
+     3 ->   3  Believes an input without a name attribute is stil
+     2 ->   2  Assumes the server remembers the previous request 
+
+==============================================================================
+STEP 8 - a DENIAL does not move it
+==============================================================================
+denied: Chooses GET for a request that changes server state
+heatmap unchanged after the denial: True
+
+==============================================================================
+PART 2 -- the same path with PROVIDER=mock (verification step 4)
+==============================================================================
+
+
+PROVIDER = mock
+
+==============================================================================
+OFFLINE: diagnostic -> gap
+==============================================================================
+Found 1 prerequisite gap. | ['HTTP methods, GET and POST']
+
+==============================================================================
+OFFLINE: the gap lesson -- does it still answer, or does it refuse?
+==============================================================================
+outcome: answered | alignment: 66 %
+citations: 4 | speech_text: True
+body: **GET and POST are two of the most common HTTP methods.**   A **GET** request asks a server to *retrieve* a representation of a resource, while a **POST** request asks the server to *create* or *proce
+
+==============================================================================
+OFFLINE: practice generation
+==============================================================================
+items: 4 | source: generated
+  - A web page includes a button that enrolls the user in a course by sending a request to /ap
+  - When implementing a "like" feature that increments a like count on a post, which method is
+
+==============================================================================
+OFFLINE: wrong answer -> is it still DIAGNOSABLE?
+==============================================================================
+answered: GET -> DIAGNOSIS: Chooses GET for a request that changes server state
+diagnosable offline: True
+
+==============================================================================
+OFFLINE: confirm -> heatmap
+==============================================================================
+heatmap moved on: ['Chooses GET for a request that changes s']
+
+==============================================================================
+OFFLINE: refusal and guardrail still behave
+==============================================================================
+off-topic -> insufficient_evidence | alignment: 68 %
+
+==============================================================================
+PART 3 -- WHAT THE OFFLINE RUN EXPOSED, AND THE FIX
+==============================================================================
+The offline run above passes because of the DISK CACHE, not because the mock is
+good: the cache is keyed on sha256(model + prompt), so a rehearsed question
+replays its real answer with no network. That is the designed behaviour and it
+is why the rehearsed path survives a dead wifi intact.
+
+Asking what an UNREHEARSED question does with the wifi off found something bad:
+
+
+
+PROVIDER = mock | cache enabled: True
+
+==============================================================================
+A QUESTION NOBODY HAS EVER ASKED -- nothing in the cache to replay
+==============================================================================
+outcome: answered | alignment: 80 %
+citations: 5
+
+BODY:
+ - Start by drawing a free-body diagram and labelling every force.
+- Resolve each force into components along and perpendicular to the motion.
+- Ask what the acceleration must be, then apply F_net = m a.
+
+-> THIS is what an unrehearsed path looks like with the wifi off.
+
+==============================================================================
+THE SAME QUESTION IS FINE ONCE IT HAS BEEN ASKED ONLINE
+==============================================================================
+(the disk cache is keyed on sha256(model + prompt), so a rehearsed
+ question replays its REAL answer offline -- that is why the run above
+ produced real Django prose for the HTTP-methods gap and mock prose here)
+
+That is Newton's-laws text -- left over from when the demo course was physics --
+returned under a DJANGO question, claiming 80% alignment, carrying five real
+citations to a Django textbook. Confident prose about the wrong subject wearing
+the right sources. On stage that is not a degraded answer, it is a wrong one
+that looks right.
+
+A second, quieter instance of the same rot: the mock's generated practice item
+mapped its distractor to `velocity-implies-force`, a misconception deleted with
+the physics course. Offline, a wrong answer was therefore diagnosed as NOTHING
+-- precisely the moment the mock exists to protect. The test covering it passed
+throughout, because it hardcoded the same dead slug the mock used.
+
+FIXED both ways, and verified:
+
+
+
+PROVIDER = mock
+
+==============================================================================
+AFTER THE FIX: an UNREHEARSED question with the wifi off
+==============================================================================
+outcome: answered | alignment: 80 %
+citations: 5 (real -- vector search needs no network)
+
+BODY:
+ - [offline placeholder] Re-read the question and name exactly what is being asked for.
+- [offline placeholder] Find the passage in the cited material that covers it.
+- [offline placeholder] Write down what you already know before looking for what you do not.
+
+says it is a placeholder: True
+asserts no physics: True
+
+==============================================================================
+AND THE REHEARSED PATH IS UNAFFECTED -- the cache replays the real answer
+==============================================================================
+gap: HTTP methods, GET and POST
+outcome: answered | alignment: 66 %
+real cached answer (not a placeholder): True
+body: **GET and POST are two of the most common HTTP methods.**   A **GET** request asks a server to *retrieve* a representation of a resource, while a **POST** request asks th
+
+The mock now asserts no subject matter it cannot know. It says what it IS --
+"[offline placeholder]" -- so an offline demo is obviously offline rather than
+quietly wrong. Its practice item maps to `get-for-state-change`, which exists,
+and a test now checks the mock's distractor against the real seed file instead
+of against a hardcoded slug.
+
+WHAT IS VERIFIED
+----------------
+- The golden path runs end to end from a clean state on the live chain:
+  diagnostic -> one gap attributed to CSW1 -> lesson at 66% with real page
+  citations -> 4 generated items scoped to the gap -> wrong answer -> the
+  specific misconception -> confirm -> heatmap 7 -> 8 -> deny -> unchanged.
+- The same path runs fully offline with PROVIDER=mock, including the
+  misconception moment and the heatmap increment.
+- An unrehearsed question offline now announces itself instead of inventing.
+
+WHAT IS NOT VERIFIED, AND CANNOT BE BY ONE PERSON
+-------------------------------------------------
+1. Laptop A student flow with Laptop B showing the teacher dashboard.
+2. docs/demo-script.md run verbatim, out loud, end to end.
+3. A second clean-state repeat with no manual DB edits.
+4. The offline repeat ON TWO LAPTOPS.
+
+docs/demo-script.md is now written and is the thing to run. Budget the last
+three hours for this; do not spend them on features.

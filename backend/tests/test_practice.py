@@ -232,14 +232,60 @@ def test_the_confirm_question_asks_rather_than_asserts():
 # The offline path
 # ---------------------------------------------------------------------------
 
+def _seeded_misconception_slugs() -> set[str]:
+    import pathlib as _p
+
+    data = json.loads(
+        (_p.Path("backend/data/seed/misconceptions.json")).read_text(encoding="utf-8")
+    )
+    return {m["slug"] for m in data["misconceptions"]}
+
+
 def test_the_mock_provider_generates_a_diagnosable_item():
     """PROVIDER=mock with the wifi off must still reach the misconception
     moment, or the offline demo stops one step short of its best beat."""
     raw = json.loads(MockProvider().complete("generate practice",
                                              json_schema=practice.GENERATE_SCHEMA))
     generated = raw["items"][0]
-    known = {"velocity-implies-force": KNOWN["velocity-implies-force"]}
+    # Build the "known misconceptions" map from the item itself, so this test
+    # checks the item is well-formed and diagnosable without also pinning which
+    # misconception the mock happens to name. The test below pins that against
+    # the real seed, which is where it belongs.
+    known = {
+        slug: FakeMisconception(slug, generated["problem_type"], slug)
+        for slug in generated["distractors"].values()
+    }
     assert practice.validate_item(generated, known) is None
+
+
+def test_the_mock_items_distractor_names_a_misconception_that_actually_EXISTS():
+    """The previous version of this test hardcoded the slug the mock happened
+    to use, so it passed while the mock pointed at `velocity-implies-force` --
+    a misconception deleted with the physics course. Offline, a wrong answer
+    was therefore diagnosed as nothing at all, which is precisely the moment
+    the mock exists to protect. Check against the real seed instead."""
+    raw = json.loads(MockProvider().complete("generate practice",
+                                             json_schema=practice.GENERATE_SCHEMA))
+    slugs = set(raw["items"][0]["distractors"].values())
+    seeded = _seeded_misconception_slugs()
+    assert slugs <= seeded, (
+        f"the mock names {sorted(slugs - seeded)}, which is not in the seed"
+    )
+
+
+def test_the_mock_provider_asserts_no_subject_matter_it_cannot_know():
+    """Its answer used to be Newton's-laws prose left over from the physics
+    course. Offline, an unrehearsed question came back with 'draw a free-body
+    diagram... apply F_net = m a' while the response claimed 80% alignment and
+    carried five real citations to a Django textbook -- confident prose about
+    the wrong subject, wearing the right sources."""
+    from app.providers import mock as mock_module
+
+    text = MockProvider().complete("explain something")
+    assert "[offline placeholder]" in text
+    for physics in ("free-body", "F_net", "net force", "velocity", "friction"):
+        assert physics.lower() not in text.lower()
+    assert all("[offline placeholder]" in h for h in mock_module._HINTS)
 
 
 def test_the_mock_provider_returns_hints_for_the_guardrail():

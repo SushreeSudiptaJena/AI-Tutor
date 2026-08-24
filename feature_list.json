@@ -669,7 +669,7 @@
       "area": "demo",
       "title": "Two-laptop golden path rehearsal",
       "user_visible_behavior": "The full demo runs start to finish on two laptops without a manual fix.",
-      "status": "not_started",
+      "status": "blocked",
       "depends_on": [
         "teacher-001",
         "infra-005"
@@ -681,8 +681,8 @@
         "Repeat it a second time from a clean state with no manual DB edits.",
         "Repeat once with wifi disabled and PROVIDER=mock."
       ],
-      "evidence": null,
-      "notes": "Rehearse at least twice before the deadline. Budget the last 3 hours for this — do not spend them on features."
+      "evidence": "evidence/demo-001/offline-mock-run.txt",
+      "notes": "BLOCKED 2026-08-24 on a second operator, NOT passing. Rehearse at least twice before the deadline; budget the last 3 hours and do not spend them on features. docs/demo-script.md IS NOW WRITTEN -- it did not exist, so this feature could not even start. Drafted by the backend owner from verified behaviour because the script has to match what the code does; person 6 owns the words and should rewrite the narration, but not the sequence without re-rehearsing. VERIFIED BY ONE PERSON: the golden path runs end to end from a clean state on the live chain (diagnostic -> gap attributed to CSW1 -> lesson at 66% with real page citations -> 4 scoped items -> wrong answer -> specific misconception -> confirm -> heatmap 7->8 -> deny -> unchanged), and the SAME path runs fully offline with PROVIDER=mock including the misconception moment. Offline works because the disk cache is keyed on sha256(model+prompt) and replays real answers -- which is exactly why the exact demo questions must be rehearsed ONLINE first. THE OFFLINE RUN EXPOSED A DEMO-KILLER: an UNREHEARSED question with the wifi off returned Newton's-laws text left over from the physics course -- 'draw a free-body diagram... apply F_net = m a' -- under a Django question, claiming 80% alignment and carrying five real citations to the Django textbook. Confident prose about the wrong subject wearing the right sources: on stage that is a wrong answer that looks right. Second instance: the mock's practice item mapped its distractor to `velocity-implies-force`, deleted with the physics course, so offline a wrong answer was diagnosed as NOTHING -- the exact moment the mock exists to protect. The test covering it passed throughout because it hardcoded the same dead slug. Both fixed; the mock now announces itself as '[offline placeholder]' and asserts no subject matter, and a test checks its distractor against the real seed file. STILL NEEDS TWO LAPTOPS: student flow on A with the teacher dashboard on B, the script run verbatim out loud, a second clean-state repeat, and the offline repeat on both machines."
     },
     {
       "id": "infra-006",
