@@ -1,11 +1,37 @@
 {
-  "_readme": "Institution structure. CONTENT LEAD: change codes/titles to your subject.",
+  "_readme": [
+    "Institution structure. The DEMO COURSE is CSW2 -- Computer Science Workshop 2,",
+    "semester 4, CSE core, admission batches 2024 and 2025. Its corpus is the real",
+    "ingested 'Django 5 By Example' plus the seven assignment PDFs the admin uploads",
+    "across the semester.",
+    "",
+    "CSW1 is its prerequisite. The diagnostic checks what a student should already",
+    "have from it -- Python, HTTP, HTML, relational data -- which is why every gap",
+    "names CSW1 as the course it should have been learned in.",
+    "",
+    "PH101/PH000 are still in the database from the earlier physics stand-in. They",
+    "are harmless: retrieval, the diagnostic and the heatmap are all course-scoped."
+  ],
   "departments": [
-    { "name": "Physics" }
+    {
+      "name": "Computer Science & Engineering"
+    }
   ],
   "courses": [
-    { "code": "PH000", "title": "Class 12 Physics", "department": "Physics", "prerequisites": [] },
-    { "code": "PH101", "title": "Mechanics",        "department": "Physics", "prerequisites": ["PH000"] }
+    {
+      "code": "CSW1",
+      "title": "Computer Science Workshop 1",
+      "department": "Computer Science & Engineering",
+      "prerequisites": []
+    },
+    {
+      "code": "CSW2",
+      "title": "Computer Science Workshop 2",
+      "department": "Computer Science & Engineering",
+      "prerequisites": [
+        "CSW1"
+      ]
+    }
   ],
-  "primary_course": "PH101"
+  "primary_course": "CSW2"
 }

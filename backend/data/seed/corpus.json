@@ -1,17 +1,19 @@
 {
   "_readme": [
-    "Stand-in knowledge base so retrieval, citations and the guardrail can be built",
-    "and tested before the real PDFs exist. Each passage becomes one chunk with a real",
-    "page number, exactly as PyMuPDF ingestion would produce.",
+    "DISABLED 2026-08-24. The demo course is now CSW2, whose corpus is the real",
+    "ingested 'Django 5 By Example' plus seven assignment PDFs -- so this physics",
+    "stand-in has nothing to stand in for.",
     "",
-    "CONTENT LEAD: replace this by dropping real PDFs in backend/data/pdfs/ and running",
-    "ingest_pdfs.py. Once real material is ingested, set 'enabled' to false here so the",
-    "placeholder text stops competing with the real book in search results.",
+    "It is kept rather than deleted because it is a working example of the shape",
+    "ingestion produces: one passage per chunk, each with a real page number, which",
+    "is what a citation resolves against.",
     "",
-    "kind='assignment' material is searchable so the guardrail can RECOGNISE homework,",
-    "but is never quoted as a lesson source."
+    "The PH101 material it created is still in the database and still reachable, but",
+    "retrieval is course-scoped so it cannot appear in a CSW2 answer.",
+    "",
+    "To use it again: set enabled to true and re-run seed.py."
   ],
-  "enabled": true,
+  "enabled": false,
   "materials": [
     {
       "title": "Concepts of Physics, Vol 1",

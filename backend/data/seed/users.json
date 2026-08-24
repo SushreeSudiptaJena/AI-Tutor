@@ -4,8 +4,29 @@
     "These are throwaway demo logins for a public repo - never reuse a real password."
   ],
   "users": [
-    { "email": "asha@example.edu",  "full_name": "Asha R",     "role": "student", "password": "demo1234", "course": "PH101", "preferred_language": "en" },
-    { "email": "ravi@example.edu",  "full_name": "Ravi Menon", "role": "teacher", "password": "demo1234", "course": "PH101", "preferred_language": "en" },
-    { "email": "admin@example.edu", "full_name": "Admin",      "role": "admin",   "password": "demo1234", "course": null,    "preferred_language": "en" }
+    {
+      "email": "asha@example.edu",
+      "full_name": "Asha R",
+      "role": "student",
+      "password": "demo1234",
+      "course": "CSW2",
+      "preferred_language": "en"
+    },
+    {
+      "email": "ravi@example.edu",
+      "full_name": "Ravi Menon",
+      "role": "teacher",
+      "password": "demo1234",
+      "course": "CSW2",
+      "preferred_language": "en"
+    },
+    {
+      "email": "admin@example.edu",
+      "full_name": "Admin",
+      "role": "admin",
+      "password": "demo1234",
+      "course": null,
+      "preferred_language": "en"
+    }
   ]
 }

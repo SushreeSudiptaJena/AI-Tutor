@@ -1,0 +1,243 @@
+content-001 -- golden path run END TO END on CSW2 as the demo course
+====================================================================
+One uninterrupted run, immediately after reset_demo_state.py + seed.py, through
+the real provider chain (PROVIDER=groq) against the real ingested corpus
+(Django 5 By Example, 1938 chunks). No physics anywhere in this run.
+
+
+
+
+==============================================================================
+STEP 1 - login as the CSW2 student
+==============================================================================
+asha@example.edu / course CSW2 (id 5).  The API does not return correct_answer,
+so the answer key is read from backend/data/seed/diagnostic.json.
+
+==============================================================================
+STEP 2 - diagnostic: 8 items, wrong on the two NEW ones
+==============================================================================
+  [Virtual environments and package isolati] WRONG <- encodes a known misconception
+  [Class inheritance in Python             ] correct
+  [The HTTP request and response cycle     ] correct
+  [HTTP methods, GET and POST              ] correct
+  [URL paths and routing                   ] WRONG <- encodes a known misconception
+  [Primary keys and foreign keys           ] correct
+  [One-to-many relationships               ] correct
+  [Filtering and querying records          ] correct
+
+-> Found 2 prerequisite gaps.
+   gap 237: Virtual environments and package isolation   (prerequisite course: Computer Science Workshop 1)
+   gap 238: URL paths and routing   (prerequisite course: Computer Science Workshop 1)
+
+==============================================================================
+STEP 3 - gap lesson: alignment score + citations, from the REAL Django corpus
+==============================================================================
+
+--- Virtual environments and package isolation ---
+outcome: answered | alignment_score: None
+body: A Python virtual environment gives a project its **own isolated copy of the interpreter and its own site‑packages directory**, so the versions of libraries you install for that project cannot interfere with the versions required by any other project [1][3].  It works because the `venv` module creates a separate directory that contains a private Python binary and a private `site‑packages` folder; a
+   cite: None p. None sim None
+   cite: None p. None sim None
+   cite: None p. None sim None
+   cite: None p. None sim None
+
+--- URL paths and routing ---
+outcome: answered | alignment_score: None
+body: In Django a **URL path** is a pattern that tells the framework which view should handle a particular request [1].   A pattern is built with the `path()` function, a string that may contain *converters* inside angle brackets (e.g., `<int:id>`) to capture parts of the URL as arguments that are passed to the view [1]. Django examines the list of patterns in order and stops at the first one that match
+   cite: None p. None sim None
+   cite: None p. None sim None
+   cite: None p. None sim None
+
+
+
+==============================================================================
+STEP 3 (restated) - alignment score, correct keys
+==============================================================================
+
+Virtual environments and package isolation
+   outcome=answered  alignment=86%  top_sim=0.8123  threshold=0.7  sufficient=True
+   cite: Django 5 By Example (Antonio Mele) p.47 - Building a Blog Application
+   cite: Django 5 By Example (Antonio Mele) p.162 - Enhancing Your Blog and Adding S
+   cite: Django 5 By Example (Antonio Mele) p.46 - Building a Blog Application
+
+URL paths and routing
+   outcome=answered  alignment=62%  top_sim=0.7274  threshold=0.7  sufficient=True
+   cite: Django 5 By Example (Antonio Mele) p.114 - Building a Blog Application
+   cite: Django 5 By Example (Antonio Mele) p.116 - Building a Blog Application
+   cite: Django 5 By Example (Antonio Mele) p.124 - Building a Blog Application
+
+==============================================================================
+STEP 4 - generate practice scoped to the gap: Virtual environments and package isolation
+==============================================================================
+status: 200 | keys: ['practice_set_id', 'concept', 'items', 'source']
+{
+  "practice_set_id": 5,
+  "concept": "Virtual environments and package isolation",
+  "items": [
+    {
+      "id": 31,
+      "prompt": "You create a virtual environment `venv` and activate it. Inside the activated environment you run `python -m pip install requests`. Later you run a script with the system Python (outside the venv) that contains `import requests`. What happens?",
+      "kind": "mcq",
+      "options": [
+        "It will import successfully",
+        "It will raise ModuleNotFoundError",
+        "It will import a different version",
+        "It will import but with warnings"
+      ],
+      "gap_id": 237
+    },
+    {
+      "id": 32,
+      "prompt": "A package `numpy` is installed globally on your machine. You then create a new virtual environment `myenv` but never install `numpy` inside it. While `myenv` is activated you run a script that does `import numpy`. What is the result?",
+      "kind": "mcq",
+      "options": [
+        "It will import successfully",
+        "It will raise ModuleNotFoundError",
+        "It will import a stub version",
+        "It will import but issue a deprecation warning"
+      ],
+      "gap_id": 237
+    },
+    {
+      "id": 33,
+      "prompt": "After activating a virtual environment, you execute `pip list`. Which packages are displayed?",
+      "kind": "mcq",
+      "options": [
+        "Only packages installed in the virtual environment",
+        "All packages installed globally on the system",
+        "Both global and virtual\u2011environment packages",
+        "No packages are displayed"
+      ],
+      "gap_id": 237
+    },
+    {
+  
+
+
+
+==============================================================================
+STEP 5 - teacher heatmap BEFORE (course-scoped to CSW2)
+==============================================================================
+     9  Puts the foreign key on the one side of a one-
+     7  Chooses GET for a request that changes server 
+     5  Believes a filter returns a single record rath
+     4  Treats a class attribute as if every instance 
+     3  Believes an input without a name attribute is 
+     2  Assumes the server remembers the previous requ
+
+==============================================================================
+STEP 6 - answer a generated item WRONG with the misconception's answer
+==============================================================================
+prompt: A package `numpy` is installed globally on your machine. You then create a new virtual environment `myenv` but never install `numpy` inside it. While 
+answering: It will import successfully   <- 'a global install is visible inside the venv'
+
+status: 200 | keys: ['correct', 'correct_answer', 'explanation', 'citations', 'diagnosis']
+{
+  "correct": false,
+  "correct_answer": "It will raise ModuleNotFoundError",
+  "explanation": "A virtual environment keeps its own\u202fsite\u2011packages directory separate from the system\u2011wide one, so only packages installed inside the environment are on its import path\u202f[1]. When the environment is active, Python looks for modules in\u202f`my_env/lib/pythonX.Y/site\u2011packages`\u202frather than the global location\u202f[2]. Because\u202f`numpy`\u202fwas never installed into that isolated directory, the import machinery cannot find it and raises\u202f`ModuleNotFoundError`. Thus the script will not import\u202f`numpy`\u202fsuccessfully.",
+  "citations": [
+    {
+      "chunk_id": 1393,
+      "material_id": 12,
+      "book_title": "Django 5 By Example (Antonio Mele)",
+      "page_no": 47,
+      "chapter": "Building a Blog Application",
+      "snippet": "If you upgrade a module version for an application, you might end up breaking other applications that require an older version of that module. To address this issue, you can use Python virtual environments. With virtual..."
+    },
+    {
+      "chunk_id": 1395,
+      "material_id": 12,
+      "book_title": "Django 5 By Example (Antonio Mele)",
+      "page_no": 48,
+      "chapter": "Building a Blog Application",
+      "snippet": "environment is active will go into the my_env/lib/python3.12/sitepackages directory. If you
+
+
+
+==============================================================================
+STEP 7 - the AI-diagnosed misconception
+==============================================================================
+label: Believes a globally installed package is available inside a virtual environment
+asked: That answer usually comes from this reasoning: believes a globally installed package is available inside a virtual environment. Does that match your thinking?
+
+==============================================================================
+STEP 8 - student CONFIRMS (204 No Content by contract)
+==============================================================================
+status: 204 | body: ''
+
+==============================================================================
+STEP 9 - teacher heatmap AFTER -- live increment, course-scoped to CSW2
+==============================================================================
+     0 ->   9  Puts the foreign key on the one side of a one-to-man   <== LIVE INCREMENT
+     0 ->   7  Chooses GET for a request that changes server state   <== LIVE INCREMENT
+     0 ->   5  Believes a filter returns a single record rather tha   <== LIVE INCREMENT
+     0 ->   4  Treats a class attribute as if every instance had it   <== LIVE INCREMENT
+     0 ->   3  Believes an input without a name attribute is still    <== LIVE INCREMENT
+     0 ->   2  Assumes the server remembers the previous request wi   <== LIVE INCREMENT
+     0 ->   1  Believes a globally installed package is available i   <== LIVE INCREMENT
+     3 ->   0  Believes an input without a name attribute is    <== LIVE INCREMENT
+     5 ->   0  Believes a filter returns a single record rath   <== LIVE INCREMENT
+     4 ->   0  Treats a class attribute as if every instance    <== LIVE INCREMENT
+     9 ->   0  Puts the foreign key on the one side of a one-   <== LIVE INCREMENT
+     2 ->   0  Assumes the server remembers the previous requ   <== LIVE INCREMENT
+     7 ->   0  Chooses GET for a request that changes server    <== LIVE INCREMENT
+
+==============================================================================
+STEP 10 - a DENIAL must not move the number
+==============================================================================
+diagnosed again: Believes a globally installed package is available inside a 
+student DENIED it.
+heatmap unchanged after denial: True
+     9  Puts the foreign key on the one side of a one-to-man
+     7  Chooses GET for a request that changes server state
+     5  Believes a filter returns a single record rather tha
+     4  Treats a class attribute as if every instance had it
+     3  Believes an input without a name attribute is still 
+     2  Assumes the server remembers the previous request wi
+     1  Believes a globally installed package is available i
+
+NOTE ON STEP 9's OUTPUT
+-----------------------
+The "0 -> 9" rows above are an artefact of the harness, not of the data: the
+before/after snapshots truncated misconception labels to different widths (46
+vs 52 chars), so the dict keys did not line up. The counts are the evidence:
+
+    BEFORE   9, 7, 5, 4, 3, 2          (six rows)
+    AFTER    9, 7, 5, 4, 3, 2, 1       (the same six, plus one new row)
+
+The new row is "Believes a globally installed package is available inside a
+virtual environment" -- the misconception the student just confirmed. Step 10
+then re-read the heatmap after a DENIAL and got byte-identical output
+(heatmap unchanged after denial: True), which is the same six rows plus the
+one confirmed row still at 1.
+
+WHAT THIS RUN PROVES
+--------------------
+1. CSW2 is the demo course end to end. Course summary names Django 5 By
+   Example; every citation resolves to a real page of a real PDF, which was
+   never true of the PH101 stand-in.
+2. Both NEW diagnostic items (virtual-environments, url-routing) produce
+   correctly attributed gaps -- "should have come from Computer Science
+   Workshop 1".
+3. Neither gap lesson refuses. virtual-environments answers with citations to
+   pp. 47-48; url-routing answers at 62% alignment (top-sim 0.7274) citing
+   pp. 114, 116, 124 -- and the lesson explicitly says Django "examines the
+   list of patterns in order and stops at the first one that matches", which
+   is exactly the misconception the wrong answer encoded.
+4. Generated practice is scoped to the gap: all items are venv-isolation items.
+5. The diagnosis is specific, not generic: "Believes a globally installed
+   package is available inside a virtual environment".
+6. Confirm increments the heatmap; deny does not.
+7. The heatmap is course-scoped and shows only CSW2 misconceptions. The two
+   rows at 4 and 3 (shared-class-attribute, input-without-name-submits) are
+   the ones that would have silently disappeared had the practice items for
+   the demoted concepts been deleted instead of kept.
+
+DEMO-SCRIPT NOTE (not a defect)
+-------------------------------
+This run made the student miss virtual-environments, whose misconception has no
+seeded history, so the heatmap gained a NEW row at 1. On stage a growing bar
+reads better than an appearing row. To get that, have the student miss the
+HTTP-methods item instead: its misconception ("Chooses GET for a request that
+changes server state") is seeded at 7 and will visibly go 7 -> 8.

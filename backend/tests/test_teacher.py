@@ -108,3 +108,16 @@ def test_resolve_accepts_an_optional_note_without_requiring_one():
 
     assert ResolveFlagIn().note is None
     assert ResolveFlagIn(note="covered in Friday's class").note
+
+
+def test_the_heatmap_is_scoped_to_a_course():
+    """Several courses' misconceptions share one table. An unscoped heatmap
+    shows a teacher another class's numbers, which reads as a surprising result
+    rather than as a bug -- the same failure mode retrieval had."""
+    source = _sql_of(teacher.heatmap)
+    assert "Topic.course_id == course_id" in source
+
+
+def test_the_heatmap_falls_back_to_the_teachers_own_course():
+    source = _sql_of(teacher.heatmap)
+    assert "course_id if course_id is not None else user.course_id" in source

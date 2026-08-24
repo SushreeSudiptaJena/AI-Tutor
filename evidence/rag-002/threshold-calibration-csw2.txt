@@ -1,0 +1,29 @@
+corpus: CSW2 - Computer Science Workshop 2
+
+kind        top-sim  source                                 question
+----------------------------------------------------------------------------------------------------
+COVERED      0.7811  Django 5 By Example (Antonio Mele), p. How do I define a model field and choose its
+COVERED      0.8239  Django 5 By Example (Antonio Mele), p. What does a QuerySet do and when is it evalu
+COVERED      0.7788  Django 5 By Example (Antonio Mele), p. How do I write a custom model manager?
+COVERED      0.8248  Django 5 By Example (Antonio Mele), p. How does a Django view receive the request o
+COVERED      0.7441  Django 5 By Example (Antonio Mele), p. How does template inheritance work?
+COVERED      0.7859  Django 5 By Example (Antonio Mele), p. How do I build and validate a form?
+COVERED      0.7650  Django 5 By Example (Antonio Mele), p. What is the request and response cycle?
+COVERED      0.7881  Django 5 By Example (Antonio Mele), p. How do I set up a virtual environment for a 
+OFF-TOPIC    0.6412  Django 5 By Example (Antonio Mele), p. How does Rust's borrow checker prevent data 
+OFF-TOPIC    0.6905  Django 5 By Example (Antonio Mele), p. Explain how React's useEffect dependency arr
+OFF-TOPIC    0.6781  Django 5 By Example (Antonio Mele), p. How do I set up a Kubernetes ingress with TL
+OFF-TOPIC    0.5813  Django 5 By Example (Antonio Mele), p. What is the time complexity of Dijkstra's al
+OFF-TOPIC    0.6145  Django 5 By Example (Antonio Mele), p. How do I train a convolutional neural networ
+OFF-TOPIC    0.5533  Django 5 By Example (Antonio Mele), p. What is photosynthesis in plant cells?
+OFF-TOPIC    0.5231  Django 5 By Example (Antonio Mele), p. Who won the football world cup in 2018?
+OFF-TOPIC    0.5663  Django 5 By Example (Antonio Mele), p. Explain Newton's second law of motion
+
+lowest covered      : 0.7441
+highest off-topic   : 0.6905
+margin              : +0.0536
+
+SUGGESTED ALIGNMENT_REFUSAL_THRESHOLD = 0.72
+
+Put that in .env. Then verify by hand through the real endpoint:
+one covered question must answer, one off-topic must refuse.

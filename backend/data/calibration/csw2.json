@@ -1,0 +1,40 @@
+{
+  "_readme": [
+    "Calibration set for CSW2 (Computer Science Workshop 2), measured against",
+    "'Django 5 By Example' plus the seven assignment PDFs.",
+    "",
+    "    .venv/Scripts/python.exe backend/scripts/calibrate_threshold.py \\",
+    "        --course CSW2 --questions backend/data/calibration/csw2.json",
+    "",
+    "'covered' questions are drawn from the concepts the diagnostic actually tests,",
+    "because those are the ones a gap lesson has to be able to teach. If one of them",
+    "scores below the threshold, that concept produces insufficient_evidence on its",
+    "lesson and should come out of concepts.json.",
+    "",
+    "'off_topic' leans deliberately NEAR-domain -- other web frameworks, other",
+    "languages, CS topics this book skips. Those are what a judge tries, and they",
+    "are the cases similarity cannot separate. If the margin comes out small or",
+    "negative, that is the script being honest: the entailment check in evidence.py",
+    "is carrying the refusal, exactly as designed."
+  ],
+  "covered": [
+    "How do I define a model field and choose its type?",
+    "What does a QuerySet do and when is it evaluated?",
+    "How do I write a custom model manager?",
+    "How does a Django view receive the request object?",
+    "How does template inheritance work?",
+    "How do I build and validate a form?",
+    "What is the request and response cycle?",
+    "How do I set up a virtual environment for a project?"
+  ],
+  "off_topic": [
+    "How does Rust's borrow checker prevent data races at compile time?",
+    "Explain how React's useEffect dependency array works",
+    "How do I set up a Kubernetes ingress with TLS termination?",
+    "What is the time complexity of Dijkstra's algorithm with a binary heap?",
+    "How do I train a convolutional neural network in PyTorch?",
+    "What is photosynthesis in plant cells?",
+    "Who won the football world cup in 2018?",
+    "Explain Newton's second law of motion"
+  ]
+}

@@ -89,6 +89,16 @@ def heatmap(
         .join(counts, counts.c.misconception_id == Misconception.id)
         .order_by(counts.c.confirmed_count.desc(), Misconception.id)
     )
+
+    # Scoped to the course, the same way retrieval is. Several courses'
+    # misconceptions share this table, and an unscoped heatmap shows a physics
+    # teacher the Django class's numbers -- which does not look like a bug, it
+    # looks like a surprising result. A misconception with no topic is excluded
+    # here, because there is nothing to scope it by.
+    if course_id is not None:
+        stmt = stmt.join(Topic, Topic.id == Misconception.topic_id).where(
+            Topic.course_id == course_id
+        )
     if topic_id is not None:
         stmt = stmt.where(Misconception.topic_id == topic_id)
 

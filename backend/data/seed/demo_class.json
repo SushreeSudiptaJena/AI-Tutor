@@ -8,43 +8,93 @@
     "heatmap has a believable shape AND visibly increments when the student confirms.",
     "",
     "Synthetic students are never named in any teacher view; teacher endpoints only",
-    "ever aggregate."
+    "ever aggregate.",
+    "",
+    "The proportions are deliberately uneven. A flat heatmap tells a teacher nothing",
+    "and looks generated; a long tail with two clear leaders looks like a real class",
+    "and gives the demo something to point at.",
+    "",
+    "The uncertainty_flags below are questions a CSW2 student might plausibly ask",
+    "that the Django corpus genuinely does not cover -- neighbouring CS topics, not",
+    "absurd ones. A flag panel full of obviously silly questions makes the refusal",
+    "look easy; these make it look necessary."
   ],
   "synthetic_students": 24,
   "confirmed_misconceptions": {
-    "velocity-implies-force": 9,
-    "sin-cos-swap": 6,
-    "normal-equals-weight-always": 4,
-    "vector-scalar-addition": 3,
-    "heavier-falls-faster": 2,
-    "action-reaction-same-body": 2
+    "foreign-key-on-the-one-side": 9,
+    "get-for-state-change": 7,
+    "filter-returns-object": 5,
+    "shared-class-attribute": 4,
+    "input-without-name-submits": 3,
+    "server-remembers-requests": 2
   },
   "denied_misconceptions": {
-    "velocity-implies-force": 2,
-    "friction-depends-on-area": 1
+    "get-for-state-change": 2,
+    "meaningful-primary-key": 1
   },
+  "_gap_counts_readme": [
+    "Every slug here MUST be a prerequisite concept, because seed.py writes these",
+    "as Gap rows with detected_from='diagnostic'. A gap on a concept the corpus",
+    "cannot teach is a lesson that refuses.",
+    "The two long-tail entries were python-classes-objects and html-forms; both",
+    "were demoted out of the prerequisite set (see concepts.json) and are now the",
+    "two concepts the diagnostic actually tests in their place."
+  ],
   "gap_counts": {
-    "vector-components": 11,
-    "free-body-diagrams": 7,
-    "newtons-second-law": 5,
-    "mass-and-weight": 3
+    "one-to-many": 11,
+    "http-methods": 8,
+    "filtering-records": 6,
+    "virtual-environments": 4,
+    "url-routing": 3
   },
   "uncertainty_flags": [
-    { "question": "Explain Lagrangian mechanics and the principle of least action", "alignment_score": 0.29, "reason": "no_matching_material", "topic": "newtons-laws" },
-    { "question": "How do I derive the Navier-Stokes equations?",                    "alignment_score": 0.18, "reason": "no_matching_material", "topic": "newtons-laws" },
-    { "question": "What is the Higgs mechanism?",                                    "alignment_score": 0.12, "reason": "no_matching_material", "topic": null }
+    {
+      "question": "How does Rust's borrow checker prevent data races at compile time?",
+      "alignment_score": 0.31,
+      "reason": "material_does_not_answer",
+      "topic": "python-foundations"
+    },
+    {
+      "question": "What is the time complexity of Dijkstra's algorithm with a binary heap?",
+      "alignment_score": 0.22,
+      "reason": "no_matching_material",
+      "topic": null
+    },
+    {
+      "question": "How do I set up a Kubernetes ingress with TLS termination?",
+      "alignment_score": 0.18,
+      "reason": "no_matching_material",
+      "topic": "how-the-web-works"
+    },
+    {
+      "question": "Explain how React's useEffect dependency array works",
+      "alignment_score": 0.27,
+      "reason": "no_matching_material",
+      "topic": "django-views"
+    }
   ],
   "sourced_content": [
-    { "source_url": "https://example.org/lagrangian-intro", "title": "An Introduction to Lagrangian Mechanics",
-      "excerpt": "The Lagrangian formulation recasts Newtonian mechanics in terms of energy rather than force...",
-      "found_for_gap": "Lagrangian mechanics", "status": "pending" },
-    { "source_url": "https://example.org/rotational-dynamics", "title": "Rotational Dynamics Primer",
-      "excerpt": "Torque is the rotational analogue of force, defined as the cross product of position and force...",
-      "found_for_gap": "Rotational motion", "status": "pending" }
+    {
+      "source_url": "https://example.org/django-async-views",
+      "title": "Asynchronous Views in Django",
+      "excerpt": "Django supports async views for I/O-bound work, but the ORM remains synchronous unless wrapped...",
+      "found_for_gap": "Asynchronous views",
+      "status": "pending"
+    },
+    {
+      "source_url": "https://example.org/sql-index-basics",
+      "title": "How Database Indexes Actually Work",
+      "excerpt": "An index is a sorted structure that lets the database find rows without scanning the whole table...",
+      "found_for_gap": "Database indexes",
+      "status": "pending"
+    }
   ],
   "reteach_units": [
-    { "misconception": "velocity-implies-force", "status": "draft",
-      "title": "Constant velocity means zero net force",
-      "body": "Start from the observation that a puck on ice keeps moving with no push at all. Motion does not need a force; only a CHANGE in motion does. Work through the sliding block at constant speed: the push and friction are equal and opposite, so they sum to zero." }
+    {
+      "misconception": "foreign-key-on-the-one-side",
+      "status": "draft",
+      "title": "Which side carries the foreign key",
+      "body": "Start from the question 'how many can this row point at?' A post has exactly one author, so a post row can hold one author id in one column. An author has many posts, and a single column cannot hold many ids. The key therefore lives on the many side. Work through it by drawing two tables and asking students to write the id in by hand - the impossibility of fitting several ids in one cell is the whole argument, and it lands better drawn than stated."
+    }
   ]
 }

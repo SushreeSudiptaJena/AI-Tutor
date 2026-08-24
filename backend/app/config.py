@@ -73,15 +73,22 @@ EMBEDDING_MODEL = _get("EMBEDDING_MODEL", "BAAI/bge-small-en-v1.5")
 # at the original 0.35 the refusal in rag-003 would never once have fired, and
 # nobody would have noticed -- "it answered" looks exactly like success.
 #
-# Measured on the CS-C corpus (evidence/rag-002/threshold-calibration-cs-c.txt):
-# lowest covered 0.7442, highest off-topic 0.7014. calibrate_threshold.py
-# suggests 0.72; we run 0.70 deliberately, because the two gates fail in
-# different directions. A similarity-gate refusal is final -- the student is
-# told there is no material when there is -- whereas a question that slips past
-# similarity still has to satisfy the entailment check, which caught the
-# near-domain cases live (Rust at 0.7014 scored 0.0 entailment and was refused).
-# So the threshold sits with headroom under the weakest covered question rather
-# than tight against it.
+# Measured on both ingested corpora, and 0.70 happens to suit both:
+#
+#   CSW2, the demo course (evidence/rag-002/threshold-calibration-csw2.txt):
+#       lowest covered 0.7441, highest off-topic 0.6905 -- clean separation, and
+#       0.70 sits in the gap.
+#   CS-C (evidence/rag-002/threshold-calibration-cs-c.txt):
+#       lowest covered 0.7442, highest off-topic 0.7014 -- no gap, so the
+#       entailment check does the separating there.
+#
+# calibrate_threshold.py suggests 0.72 for both. We run 0.70 deliberately,
+# because the two gates fail in different directions. A similarity-gate refusal
+# is final -- the student is told there is no material when there is -- whereas
+# a question that slips past similarity still has to satisfy the entailment
+# check, which caught the near-domain cases live (Rust scored 0.7014 against the
+# C book, then 0.0 entailment, and was refused). So the threshold sits with
+# headroom under the weakest covered question rather than tight against it.
 #
 # This value is a property of the ingested books. Re-measure after every ingest.
 ALIGNMENT_REFUSAL_THRESHOLD = float(_get("ALIGNMENT_REFUSAL_THRESHOLD", "0.70"))

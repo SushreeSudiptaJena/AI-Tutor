@@ -1,100 +1,101 @@
 {
   "_readme": [
-    "THE most important file in the project. When a student answers wrong, the tutor",
-    "names the specific wrong mental model behind THAT answer, then asks them to confirm.",
+    "Known wrong mental models for CSW2's prerequisites, each tied to a problem_type.",
+    "A wrong answer is only ever matched against misconceptions carrying the SAME",
+    "problem_type -- that is what keeps a diagnosis specific instead of generic.",
     "",
-    "Rules:",
-    "  * label must be SPECIFIC. 'Struggles with forces' is worthless. 'Treats constant",
-    "    velocity as implying a net force' is something a teacher recognises instantly.",
-    "  * problem_type is the join key. A wrong answer is only matched against",
-    "    misconceptions sharing the same problem_type as the question.",
-    "  * wrong_answer_pattern is a regex matched against the student's answer. A hit here",
-    "    diagnoses with NO llm call - fast, free and deterministic, which is what you want",
-    "    live on stage.",
-    "  * every practice item must have at least one misconception whose pattern matches",
-    "    one of its wrong options, or the demo's best moment falls back to a guess.",
-    "    scripts/seed.py checks this and refuses to seed if it fails."
+    "wrong_answer_pattern is a regex matched against the student's answer text, and",
+    "it is welded to the wording of the SEEDED practice items below it. Generated",
+    "practice uses different wording and different values, so a generated item",
+    "carries its own declared option-to-misconception mapping instead -- see",
+    "backend/app/services/practice.py. Do not assume a pattern here will match a",
+    "generated item. It will not, and that is the whole reason the declared mapping",
+    "exists.",
+    "",
+    "CONTENT LEAD: every entry should be a mistake you have actually seen a student",
+    "make. A plausible-sounding invention produces a diagnosis nobody recognises,",
+    "and the student denies it -- which is worse than no diagnosis at all."
   ],
   "misconceptions": [
     {
-      "slug": "velocity-implies-force",
-      "topic": "newtons-laws",
-      "problem_type": "net-force-constant-velocity",
-      "label": "Treats constant velocity as implying a net force",
-      "description": "Believes motion itself requires an ongoing force, so a moving object must have a non-zero net force. This is the single most studied misconception in physics education - it is essentially Aristotelian physics, and it survives instruction remarkably well.",
-      "wrong_answer_pattern": "^(?!0\\s*N).*\\d+\\s*N"
+      "slug": "shared-class-attribute",
+      "topic": "python-foundations",
+      "problem_type": "class-vs-instance-attribute",
+      "label": "Treats a class attribute as if every instance had its own copy",
+      "description": "Assumes a list or dict defined in the class body is created fresh for each object. It is created once and shared, so one instance mutating it changes it for every instance. This is the most common Python bug in student code that works perfectly until a second object exists.",
+      "wrong_answer_pattern": "^\\[\\]$"
     },
     {
-      "slug": "sin-cos-swap",
-      "topic": "vectors-forces",
-      "problem_type": "resolve-vector-components",
-      "label": "Uses sine where cosine is required when resolving along the horizontal",
-      "description": "Applies the trigonometric function by habit rather than by checking which side of the triangle is adjacent to the angle.",
-      "wrong_answer_pattern": "^5(\\.0+)?\\s*N$"
+      "slug": "override-runs-parent-anyway",
+      "topic": "python-foundations",
+      "problem_type": "override-init-super",
+      "label": "Assumes an overridden method still runs the parent's version automatically",
+      "description": "Expects inheritance to combine the two methods. Overriding replaces; the parent's version runs only if super() is called explicitly, so shared setup silently stops happening and the failure appears somewhere unrelated.",
+      "wrong_answer_pattern": "automatically"
     },
     {
-      "slug": "vector-scalar-addition",
-      "topic": "vectors-forces",
-      "problem_type": "add-perpendicular-forces",
-      "label": "Adds perpendicular force magnitudes arithmetically instead of using Pythagoras",
-      "description": "Treats vectors as plain numbers, so 3 N east plus 4 N north becomes 7 N rather than 5 N.",
-      "wrong_answer_pattern": "^7\\s*N$"
+      "slug": "global-install-in-venv",
+      "topic": "python-foundations",
+      "problem_type": "virtualenv-isolation",
+      "label": "Believes a globally installed package is available inside a virtual environment",
+      "description": "Treats a virtual environment as just a folder rather than as an isolated interpreter with its own site-packages. Produces 'it works on my machine' and requirements.txt files that are quietly incomplete.",
+      "wrong_answer_pattern": "global"
     },
     {
-      "slug": "normal-equals-weight-always",
-      "topic": "newtons-laws",
-      "problem_type": "normal-force-incline",
-      "label": "Assumes the normal force always equals mg, even on an incline",
-      "description": "Memorised N = mg from horizontal-surface problems and applies it without resolving the weight along and perpendicular to the slope.",
-      "wrong_answer_pattern": "^50\\s*N$"
+      "slug": "server-remembers-requests",
+      "topic": "how-the-web-works",
+      "problem_type": "http-statelessness",
+      "label": "Assumes the server remembers the previous request without being told",
+      "description": "Carries an intuition from desktop programs, where state persists between actions. HTTP is stateless: anything the server should remember has to be re-sent, in a cookie, a session, or the request itself.",
+      "wrong_answer_pattern": "previous|session history|came from"
     },
     {
-      "slug": "heavier-falls-faster",
-      "topic": "newtons-laws",
-      "problem_type": "free-fall-comparison",
-      "label": "Believes heavier objects fall faster even without air resistance",
-      "description": "Notices the larger gravitational force on the heavier body but not its proportionally larger inertia.",
-      "wrong_answer_pattern": "5\\s*kg"
+      "slug": "get-for-state-change",
+      "topic": "how-the-web-works",
+      "problem_type": "http-method-choice",
+      "label": "Chooses GET for a request that changes server state",
+      "description": "Picks the method by convenience rather than by meaning. GET is supposed to be safe and repeatable, so using it to create or delete means a refresh, a prefetch or a crawler can perform the action a second time.",
+      "wrong_answer_pattern": "^GET"
     },
     {
-      "slug": "friction-depends-on-area",
-      "topic": "newtons-laws",
-      "problem_type": "friction-magnitude",
-      "label": "Believes friction depends on contact area rather than on the normal force",
-      "description": "Intuition from everyday experience: a bigger footprint feels like it should grip more.",
-      "wrong_answer_pattern": "increase"
+      "slug": "input-without-name-submits",
+      "topic": "how-the-web-works",
+      "problem_type": "form-field-name",
+      "label": "Believes an input without a name attribute is still submitted",
+      "description": "Confuses id, which is for CSS and JavaScript, with name, which is the key the browser actually sends. A field with only an id silently sends nothing, and the bug looks like a server-side problem.",
+      "wrong_answer_pattern": "by its id"
     },
     {
-      "slug": "force-in-direction-of-motion",
-      "topic": "newtons-laws",
-      "problem_type": "force-direction-projectile",
-      "label": "Assumes an upward force acts on a ball while it is moving upward",
-      "description": "Confuses velocity with force, so an object moving up is assumed to have something pushing it up.",
-      "wrong_answer_pattern": "upward force"
+      "slug": "url-matched-by-specificity",
+      "topic": "how-the-web-works",
+      "problem_type": "url-pattern-order",
+      "label": "Believes URL patterns are matched by specificity rather than in the order listed",
+      "description": "Expects the router to pick the best match, the way a CSS selector wins by specificity. Patterns are tried top to bottom and the first match wins, so a broad pattern placed early shadows every pattern after it.",
+      "wrong_answer_pattern": "most specific"
     },
     {
-      "slug": "action-reaction-same-body",
-      "topic": "newtons-laws",
-      "problem_type": "third-law-pair",
-      "label": "Places both action and reaction forces on the same body",
-      "description": "Picks weight and normal force as a third-law pair because they are equal and opposite, missing that both act on the same object.",
-      "wrong_answer_pattern": "[Ww]eight of (the )?book and (the )?normal"
+      "slug": "meaningful-primary-key",
+      "topic": "relational-data",
+      "problem_type": "primary-key-choice",
+      "label": "Chooses a meaningful, changeable value as the primary key",
+      "description": "Picks something recognisable, like an email address. Real-world identifiers change, and when they do, every foreign key referencing them has to change too.",
+      "wrong_answer_pattern": "email"
     },
     {
-      "slug": "mass-weight-confusion",
-      "topic": "foundations",
-      "problem_type": "mass-vs-weight",
-      "label": "Uses mass and weight interchangeably",
-      "description": "Applies the change in g to the mass rather than to the weight, so mass appears to shrink on the Moon.",
-      "wrong_answer_pattern": "11\\.2|112"
+      "slug": "foreign-key-on-the-one-side",
+      "topic": "relational-data",
+      "problem_type": "foreign-key-placement",
+      "label": "Puts the foreign key on the one side of a one-to-many relationship",
+      "description": "Reasons that the author owns the posts, so the reference belongs on the author. A single column cannot hold many post ids; the key goes on the many side, which is the row that has exactly one parent.",
+      "wrong_answer_pattern": "author table"
     },
     {
-      "slug": "static-friction-is-fixed",
-      "topic": "newtons-laws",
-      "problem_type": "static-friction-threshold",
-      "label": "Treats static friction as a fixed value rather than as a maximum",
-      "description": "Computes mu_s N and reports it regardless of the applied force, instead of recognising that static friction matches the push up to that limit.",
-      "wrong_answer_pattern": "^40\\s*N$"
+      "slug": "filter-returns-object",
+      "topic": "relational-data",
+      "problem_type": "filter-vs-get",
+      "label": "Believes a filter returns a single record rather than a collection",
+      "description": "Reads filter() as 'find the one that matches'. It returns a collection whose length happens to be one, so calling a field on it fails with an error mentioning the queryset rather than the field, which sends students looking in the wrong place.",
+      "wrong_answer_pattern": "[Tt]he record itself"
     }
   ]
 }

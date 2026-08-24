@@ -1,0 +1,55 @@
+content-001 -- CSW2 replaces PH101 as the demo course
+=====================================================
+Concept-by-concept evidence check against the REAL ingested CSW2 corpus
+(Django 5 By Example + 7 assignment PDFs), run through the same code path
+tutor.lesson() uses: retrieval.search(course_id=CSW2) then evidence.assess(),
+i.e. top-k cosine AND the LLM entailment call. Similarity alone is not enough
+to choose a syllabus -- that is the whole point of this run.
+
+Why this matters: a diagnostic wrong answer creates a Gap, and golden path
+step 2 opens that Gap's lesson. A prerequisite concept the corpus cannot teach
+returns insufficient_evidence exactly where the demo needs an explanation.
+
+course: CSW2 - Computer Science Workshop 2 (id=5)
+ALIGNMENT_REFUSAL_THRESHOLD = 0.7
+provider = groq
+
+concept                    prereq   top-sim   align   suff  reason
+--------------------------------------------------------------------------------------------------------
+class-inheritance          YES       0.7619  0.6581   True  
+python-classes-objects     no        0.7206  0.4591  False  material_does_not_answer
+virtual-environments       YES       0.8123  0.8589   True  
+http-request-response      YES       0.7921  0.7669   True  
+http-methods               YES       0.7519  0.6597   True  
+url-routing                YES       0.7274  0.6223   True  
+html-forms                 no        0.7284  0.4892  False  material_does_not_answer
+primary-foreign-keys       YES       0.7439  0.6775   True  
+one-to-many                YES       0.7625  0.6381   True  
+filtering-records          YES       0.7156  0.8199   True  
+querysets                  no        0.8042  0.8655   True  
+custom-managers            no        0.8236  0.8308   True  
+views-and-requests         no        0.8208  0.7182   True  
+template-inheritance       no        0.7961  0.8222   True  
+django-forms               no        0.8082  0.7983   True  
+
+PREREQUISITE concepts whose gap lesson would REFUSE: none
+non-prerequisite concepts (never diagnosed, refusal harmless): [('python-classes-objects', False), ('html-forms', False), ('querysets', True), ('custom-managers', True), ('views-and-requests', True), ('template-inheritance', True), ('django-forms', True)]
+
+READING
+-------
+All 8 PREREQUISITE concepts are sufficient. Every diagnostic item can therefore
+produce a teachable gap lesson -- golden path step 2 cannot refuse.
+
+python-classes-objects (align 0.4591) and html-forms (align 0.4892) FAIL, which
+is why they carry no prerequisite_course and are not tested by the diagnostic.
+They remain listed as concepts because the seeded practice items and the
+misconceptions behind 7 confirmed heatmap diagnoses hang off them; seed.py's
+add_diagnoses() silently skips a misconception whose problem_type has no
+practice item, so deleting them would have emptied two heatmap rows with no
+error anywhere.
+
+THIN MARGIN -- url-routing, top-sim 0.7274 against a 0.70 gate (+0.027).
+It is the weakest prerequisite and it is now both a diagnostic item and a
+gap_counts entry. calibrate_threshold.py suggests 0.72 for this corpus; at 0.72
+url-routing clears by 0.0074. This is a concrete reason NOT to take that
+suggestion. Re-measure this concept specifically after any re-ingest.

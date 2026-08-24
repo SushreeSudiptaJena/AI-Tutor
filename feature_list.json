@@ -104,7 +104,7 @@
       "area": "infra",
       "title": "Cloudflare tunnel + VITE_API_BASE wiring for remote team",
       "user_visible_behavior": "A teammate on another laptop runs the frontend locally and it talks to Sushree's backend.",
-      "status": "in_progress",
+      "status": "blocked",
       "depends_on": [
         "infra-002"
       ],
@@ -115,7 +115,7 @@
         "CORS allows the vite dev origin."
       ],
       "evidence": "evidence/infra-005/tunnel-verification.txt",
-      "notes": "Demo must run on at least two laptops. Tunnel URL changes on restart -- repost it each time; ./tunnel.sh prints the exact line to paste. 2026-08-24: cloudflared 2026.8.2 installed as a standalone binary in ~/bin (the winget MSI needs elevation and was declined). Steps 1 and 3 verified through the PUBLIC tunnel URL: /health 200, CORS admits http://localhost:5173 and returns no Allow-Origin for a foreign origin, login 200 / wrong password 401, authenticated /auth/me 200, and POST /tutor/ask returned a real 87%-aligned answer with four citations. STAYS in_progress: step 2 requires a TEAMMATE on a second machine to load the app and log in, which cannot be self-certified -- same situation as infra-001. Two operational traps found and handled: a stale uvicorn from a previous session was holding port 8000 and serving pre-auth code, so the tunnel 404'd on every route while /health looked fine; and a quick tunnel sometimes hands out a hostname that never resolves (curl 000 while cloudflared reports healthy) -- restart for a new one."
+      "notes": "Demo must run on at least two laptops. Tunnel URL changes on restart -- repost it each time; ./tunnel.sh prints the exact line to paste. 2026-08-24: cloudflared 2026.8.2 installed as a standalone binary in ~/bin (the winget MSI needs elevation and was declined). Steps 1 and 3 verified through the PUBLIC tunnel URL: /health 200, CORS admits http://localhost:5173 and returns no Allow-Origin for a foreign origin, login 200 / wrong password 401, authenticated /auth/me 200, and POST /tutor/ask returned a real 87%-aligned answer with four citations. STAYS in_progress: step 2 requires a TEAMMATE on a second machine to load the app and log in, which cannot be self-certified -- same situation as infra-001. Two operational traps found and handled: a stale uvicorn from a previous session was holding port 8000 and serving pre-auth code, so the tunnel 404'd on every route while /health looked fine; and a quick tunnel sometimes hands out a hostname that never resolves (curl 000 while cloudflared reports healthy) -- restart for a new one. STATUS CORRECTED 2026-08-24: was in_progress, but the tunnel is built and verified and the only thing left is a second person confirming it from another machine. That is blocked-on-a-person, not work in flight."
     },
     {
       "id": "auth-001",
@@ -214,6 +214,30 @@
       ],
       "evidence": "evidence/rag-002/alignment-live-cs-c.txt",
       "notes": "RUBRIC FEATURE. top-k cosine + one LLM entailment check -> percentage. PASSING 2026-08-24 live: covered question 87%, near-domain 38%, off-syllabus 27%. THE ENTAILMENT HALF IS LOAD-BEARING AND WAS PROVEN SO: a Rust borrow-checker question scored 0.7014 top-similarity against the C book -- ABOVE the 0.70 threshold -- so a similarity-only check would have answered it. Entailment scored it 0.0 and it was refused. Do not simplify evidence.py. Threshold re-calibrated for the real corpus (evidence/rag-002/threshold-calibration-cs-c.txt): lowest covered 0.7442, highest off-topic 0.7014, margin +0.043. The script suggests 0.72; we run 0.70 on purpose, because a similarity-gate refusal is final while a question that slips past it still has to satisfy entailment. .env had drifted to 0.35, at which the refusal could never once have fired. Last contract step -- the score appearing on the student lesson card -- is student-003's, not built yet."
+    },
+    {
+      "id": "content-001",
+      "priority": 11,
+      "area": "content",
+      "title": "CSW2 replaces PH101 as the demo course",
+      "user_visible_behavior": "The whole demo runs on Computer Science Workshop 2, so every citation opens a real page of a real ingested PDF instead of a stand-in that names a book nobody has.",
+      "status": "passing",
+      "depends_on": [
+        "ingest-001",
+        "rag-002",
+        "student-003",
+        "student-006",
+        "teacher-001"
+      ],
+      "demo_mode": "live",
+      "verification": [
+        "seed.py validates with 0 errors and seeds without touching chunks.",
+        "Every one of the 8 PREREQUISITE concepts passes the FULL evidence check (retrieval + entailment) against the CSW2 corpus, so no diagnostic wrong answer can lead to a gap lesson that refuses.",
+        "The golden path runs end to end on CSW2 in one clean run: diagnostic -> gap -> lesson with alignment score and page-anchored citations -> scoped practice -> wrong answer -> specific misconception -> confirm -> heatmap increments; deny leaves it unchanged.",
+        "The heatmap is course-scoped and shows only CSW2 misconceptions."
+      ],
+      "evidence": "evidence/content-001/golden-path-csw2.txt",
+      "notes": "PASSING 2026-08-24. Replaces the physics stand-in; PH101/PH000 stay in the DB and are harmless because retrieval, the diagnostic and the heatmap are all course-scoped. THE TRAP THIS FEATURE WALKED INTO AND OUT OF: two concepts (python-classes-objects 0.4591, html-forms 0.4892) fail entailment against the Django book -- it USES classes and forms constantly and never TEACHES them -- so their gap lessons correctly refuse, which is right behaviour in the wrong place, since golden path step 2 opens exactly that lesson. They were therefore DEMOTED (prerequisite_course removed) rather than deleted: only a prerequisite concept is diagnostic-testable, and only a diagnostic wrong answer makes a gap. Deleting them would have been worse than wrong -- seed.py's add_diagnoses() silently `continue`s past a misconception whose problem_type has no practice item, so removing their two practice items would have emptied two heatmap rows (4 and 3 confirmed) with no error raised anywhere. The diagnostic now tests exactly the 8 prerequisite concepts, 1:1; the two freed slots went to virtual-environments and url-routing, whose misconceptions already existed and were unused. THIN MARGIN: url-routing tops out at 0.7274 similarity against a 0.70 gate. It is the weakest prerequisite and it is now both a diagnostic item and a gap_counts entry -- a concrete reason NOT to take calibrate_threshold.py's suggestion of 0.72, which would leave it 0.0074 of headroom. Re-measure this concept specifically after any re-ingest. Second evidence file: evidence/content-001/concept-evidence-check.txt."
     },
     {
       "id": "rag-003",

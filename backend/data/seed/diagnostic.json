@@ -1,28 +1,117 @@
 {
   "_readme": [
-    "The prerequisite check. Each question is tied to ONE concept - answering it wrong",
-    "creates a Gap for that concept. There is no score anywhere: the output is a list of",
-    "what to study next, not a grade.",
+    "The prerequisite check for CSW2. Eight items, all testing what a student should",
+    "already have from CSW1 -- not Django itself.",
     "",
-    "DEMO TIP: keep at least one question the demo student will deliberately get wrong,",
-    "so the gap that appears is predictable. 'vector-components' is the scripted one."
+    "Every item's wrong options include the answer a SPECIFIC known misconception",
+    "produces, so a wrong answer here names a real gap rather than a vague one.",
+    "",
+    "There is no score attached to this anywhere. The output is a gap list.",
+    "",
+    "CONTENT LEAD: a concept may only be tested here if the corpus can TEACH it.",
+    "A wrong answer creates a gap, and golden path step 2 opens that gap's lesson --",
+    "so a concept that fails the entailment check produces a refusal exactly where",
+    "the demo needs an explanation. That is why python-classes-objects and",
+    "html-forms are deliberately absent: they are still concepts in concepts.json,",
+    "but they are not prerequisites and are never diagnosed here. See the readme in",
+    "concepts.json for the measured numbers."
   ],
   "items": [
-    { "concept": "vector-components",  "prompt": "A displacement of 20 m is directed 60 degrees north of east. What is its eastward component?",
-      "kind": "mcq", "options": ["10 m", "17.3 m", "20 m", "23.1 m"], "correct_answer": "10 m" },
-    { "concept": "vector-addition",    "prompt": "Two perpendicular forces of 6 N and 8 N act at a point. What is the magnitude of the resultant?",
-      "kind": "mcq", "options": ["2 N", "10 N", "14 N", "48 N"], "correct_answer": "10 N" },
-    { "concept": "free-body-diagrams", "prompt": "A box hangs at rest from a single rope. How many forces act on the box?",
-      "kind": "mcq", "options": ["0", "1", "2", "3"], "correct_answer": "2" },
-    { "concept": "newtons-first-law",  "prompt": "An object moves in a straight line at constant velocity. The net force on it is:",
-      "kind": "mcq", "options": ["zero", "constant and non-zero", "increasing steadily", "equal to its weight"], "correct_answer": "zero" },
-    { "concept": "newtons-second-law", "prompt": "A 4 kg object experiences a net force of 12 N. What is its acceleration?",
-      "kind": "mcq", "options": ["0.33 m/s^2", "3 m/s^2", "12 m/s^2", "48 m/s^2"], "correct_answer": "3 m/s^2" },
-    { "concept": "newtons-third-law",  "prompt": "You push against a wall with a force of 50 N. The force the wall exerts on you is:",
-      "kind": "mcq", "options": ["50 N", "0 N", "less than 50 N", "dependent on your mass"], "correct_answer": "50 N" },
-    { "concept": "friction",           "prompt": "The force of kinetic friction on a sliding block depends mainly on:",
-      "kind": "mcq", "options": ["the normal force", "the contact area", "the sliding speed", "the block's volume"], "correct_answer": "the normal force" },
-    { "concept": "mass-and-weight",    "prompt": "Which quantity is the same for an object on Earth and on the Moon?",
-      "kind": "mcq", "options": ["its mass", "its weight", "both", "neither"], "correct_answer": "its mass" }
+    {
+      "concept": "virtual-environments",
+      "prompt": "You activate a virtual environment and run `pip freeze`. A package you installed with pip earlier, outside any environment, does not appear in the output. Why not?",
+      "kind": "mcq",
+      "options": [
+        "`pip freeze` lists only what is installed in the active environment",
+        "It does appear; global packages are inherited by every environment",
+        "`pip freeze` lists only packages named in requirements.txt",
+        "It needs `pip freeze --all` before it will be listed"
+      ],
+      "correct_answer": "`pip freeze` lists only what is installed in the active environment"
+    },
+    {
+      "concept": "class-inheritance",
+      "prompt": "A subclass defines its own `__init__()` and never calls `super().__init__()`. What happens to the attributes the parent's `__init__` used to set?",
+      "kind": "mcq",
+      "options": [
+        "They are never set",
+        "They are set automatically anyway",
+        "They are set to None",
+        "Python raises a TypeError"
+      ],
+      "correct_answer": "They are never set"
+    },
+    {
+      "concept": "http-request-response",
+      "prompt": "A user loads a page and then submits a form on it. Between those two requests, what does the server remember about that user by default?",
+      "kind": "mcq",
+      "options": [
+        "Nothing",
+        "The previous request",
+        "The page they came from",
+        "Their whole session history"
+      ],
+      "correct_answer": "Nothing"
+    },
+    {
+      "concept": "http-methods",
+      "prompt": "A form creates a new blog post when it is submitted. Which HTTP method should it use?",
+      "kind": "mcq",
+      "options": [
+        "POST, because the request changes server state",
+        "GET, because it is a simpler request",
+        "GET, so the values are visible in the URL",
+        "Either one; the method makes no difference"
+      ],
+      "correct_answer": "POST, because the request changes server state"
+    },
+    {
+      "concept": "url-routing",
+      "prompt": "A URL configuration lists `path('<slug:slug>/', post_detail)` above `path('about/', about_page)`. A request arrives for `/about/`. Which view runs?",
+      "kind": "mcq",
+      "options": [
+        "post_detail, because its pattern is listed first and it matches",
+        "about_page, because it is the most specific match",
+        "about_page, because a literal path always beats a converter",
+        "Neither; the router reports an ambiguous pattern"
+      ],
+      "correct_answer": "post_detail, because its pattern is listed first and it matches"
+    },
+    {
+      "concept": "primary-foreign-keys",
+      "prompt": "Which column makes the best primary key for a users table?",
+      "kind": "mcq",
+      "options": [
+        "A stable auto-generated id",
+        "The user's email address",
+        "The user's full name",
+        "The date they signed up"
+      ],
+      "correct_answer": "A stable auto-generated id"
+    },
+    {
+      "concept": "one-to-many",
+      "prompt": "One author writes many posts. Which table carries the foreign key?",
+      "kind": "mcq",
+      "options": [
+        "The post table, pointing at the author",
+        "The author table, pointing at the post",
+        "Both tables carry one",
+        "Neither; a join table is required"
+      ],
+      "correct_answer": "The post table, pointing at the author"
+    },
+    {
+      "concept": "filtering-records",
+      "prompt": "A query filters a table by a condition that happens to match exactly one row. What does the filter return?",
+      "kind": "mcq",
+      "options": [
+        "A collection containing one record",
+        "The record itself",
+        "The record's primary key",
+        "None, unless get() is used"
+      ],
+      "correct_answer": "A collection containing one record"
+    }
   ]
 }

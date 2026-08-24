@@ -1,100 +1,142 @@
 {
   "_readme": [
-    "Seeded practice questions. Each carries a problem_type, which is how a wrong answer",
-    "is matched against the misconceptions that could explain it.",
+    "Seeded practice items -- the FALLBACK for student-005, not the primary path.",
+    "Practice is normally generated live for the student's gap; these are what runs",
+    "if generation fails validation twice, or if the provider chain is down.",
     "",
-    "Every item below has at least one wrong option that matches a misconception's",
-    "wrong_answer_pattern. seed.py verifies this and refuses to seed if an item has no",
-    "diagnosable wrong answer - because that item would silently produce the demo's",
-    "weakest moment: a wrong answer with no diagnosis.",
+    "seed.py REFUSES to seed an item whose wrong options match no misconception",
+    "pattern for its problem_type. An item like that produces the demo's weakest",
+    "moment -- a wrong answer with no diagnosis -- and you would only find out on",
+    "stage. If validation rejects something you added, the fix is a distractor that",
+    "is a real mistake, not a looser regex.",
     "",
-    "correct_answer is stored but NEVER sent to a client."
+    "One item per problem_type, each covering a prerequisite the diagnostic tests."
   ],
   "items": [
     {
-      "concept": "newtons-first-law",
-      "problem_type": "net-force-constant-velocity",
-      "prompt": "A 2 kg block is pushed across a rough floor and moves at a constant velocity of 3 m/s. What is the net force on the block?",
+      "concept": "python-classes-objects",
+      "problem_type": "class-vs-instance-attribute",
+      "prompt": "A class body contains `names = []`. Two objects are created from the class, and the first calls `self.names.append('django')`. What does the second object's `names` contain?",
       "kind": "mcq",
-      "options": ["0 N", "6 N", "20 N", "24 N"],
-      "correct_answer": "0 N"
+      "options": ["['django']", "[]", "None", "A TypeError is raised"],
+      "correct_answer": "['django']"
     },
     {
-      "concept": "vector-components",
-      "problem_type": "resolve-vector-components",
-      "prompt": "A force of 10 N acts at 30 degrees above the horizontal. What is its horizontal component?",
-      "kind": "mcq",
-      "options": ["5 N", "8.66 N", "10 N", "11.5 N"],
-      "correct_answer": "8.66 N"
-    },
-    {
-      "concept": "vector-addition",
-      "problem_type": "add-perpendicular-forces",
-      "prompt": "Two forces act at a point: 3 N due east and 4 N due north. What is the magnitude of the resultant force?",
-      "kind": "mcq",
-      "options": ["1 N", "5 N", "7 N", "12 N"],
-      "correct_answer": "5 N"
-    },
-    {
-      "concept": "free-body-diagrams",
-      "problem_type": "normal-force-incline",
-      "prompt": "A 5 kg block rests on a frictionless incline at 30 degrees to the horizontal. Taking g = 10 m/s^2, what is the normal force on the block?",
-      "kind": "mcq",
-      "options": ["25 N", "43.3 N", "50 N", "58 N"],
-      "correct_answer": "43.3 N"
-    },
-    {
-      "concept": "free-fall",
-      "problem_type": "free-fall-comparison",
-      "prompt": "A 1 kg ball and a 5 kg ball are released from the same height with no air resistance. Which reaches the ground first?",
-      "kind": "mcq",
-      "options": ["The 1 kg ball", "The 5 kg ball", "They land at the same time", "It depends on their size"],
-      "correct_answer": "They land at the same time"
-    },
-    {
-      "concept": "friction",
-      "problem_type": "friction-magnitude",
-      "prompt": "A block slides across a table. It is then turned so that a larger face is in contact with the table, with the same weight and the same materials. The kinetic friction force will:",
-      "kind": "mcq",
-      "options": ["increase", "decrease", "stay the same", "become zero"],
-      "correct_answer": "stay the same"
-    },
-    {
-      "concept": "free-fall",
-      "problem_type": "force-direction-projectile",
-      "prompt": "A ball is thrown vertically upward. Ignoring air resistance, which forces act on it while it is still rising?",
-      "kind": "mcq",
-      "options": ["Gravity only", "Gravity and an upward force", "No forces at all", "An upward force only"],
-      "correct_answer": "Gravity only"
-    },
-    {
-      "concept": "newtons-third-law",
-      "problem_type": "third-law-pair",
-      "prompt": "A book rests on a table. Which two forces form a Newton's third law action-reaction pair?",
+      "concept": "class-inheritance",
+      "problem_type": "override-init-super",
+      "prompt": "A subclass overrides `__init__()` and does not call `super().__init__()`. What happens to the attributes the parent's `__init__` sets?",
       "kind": "mcq",
       "options": [
-        "The weight of the book and the normal force on the book",
-        "The book pushes down on the table and the table pushes up on the book",
-        "The weight of the book and the weight of the table",
-        "The normal force and the friction force"
+        "They are never set",
+        "They are set automatically anyway",
+        "They are set to None",
+        "Python raises a TypeError"
       ],
-      "correct_answer": "The book pushes down on the table and the table pushes up on the book"
+      "correct_answer": "They are never set"
     },
     {
-      "concept": "mass-and-weight",
-      "problem_type": "mass-vs-weight",
-      "prompt": "An astronaut has a mass of 70 kg on Earth. On the Moon, where g = 1.6 m/s^2, the astronaut's mass is:",
+      "concept": "virtual-environments",
+      "problem_type": "virtualenv-isolation",
+      "prompt": "A package was installed with pip outside any virtual environment. Inside a freshly created and activated virtual environment, can it be imported?",
       "kind": "mcq",
-      "options": ["70 kg", "11.2 kg", "112 N", "686 N"],
-      "correct_answer": "70 kg"
+      "options": [
+        "No, the environment has its own packages",
+        "Yes, global installs are always available",
+        "Only if it is part of the standard library",
+        "Only after restarting the terminal"
+      ],
+      "correct_answer": "No, the environment has its own packages"
     },
     {
-      "concept": "friction",
-      "problem_type": "static-friction-threshold",
-      "prompt": "A 10 kg crate sits on a floor with a coefficient of static friction of 0.4. Taking g = 10 m/s^2, a horizontal push of 20 N is applied and the crate does not move. What is the friction force on the crate?",
+      "concept": "http-request-response",
+      "problem_type": "http-statelessness",
+      "prompt": "A browser sends two separate requests to the same site a moment apart. What does the server remember about the first one when handling the second, if nothing is configured?",
       "kind": "mcq",
-      "options": ["0 N", "20 N", "40 N", "100 N"],
-      "correct_answer": "20 N"
+      "options": [
+        "Nothing",
+        "The previous request",
+        "The page they came from",
+        "Their whole session history"
+      ],
+      "correct_answer": "Nothing"
+    },
+    {
+      "concept": "http-methods",
+      "problem_type": "http-method-choice",
+      "prompt": "A form deletes a comment when it is submitted. Which HTTP method should the form use?",
+      "kind": "mcq",
+      "options": [
+        "POST, because the request changes server state",
+        "GET, because it is a simpler request",
+        "GET, so the comment id appears in the URL",
+        "Either one; the method makes no difference"
+      ],
+      "correct_answer": "POST, because the request changes server state"
+    },
+    {
+      "concept": "html-forms",
+      "problem_type": "form-field-name",
+      "prompt": "A form contains `<input id=\"title\" type=\"text\">` with no `name` attribute. What arrives at the server for that field?",
+      "kind": "mcq",
+      "options": [
+        "Nothing at all",
+        "The value, keyed by its id",
+        "The value, keyed by its type",
+        "An empty string"
+      ],
+      "correct_answer": "Nothing at all"
+    },
+    {
+      "concept": "url-routing",
+      "problem_type": "url-pattern-order",
+      "prompt": "Two URL patterns in the same file both match an incoming request. Which one handles it?",
+      "kind": "mcq",
+      "options": [
+        "The one listed first",
+        "The most specific one",
+        "The one listed last",
+        "Neither; an ambiguity error is raised"
+      ],
+      "correct_answer": "The one listed first"
+    },
+    {
+      "concept": "primary-foreign-keys",
+      "problem_type": "primary-key-choice",
+      "prompt": "A users table needs a primary key. Which column is the best choice?",
+      "kind": "mcq",
+      "options": [
+        "A stable auto-generated id",
+        "The user's email address",
+        "The user's full name",
+        "The date they signed up"
+      ],
+      "correct_answer": "A stable auto-generated id"
+    },
+    {
+      "concept": "one-to-many",
+      "problem_type": "foreign-key-placement",
+      "prompt": "One author writes many posts, and every post has exactly one author. Where does the foreign key column belong?",
+      "kind": "mcq",
+      "options": [
+        "On the post table, pointing at the author",
+        "On the author table, pointing at the post",
+        "On both tables",
+        "In a separate join table"
+      ],
+      "correct_answer": "On the post table, pointing at the author"
+    },
+    {
+      "concept": "filtering-records",
+      "problem_type": "filter-vs-get",
+      "prompt": "`Post.objects.filter(id=3)` matches exactly one row. What does it return?",
+      "kind": "mcq",
+      "options": [
+        "A queryset containing one record",
+        "The record itself",
+        "The record's primary key",
+        "None, unless get() is used"
+      ],
+      "correct_answer": "A queryset containing one record"
     }
   ]
 }
