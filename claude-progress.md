@@ -13,11 +13,12 @@ Every session **reads this first** and **writes to it last**.
 | **Repository root** | the directory containing this file (every path in this repo is relative to it) |
 | **Standard startup path** | `./init.sh` (then `RUN_START_COMMAND=1 ./init.sh` to launch backend) |
 | **Standard verification path** | `python -m pytest backend/tests -q && npm --prefix frontend run build` |
-| **Highest priority unfinished feature** | `student-007` mastery view, then the seeded teacher/admin panels (`teacher-002/003/005/006/007`, `admin-001/002/003`). All are read endpoints over data that already exists. |
+| **Highest priority unfinished feature** | The seeded teacher/admin panels (`teacher-002/003/005/006/007`, `admin-001/002/003`). All are read endpoints over data that already exists in the DB. `demo-001` (two-laptop rehearsal) is the highest-value non-feature work. |
 | **Current blocker** | None for new work. `infra-001`, `infra-003` and `infra-005` each need a second person to finish verifying; none blocks anything downstream. |
 | **Demo course** | **CSW2 — Computer Science Workshop 2 (Django).** Not physics. Every citation in the demo now opens a real page of a real ingested PDF. |
 | **Golden path status** | **COMPLETE, and re-verified end to end on CSW2.** diagnostic → gap attributed to CSW1 → lesson with alignment score + page-anchored citations → generated practice → wrong answer → specific misconception → confirm → teacher heatmap increments; deny leaves it unchanged. |
-| **Last verified** | 2026-08-24 — 172 tests pass, `./init.sh` green. 17 of 33 features passing. |
+| **Last verified** | 2026-08-24 — 200 tests pass, `./init.sh` green. 19 of 35 features passing. |
+| **Student surface is complete** | `student-001` … `student-008` all passing. The API contract has no unbuilt student endpoint left. |
 
 ### Environment facts
 
@@ -27,6 +28,8 @@ Every session **reads this first** and **writes to it last**.
 - **`ALIGNMENT_REFUSAL_THRESHOLD` is corpus-specific**, currently `0.70`, now measured against BOTH books (`evidence/rag-002/threshold-calibration-{cs-c,csw2}.txt`). `calibrate_threshold.py` suggests 0.72 for each; **do not take that suggestion.** The `url-routing` concept tops out at 0.7274 similarity and is now a live diagnostic item, so 0.72 would leave it 0.0074 of headroom. Re-run the calibration after any ingest, and re-measure `url-routing` specifically.
 - **Five courses now share the database.** `CSW2` Computer Science Workshop 2 — Django textbook + seven real assignment PDFs — **is the demo course**, and `CSW1` is its prerequisite (the course every gap is attributed to; it has no corpus and needs none). `CS-C` Programming with C is a second real ingested book. `PH101`/`PH000` are the retired physics stand-in: still present, still reachable, and harmless, because retrieval, the diagnostic and the heatmap are all course-scoped.
 - **Two concepts are deliberately NOT diagnostic-testable.** `python-classes-objects` and `html-forms` fail the entailment half of the evidence check against the Django book (0.4591 and 0.4892) — it *uses* classes and forms on every page and never *teaches* them. They carry no `prerequisite_course`, so no diagnostic item tests them and no gap lesson is ever asked for them. They are not deleted, because `seed.py`'s `add_diagnoses()` silently skips a misconception whose `problem_type` has no practice item — deleting their practice items empties two heatmap rows with no error anywhere.
+- **`seed.py` never deletes.** It upserts by natural key, so content removed from a seed file stays in the shared database as a phantom row. One such row (`model-fields`) was found via `GET /student/mastery` and deleted by hand; the code is still unfixed and tracked as `infra-006`. Anything that enumerates a whole course will surface these, so check before assuming the DB matches the seed files.
+- **`GET /` is a 404, and that is correct.** There is no root route; opening the bare tunnel URL in a browser returns `{"error":{"code":"not_found","message":"No such route."}}`. Use `/health` or `/docs` to check the backend is alive. This looks like a broken tunnel and is not one.
 - **`reset_demo_state.py` is the pre-demo cleanup**, not `reset_db.py`. It deletes only transactional rows (attempts, diagnoses, gaps, mastery, generated practice, flags) and re-seeds the class history. `reset_db.py` drops `chunks` too — 3,000+ embeddings, ~40 minutes to regenerate.
 - **`cloudflared` is a standalone binary in `~/bin`**, not an installed service — the winget MSI needs elevation. `./tunnel.sh` starts it and prints the line to post to the team channel.
 - **Watch for stale servers.** A uvicorn left running from an earlier session was holding port 8000 and serving pre-auth code; `/health` answered 200 while every real route 404'd. `./tunnel.sh` now refuses to tunnel to a dead port, but check the port owner if routes vanish.
@@ -40,6 +43,20 @@ Every session **reads this first** and **writes to it last**.
 ## Session Record
 
 *Newest entry at the top. One entry per session.*
+
+### Session 011 — 2026-08-24 — student-008 (syllabus upload) + student-007 (mastery)
+
+| | |
+|---|---|
+| **Goal** | Build the one endpoint the frozen contract promised and nobody had written, then the mastery view. |
+| **Completed** | `POST /student/syllabus-upload` (`services/syllabus.py`, `prompts/syllabus_coverage.md`, a mock-provider branch, `python-multipart`) and `GET /student/mastery`. 200 tests (was 172). The contract is updated for both, including the upload's failure modes. **The student surface is now complete — no student endpoint in the contract is unbuilt.** |
+| **student-008 — the design that matters** | Coverage bias runs **opposite** to `guardrail.py`, deliberately. There, doubt resolves toward answering, because a wrong refusal blocks a student who came to learn. Here doubt resolves toward *creating the gap*: a false gap is a skippable lesson the student can see is wrong, while a false coverage is a real gap nobody ever finds. Visible over-detection beats invisible under-detection. Three guards enforce it — a text-free PDF is refused with `no_text_found` rather than read as "covers nothing", a concept missing from the model's reply counts as not covered, and a provider outage is a 503 and never an empty verdict. Each, done the other way, returns a confident-looking gap list built from zero evidence. No mastery is written: a syllabus is evidence of exposure, not of learning. |
+| **Verification run** | Three syllabi chosen so a rubber stamp in *either* direction fails: a genuine CSW1 → 0 gaps; an ECE numerical-methods course → all 8; and the discriminating one, a Python-OOP-and-venv course with no web or database content → exactly the 6 it does not teach, identical as `.txt` and as a real PDF. One of those gaps then taught at 77% alignment with 5 citations. A real, valid, text-free PDF was refused. Mastery verified from a clean slate: all `untested`, then the diagnostic drove six `solid` and two `shaky`, then a correct practice answer moved one back to `solid`. |
+| **Evidence recorded** | `evidence/student-008/syllabus-upload-live.txt`, `evidence/student-007/mastery-live.txt` |
+| **Commits** | Two. |
+| **Two bugs found by verifying rather than by reading** | `_plain_text()` gated on the file extension, so a plain-text syllabus named `.pdf` was rejected — contradicting `extract_text()`'s own docstring that byte-sniffing makes the extension irrelevant. Type is now decided by the printable-character ratio after decoding, since latin-1 decodes any byte sequence and "it decoded" was never evidence the upload was text. Separately, the mastery view exposed a **phantom concept**: `model-fields`, dropped from `concepts.json` at 0.56, was still a row in the shared DB because `seed.py` upserts and never deletes. It was invisible until an endpoint enumerated the whole syllabus. Orphan deleted (zero dependents); the code fix is `infra-006`. |
+| **Known risks** | **`infra-006` is unfixed** — the next concept anyone removes from a seed file will linger the same way, and only a whole-course listing will show it. A prune must refuse to delete a concept with dependents, or it takes a student's history with it. **The syllabus check costs one LLM call per upload** and is cached on the file's text, so a re-upload of the same syllabus is instant but a fresh one is not. **`infra-001`, `infra-003`, `infra-005` are still waiting on a second person** — assumed working for now at the owner's direction, but nobody has confirmed the tunnel from another machine. |
+| **Next best action** | `demo-001`, the two-laptop rehearsal — the demo content is real, the student surface is complete, and it is the only thing left that finds problems no test can. Then the seeded teacher/admin panels, which are read endpoints over data already in the DB. |
 
 ### Session 010 — 2026-08-24 — content-001: CSW2 replaces physics as the demo course
 
