@@ -1,0 +1,110 @@
+ingest-001 -- PyMuPDF ingestion to page-anchored chunks
+=======================================================
+
+Source material supplied by the project owner:
+    Practical C Programming - Solutions for modern C developers
+    B. M. Harwani, 1st edition, Packt Publishing, 2020, ISBN 9781838641108
+    5th-semester CSE core reading for Programming with C, 2024-25 admission batch.
+
+The source is an EPUB, which has no pages -- it is a text stream a reader
+paginates on the fly, so "page 224" means nothing until a paper size and a font
+size are fixed. ingest.ensure_fixed_pdf() lays it out once at A4 / 11pt and
+converts it to a fixed-page PDF, carrying the outline across. Cited pages are
+therefore REPRODUCIBLE but they are this rendering's, not the printed book's.
+Where a real PDF of a title exists, prefer it -- its pages match a physical copy.
+
+    645 pages laid out, 636 with a text layer, 1240 chunks, 25 chapters in the
+    outline, embedded with bge-small-en-v1.5 (384-dim) via fastembed.
+
+Verification step 1 -- ingest a real course PDF
+-----------------------------------------------
+    .venv/Scripts/python.exe backend/scripts/ingest_pdfs.py         --course CS-C --course-title "Programming with C"         --department "Computer Science & Engineering" --sample 5
+
+Completed: material 4, ingest_status=complete, chunk_count=1240.
+
+Two bugs were found by doing this for real, and both are fixed:
+
+  1. Neon terminated the connection with an idle-in-transaction timeout after
+     all 1240 inserts had been made, rolling the whole book back on the final
+     UPDATE. Embedding a book takes minutes and the original code held one
+     transaction open across it. ingest_material() now embeds with nothing held
+     and writes in committed batches.
+
+  2. verify_material() loaded every chunk of the material -- each carrying a
+     384-float embedding -- in order to sample three. That is megabytes over
+     the wire and it killed the connection a second time. It now samples ids in
+     SQL and fetches only the five columns the check reads.
+
+Two content bugs were found the same way:
+
+  3. Typeset books use ligatures: "efficient" is stored as one glyph, so a
+     student searching for it would miss the page. normalise() now applies NFKC,
+     which also folds the non-breaking spaces that were gluing "array p" into a
+     single token.
+
+  4. prompts.render() scanned its own output for unfilled {{placeholders}}. A C
+     nested array initializer -- int a[2][2] = {{1,2},{3,4}}; -- contains {{ and
+     }}, so a perfectly good prompt would have been refused. It now validates
+     the template before substituting.
+
+==============================================================================
+ingest-001 step 2 -- every chunk row has material, page and a char span
+==============================================================================
+  material 4  'Practical C Programming (Harwani, Packt 2020)'
+    kind=textbook pages=645 status=complete chunk_count=1240 source='practical-c-programming-harwani.pdf'
+
+  chunks total                       : 1240
+  rows missing material/page/span    : 0
+  embedding dimension                : 384
+  RESULT: PASS
+
+==============================================================================
+ingest-001 step 3 -- sampled chunks really appear on the page they claim
+==============================================================================
+
+  chunk 148  page 82  chars [0:448]
+    stored text == that span of a fresh extraction : True
+    text found on that page, ignoring layout       : True
+    "Finding the occurrence of the first repetitive character in a string In this recipe, you w..."
+
+  chunk 294  page 155  chars [671:1513]
+    stored text == that span of a fresh extraction : True
+    text found on that page, ignoring layout       : True
+    "The pointer will be at the null character, so move the pointer one step back to make it po..."
+
+  chunk 1184  page 600  chars [1548:1853]
+    stored text == that span of a fresh extraction : True
+    text found on that page, ignoring layout       : True
+    "} } } 6. Save the application by clicking on the File | Save As option. Specify the applic..."
+
+  RESULT: PASS (3 sampled)
+
+Verification step 3 -- pick chunks at random and confirm the text really appears
+on that page of the PDF
+--------------------------------------------------------------------------------
+    .venv/Scripts/python.exe backend/scripts/ingest_pdfs.py --verify --sample 5
+
+Two independent checks per sampled chunk:
+
+  slice   -- the recorded [char_start:char_end] span, re-sliced out of a FRESH
+             extraction of that page, is byte-identical to the stored text.
+  on_page -- the stored text occurs in that page's raw extraction with all
+             whitespace removed. This does not use our span at all, so a wrong
+             char_start cannot pass by agreeing with itself.
+
+Note the non-zero offsets (758, 1468): the spans are real, not all zero.
+
+  Practical C Programming (Harwani, Packt 2020)  (material 4, 1240 chunks)
+    [PASS] chunk 101    p.55   [758:1589]  slice=True  on_page=True
+           "After a comparison of p[0], the second element in array p, p[1], is picked up and compared..."
+    [PASS] chunk 549    p.289  [0:852]  slice=True  on_page=True
+           "sendto() This is used to send a message on the specified socket. The message can be sent i..."
+    [PASS] chunk 807    p.422  [0:825]  slice=True  on_page=True
+           "a value from the stack. To do this, they will enter 2 in the menu. The pop function will b..."
+    [PASS] chunk 880    p.452  [1468:2305]  slice=True  on_page=True
+           "In the pushNode function, the value of top that was initialized to -1 is incremented to 0 ..."
+    [PASS] chunk 1066   p.539  [0:515]  slice=True  on_page=True
+           "Handling signals In this recipe, we will learn signal handling. We will learn how to autom..."
+
+PASS -- 0 chunk(s) did not verify.
+

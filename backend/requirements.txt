@@ -16,3 +16,6 @@ httpx>=0.27.0                # provider HTTP calls, and fastapi.testclient
 
 # --- embeddings (verified: 384-dim, unit-norm, no PyTorch) ---
 fastembed>=0.4.0             # ONNX runtime, ~150MB instead of torch's ~2.5GB
+
+# --- ingest-001: PDF parsing ---
+PyMuPDF>=1.24.0          # page-anchored text extraction; wheels on all platforms

@@ -19,7 +19,12 @@ backend/.cache/
 
 # models / large artefacts
 backend/data/*.pdf
+# source material: large, and usually someone else's copyright. The manifest
+# is committed so the team can see what the corpus is made of; the books are not.
+backend/data/pdfs/*
 !backend/data/.gitkeep
+!backend/data/pdfs/.gitkeep
+!backend/data/pdfs/manifest.json
 *.safetensors
 *.bin
 

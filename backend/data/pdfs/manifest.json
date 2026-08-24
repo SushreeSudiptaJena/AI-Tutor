@@ -1,0 +1,41 @@
+{
+  "_readme": [
+    "CONTENT LEAD: drop the course PDFs in this folder, then run",
+    "    .venv/Scripts/python.exe backend/scripts/ingest_pdfs.py",
+    "",
+    "This file is OPTIONAL. Any PDF here that is not listed below is ingested as",
+    "a textbook titled after its filename. List a file only when you want to",
+    "override that:",
+    "",
+    "  title  what a student sees on a citation. Use the real book title -- it is",
+    "         printed verbatim under 'Show Source', so 'hcv1' looks broken there.",
+    "  kind   syllabus | textbook | notes | assignment",
+    "  course a course code from backend/data/seed/course.json (default: primary)",
+    "",
+    "kind='assignment' is load-bearing. Assignment material is searchable so the",
+    "graded-work guardrail can RECOGNISE homework, but it is never quoted as a",
+    "lesson source. A problem set ingested as 'textbook' would be handed to a",
+    "student as course material -- put every graded item under 'assignment'.",
+    "",
+    "PDFs themselves are gitignored (too large); this manifest is committed, so a",
+    "teammate can see what the corpus is made of without the files.",
+    "",
+    "Scanned PDFs with no text layer cannot be ingested -- OCR is out of scope.",
+    "Check with: ingest_pdfs.py --dry-run (it reports pages-with-text).",
+    "",
+    "A reflowable source (.epub) is laid out to a fixed-page PDF at A4 / 11pt",
+    "before ingestion, because 'page 143' means nothing until a paper size and a",
+    "font size are fixed. Those page numbers are reproducible but they are OUR",
+    "rendering's, not the printed book's. Where a real PDF of the same title",
+    "exists, prefer it -- its pages match a physical copy."
+  ],
+  "files": [
+    {
+      "file": "practical-c-programming-harwani.epub",
+      "title": "Practical C Programming (Harwani, Packt 2020)",
+      "kind": "textbook",
+      "course": "CS-C",
+      "note": "5th-semester CSE core reading for Programming with C, 2024-25 admission batch. Source is an EPUB, so cited pages are this A4/11pt rendering's."
+    }
+  ]
+}
