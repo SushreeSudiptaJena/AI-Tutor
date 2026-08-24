@@ -221,6 +221,34 @@ class DiagnosticItem(Base):
     concept: Mapped["Concept"] = relationship()
 
 
+class DiagnosticResponse(Base):
+    """What a student picked for one diagnostic item -- student-009.
+
+    **The answer text, and deliberately nothing else.** There is no `correct`
+    column here and there must not be one. `submit_diagnostic` judges
+    correctness in memory and writes only Gap and Mastery rows, precisely so
+    that no count of right answers exists anywhere to be serialised by
+    accident; storing correctness per item would hand that count straight back.
+    A client that reads every row still cannot mark one of them, because
+    `DiagnosticItem.correct_answer` never leaves the server.
+
+    One row per (student, item), overwritten on re-submit. Not an attempt log:
+    the diagnostic is a starting point, not a performance record.
+    """
+
+    __tablename__ = "diagnostic_responses"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    diagnostic_item_id: Mapped[int] = mapped_column(
+        ForeignKey("diagnostic_items.id", ondelete="CASCADE"), index=True
+    )
+    answer: Mapped[str] = mapped_column(String(300))
+    at: Mapped[datetime] = _now()
+
+    __table_args__ = (UniqueConstraint("user_id", "diagnostic_item_id"),)
+
+
 class Gap(Base):
     """A prerequisite concept this student is missing.
 

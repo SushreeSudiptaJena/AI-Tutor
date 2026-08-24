@@ -315,3 +315,92 @@ def test_assigned_at_comes_from_the_same_audit_row_teacher_005_reads():
     disagree about when a reteach happened."""
     source = inspect.getsource(student.assignments)
     assert '"reteach.approve"' in source
+
+
+# ---------------------------------------------------------------------------
+# student-009 -- answers survive a reload, without becoming a score
+# ---------------------------------------------------------------------------
+
+def test_a_diagnostic_response_stores_the_answer_and_never_its_correctness():
+    """The whole no-score stance rests on this. `submit_diagnostic` judges
+    correctness in memory and writes only Gap and Mastery rows, precisely so no
+    count of right answers exists to serialise by accident. A `correct` column
+    here would hand that count straight back."""
+    from app.models import DiagnosticResponse
+
+    columns = set(DiagnosticResponse.__table__.columns.keys())
+    assert "answer" in columns
+    for banned in ("correct", "is_correct", "score", "grade", "points"):
+        assert banned not in columns, f"{banned!r} would rebuild a score"
+
+
+def test_one_diagnostic_response_per_student_per_item():
+    """Re-submitting overwrites. The diagnostic is a starting point, not a
+    performance record, so it must not accumulate an attempt history."""
+    from app.models import DiagnosticResponse
+
+    uniques = [
+        set(c.columns.keys())
+        for c in DiagnosticResponse.__table__.constraints
+        if c.__class__.__name__ == "UniqueConstraint"
+    ]
+    assert {"user_id", "diagnostic_item_id"} in uniques
+
+
+def test_resuming_a_diagnostic_still_never_serialises_the_answer_key():
+    """`your_answer` is the student's own text. It must not arrive alongside
+    the thing that would let a client mark it."""
+    source = inspect.getsource(student.get_diagnostic)
+    body = source[source.index("return {"):]
+    assert "your_answer" in body
+    assert "correct_answer" not in body
+
+
+def test_reading_a_practice_set_never_serialises_the_answer_key():
+    source = inspect.getsource(student.get_practice_set)
+    assert "correct_answer" not in source[source.index("def _item_out"):]
+
+
+def test_reading_a_practice_set_is_read_only():
+    """A GET that recorded an attempt or moved a mastery row would let a reload
+    quietly change what the teacher sees."""
+    source = inspect.getsource(student.get_practice_set)
+    code = "\n".join(ln for ln in source.splitlines()
+                     if not ln.strip().startswith("#"))
+    for banned in ("db.add(", "db.flush(", "db.commit(", "Mastery("):
+        assert banned not in code, f"{banned!r} makes the resume endpoint write"
+
+
+def test_another_students_practice_set_is_not_found_rather_than_forbidden():
+    """403 would confirm the set exists. One student must not be able to probe
+    for another's."""
+    source = inspect.getsource(student.get_practice_set)
+    assert "HTTP_404_NOT_FOUND" in source
+    assert "HTTP_403_FORBIDDEN" not in source
+
+
+def test_resume_does_not_replay_explanations_or_citations():
+    """Each one costs a model call. Re-rendering yesterday's prose is not what
+    resume is for."""
+    source = inspect.getsource(student.get_practice_set)
+    item_out = source[source.index("def _item_out"):source.index("gap = db.get(Gap")]
+    assert "explanation" not in item_out
+    assert "citations" not in item_out
+
+
+def test_latest_practice_set_is_looked_up_for_every_gap_in_one_query():
+    """perf-001 exists because a per-row query is a network round trip. A gap
+    list must not reintroduce one."""
+    source = inspect.getsource(student._latest_practice_sets)
+    assert "func.max" in source and "group_by" in source
+    assert inspect.getsource(student.list_gaps).count("_latest_practice_sets") == 1
+
+
+def test_the_demo_reset_clears_diagnostic_responses():
+    """Otherwise the demo opens with every option already selected from the
+    last rehearsal, which reads as the app answering its own questions."""
+    from pathlib import Path
+
+    source = Path("backend/scripts/reset_demo_state.py").read_text(encoding="utf-8")
+    assert "DiagnosticResponse" in source
+    assert "diagnostic responses" in source

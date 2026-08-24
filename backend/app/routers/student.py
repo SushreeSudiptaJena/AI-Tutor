@@ -37,6 +37,7 @@ from ..models import (
     Concept,
     Course,
     DiagnosticItem,
+    DiagnosticResponse,
     Gap,
     Mastery,
     Material,
@@ -91,13 +92,36 @@ def _suggested_prompts(concept_name: str, topic_name: str | None) -> list[str]:
     return prompts
 
 
-def _gap_out(db: OrmSession, gap: Gap) -> dict:
+def _latest_practice_sets(db: OrmSession, gaps: list[Gap]) -> dict[int, int]:
+    """gap_id -> newest practice set id, for every gap in one query.
+
+    student-009: a client needs this to resume a half-finished set after a
+    reload without having stored the id. Batched rather than asked per gap --
+    the whole point of perf-001 was that a per-row query is a network round
+    trip.
+    """
+    ids = [g.id for g in gaps]
+    if not ids:
+        return {}
+    return {
+        gap_id: set_id
+        for gap_id, set_id in db.execute(
+            select(PracticeSet.gap_id, func.max(PracticeSet.id))
+            .where(PracticeSet.gap_id.in_(ids))
+            .group_by(PracticeSet.gap_id)
+        ).all()
+    }
+
+
+def _gap_out(db: OrmSession, gap: Gap, latest_sets: dict[int, int] | None = None) -> dict:
     # Read through the relationships rather than issuing our own db.get(): a
     # caller that eager-loaded them (see list_gaps) then pays no query at all,
     # and one that did not pays exactly what the db.get() cost before.
     concept = gap.concept
     topic = concept.topic if concept else None
     prerequisite = concept.prerequisite_course if concept else None
+    if latest_sets is None:
+        latest_sets = _latest_practice_sets(db, [gap])
     return {
         "id": gap.id,
         "concept": concept.name if concept else "",
@@ -107,6 +131,8 @@ def _gap_out(db: OrmSession, gap: Gap) -> dict:
         "suggested_prompts": _suggested_prompts(
             concept.name if concept else "", topic.name if topic else None
         ),
+        # null means "offer the practise button", never "call generate".
+        "latest_practice_set_id": latest_sets.get(gap.id),
     }
 
 
@@ -208,14 +234,36 @@ def get_diagnostic(
         .order_by(DiagnosticItem.id)
     ).all()
 
+    # student-009 -- replay what this student already picked, so a reload does
+    # not mean answering eight questions again. The answer TEXT only; see
+    # DiagnosticResponse for why correctness is not stored.
+    responses: dict[int, DiagnosticResponse] = {}
+    if items:
+        responses = {
+            r.diagnostic_item_id: r
+            for r in db.scalars(
+                select(DiagnosticResponse).where(
+                    DiagnosticResponse.user_id == user.id,
+                    DiagnosticResponse.diagnostic_item_id.in_([i.id for i in items]),
+                )
+            ).all()
+        }
+    last = max((r.at for r in responses.values() if r.at), default=None)
+
     return {
         "diagnostic_id": course.id,
+        # null until the first submit. "Start" vs "resume" is the frontend's
+        # call to make from this -- not a reason to withhold the items.
+        "submitted_at": last.isoformat().replace("+00:00", "Z") if last else None,
         "items": [
             {
                 "id": item.id,
                 "prompt": item.prompt,
                 "kind": item.kind,
                 "options": _options_list(item.options),
+                "your_answer": (
+                    responses[item.id].answer if item.id in responses else None
+                ),
                 "concept": item.concept.name if item.concept else None,
             }
             for item in items
@@ -286,6 +334,35 @@ def submit_diagnostic(
                     "detail": {"item_ids": unknown}},
         )
 
+    # student-009 -- keep the answer text so GET /student/diagnostic can replay
+    # the student's selections. One row per (student, item): re-submitting an
+    # item overwrites it, because the diagnostic is a starting point and not a
+    # performance record. Correctness is computed below and NEVER stored.
+    stored: dict[int, DiagnosticResponse] = {}
+    if body.answers:
+        stored = {
+            r.diagnostic_item_id: r
+            for r in db.scalars(
+                select(DiagnosticResponse).where(
+                    DiagnosticResponse.user_id == user.id,
+                    DiagnosticResponse.diagnostic_item_id.in_(
+                        [a.item_id for a in body.answers]
+                    ),
+                )
+            ).all()
+        }
+    for answer in body.answers:
+        row = stored.get(answer.item_id)
+        if row is None:
+            db.add(DiagnosticResponse(
+                user_id=user.id,
+                diagnostic_item_id=answer.item_id,
+                answer=answer.answer,
+            ))
+        else:
+            row.answer = answer.answer
+            row.at = func.now()   # let the database hold the clock, as on insert
+
     missed: dict[int, Concept] = {}
     answered: dict[int, bool] = {}
     for answer in body.answers:
@@ -321,8 +398,9 @@ def submit_diagnostic(
 
     db.flush()
 
+    latest = _latest_practice_sets(db, gaps)
     return {
-        "gaps": [_gap_out(db, g) for g in gaps],
+        "gaps": [_gap_out(db, g, latest) for g in gaps],
         "message": _gap_message(len(gaps)),
     }
 
@@ -438,8 +516,9 @@ def syllabus_upload(
 
     db.flush()
 
+    latest = _latest_practice_sets(db, gaps)
     return {
-        "gaps": [_gap_out(db, g) for g in gaps],
+        "gaps": [_gap_out(db, g, latest) for g in gaps],
         "message": _gap_message(len(gaps)),
     }
 
@@ -461,7 +540,8 @@ def list_gaps(
         .where(Gap.user_id == user.id)
         .order_by(Gap.id)
     ).all()
-    return {"items": [_gap_out(db, g) for g in gaps]}
+    latest = _latest_practice_sets(db, list(gaps))
+    return {"items": [_gap_out(db, g, latest) for g in gaps]}
 
 
 # ---------------------------------------------------------------------------
@@ -711,6 +791,108 @@ def generate_practice(
         # Visible on purpose: a generator that is quietly failing every item and
         # falling back to seeds should be obvious here, not a mystery on stage.
         "source": "seeded" if used_fallback else "generated",
+    }
+
+
+@router.get("/practice/{practice_set_id}")
+def get_practice_set(
+    practice_set_id: int,
+    db: OrmSession = Depends(get_db),
+    user: User = Depends(current_user),
+) -> dict:
+    """Re-read a practice set with the answers already given -- student-009.
+
+    Read-only. It writes no attempt, moves no mastery row and touches no
+    teacher aggregate. Reading a pending diagnosis is emphatically not
+    confirming it -- only the confirm route does that.
+
+    `explanation` and `citations` are not replayed. Each one costs a model call
+    to produce, and re-rendering yesterday's prose is not what resume is for.
+    """
+    practice_set = db.get(PracticeSet, practice_set_id)
+    if practice_set is None or practice_set.user_id != user.id:
+        # 404 for someone else's set, never 403: one student must not be able
+        # to discover that another student's set exists.
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={"code": "not_found", "message": "No such practice set."},
+        )
+
+    items = db.scalars(
+        select(PracticeItem)
+        .options(selectinload(PracticeItem.concept))
+        .where(PracticeItem.practice_set_id == practice_set.id)
+        .order_by(PracticeItem.id)
+    ).all()
+
+    # Latest attempt per item, in one query. Ordered by id so the last write
+    # into the dict wins, which is the newest attempt.
+    latest_attempt: dict[int, Attempt] = {}
+    if items:
+        latest_attempt = {
+            a.practice_item_id: a
+            for a in db.scalars(
+                select(Attempt)
+                .where(
+                    Attempt.user_id == user.id,
+                    Attempt.practice_item_id.in_([i.id for i in items]),
+                )
+                .order_by(Attempt.id)
+            ).all()
+        }
+
+    diagnosis_by_attempt: dict[int, MisconceptionDiagnosis] = {}
+    if latest_attempt:
+        diagnosis_by_attempt = {
+            d.attempt_id: d
+            for d in db.scalars(
+                select(MisconceptionDiagnosis)
+                .options(selectinload(MisconceptionDiagnosis.misconception))
+                .where(
+                    MisconceptionDiagnosis.attempt_id.in_(
+                        [a.id for a in latest_attempt.values()]
+                    )
+                )
+                .order_by(MisconceptionDiagnosis.id)
+            ).all()
+        }
+
+    def _item_out(item: PracticeItem) -> dict:
+        attempt = latest_attempt.get(item.id)
+        diagnosis = diagnosis_by_attempt.get(attempt.id) if attempt else None
+        return {
+            "id": item.id,
+            "prompt": item.prompt,
+            "kind": item.kind,
+            "options": _options_list(item.options),
+            "gap_id": practice_set.gap_id,
+            # null together when the item has not been answered.
+            "your_answer": attempt.answer if attempt else None,
+            "correct": attempt.correct if attempt else None,
+            "diagnosis": {
+                "id": diagnosis.id,
+                "misconception_id": diagnosis.misconception_id,
+                "label": diagnosis.misconception.label,
+                "question": practice.confirm_question(diagnosis.misconception),
+                # null = asked but not answered yet. That is a question still
+                # waiting for the student, and rendering it is what lets the
+                # golden path survive a reload mid-flow.
+                "confirmed": diagnosis.confirmed,
+            } if diagnosis is not None and diagnosis.misconception is not None else None,
+        }
+
+    gap = db.get(Gap, practice_set.gap_id) if practice_set.gap_id else None
+    concept = gap.concept if gap is not None else None
+    if concept is None:
+        concept = next((i.concept for i in items if i.concept is not None), None)
+
+    return {
+        "practice_set_id": practice_set.id,
+        "concept": concept.name if concept is not None else None,
+        # generate() knows whether it fell back; by the time the rows are on
+        # disk the only surviving record of that is is_seed on the items.
+        "source": "seeded" if any(i.is_seed for i in items) else "generated",
+        "items": [_item_out(i) for i in items],
     }
 
 

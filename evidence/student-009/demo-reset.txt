@@ -1,0 +1,22 @@
+  diagnoses        30 confirmed, 3 denied (only confirmed reach the heatmap)
+  uncertainty      4 flags
+  sourced content  2 pending
+  reteach units    1 (draft - invisible to students)
+
+seeded ok
+  log in as: asha@example.edu / demo1234
+
+Deleting:
+      39  misconception diagnoses
+      40  practice attempts
+      28  generated practice items
+       7  practice sets
+      35  gaps
+       8  mastery rows
+       5  diagnostic responses
+       5  uncertainty flags
+
+Untouched: materials, chunks, courses, topics, concepts,
+           misconceptions, seeded practice items, users.
+
+Re-seeding the demo class history so the dashboard is populated...

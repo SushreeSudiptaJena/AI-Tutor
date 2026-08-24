@@ -100,10 +100,17 @@ The alignment score (`rag-002`) and the refusal decision (`rag-003`) come from o
   "suggested_prompts": [
     "Explain vector components to me",
     "Why do we resolve forces into components?"
-  ]
+  ],
+  "latest_practice_set_id": 84
 }
 ```
 `detected_from`: `diagnostic` | `syllabus_upload` | `practice`. `status`: `open` | `improving` | `closed`.
+
+`latest_practice_set_id` is the most recent practice set generated for this gap,
+or `null` if there is none. It exists so a client can **resume** a half-finished
+practice set after a reload without having stored the id itself — hand it to
+`GET /student/practice/{practice_set_id}`. It is not a prompt to auto-generate:
+`null` means "offer the practise button", not "call generate".
 
 Gaps are **persisted rows, not a one-off result**. `POST /student/diagnostic/{id}/submit` writes them and returns them in the same transaction so the UI can render immediately, but they remain available from `GET /student/gaps` afterwards — for the dashboard, the mastery view, or as chat prompt suggestions. `suggested_prompts` exists so the chat can offer a starting question without the frontend inventing phrasing.
 
@@ -312,7 +319,7 @@ Actions: `material.upload` · `material.archive` · `material.ingest` · `course
 
 | Method | Path | Notes |
 |---|---|---|
-| `GET` | `/student/diagnostic` | `{ diagnostic_id, items: [PracticeItem] }` |
+| `GET` | `/student/diagnostic` | `{ diagnostic_id, submitted_at, items: [PracticeItem] }` — each item carries `your_answer`. **`student-009`.** |
 | `POST` | `/student/diagnostic/{diagnostic_id}/submit` | `{ answers: [{ item_id, answer }] }` |
 | `POST` | `/student/syllabus-upload` | `multipart`: `file` — alternative entry for incoming students. **Built `student-008`.** PDF, `.txt` or `.md`; ≤10 MB. Returns the same `{ gaps, message }` body as `submit`. |
 | `GET` | `/student/gaps` | `{ items: [Gap] }` |
@@ -344,6 +351,42 @@ alike to a student.
 
 > **There is no score, percentage, or grade in this response, by design.** The problem statement asks for a gap list, not a grade. Frontend must not compute one from `answers`.
 
+#### Resuming a diagnostic — `student-009`
+
+`GET /student/diagnostic` replays what this student already picked, so a reload,
+a dropped connection or coming back tomorrow does not mean answering eight
+questions again:
+
+```json
+{
+  "diagnostic_id": 3,
+  "submitted_at": "2026-08-24T18:40:11Z",
+  "items": [
+    { "id": 121, "prompt": "…", "kind": "mcq", "options": ["…"],
+      "concept": "HTTP methods, GET and POST",
+      "your_answer": "GET, because it is a simpler request" },
+    { "id": 122, "prompt": "…", "kind": "mcq", "options": ["…"],
+      "concept": "URL routing", "your_answer": null }
+  ]
+}
+```
+
+* `your_answer` is the **exact string** the student sent, echoed back verbatim,
+  or `null` for an item they never answered. Matching it against `options` to
+  pre-select a button is the intended use.
+* `submitted_at` is when the diagnostic was last submitted, or `null` if it
+  never has been. Use it to decide between "start" and "resume", not to decide
+  whether to render — a student may have answered some items and stopped.
+* Re-submitting overwrites: one stored response per student per item, always
+  the latest. There is no attempt history here.
+
+> **`your_answer` does not weaken the no-score rule, and must not be used to
+> get around it.** Only the answer *text* is stored — correctness is not, for
+> diagnostic items, anywhere in the database. `correct_answer` still never
+> leaves the server, so a client holding every `your_answer` still cannot mark
+> a single one right or wrong, let alone total them. Do not add a `correct`
+> field here.
+
 ### Lesson for a gap — `student-003`, `student-004`, `rag-002`
 `GET /student/gaps/{gap_id}/lesson?language=en`
 
@@ -370,7 +413,51 @@ been asked about is genuinely unknown.
 | Method | Path | Notes |
 |---|---|---|
 | `POST` | `/student/practice/generate` | `{ gap_id, count? }` → `{ practice_set_id, items: [PracticeItem] }` |
+| `GET` | `/student/practice/{practice_set_id}` | Re-read a set with the answers already given. **`student-009`.** |
 | `POST` | `/student/practice/{practice_set_id}/answer` | `{ item_id, answer }` |
+
+#### Resuming a practice set — `student-009`
+
+`GET /student/practice/{practice_set_id}` returns the same `practice_set_id`,
+`concept`, `source` and `items` that `generate` returned, with each item
+carrying what the student did:
+
+```json
+{
+  "practice_set_id": 84,
+  "concept": "HTTP methods, GET and POST",
+  "source": "generated",
+  "items": [
+    { "id": 310, "prompt": "…", "kind": "mcq", "options": ["…"], "gap_id": 486,
+      "your_answer": "GET, because it is a simpler request",
+      "correct": false,
+      "diagnosis": { "id": 91, "misconception_id": 7,
+                     "label": "Thinks GET is for any read-only form",
+                     "question": "It looks like you…", "confirmed": null } },
+    { "id": 311, "prompt": "…", "kind": "mcq", "options": ["…"], "gap_id": 486,
+      "your_answer": null, "correct": null, "diagnosis": null }
+  ]
+}
+```
+
+* `your_answer` and `correct` are `null` together for an item not yet answered.
+  Unlike the diagnostic, `correct` **is** returned here — practice already tells
+  a student immediately whether they were right, so replaying it reveals
+  nothing new.
+* `diagnosis` is the same object `POST .../answer` returned, plus **`confirmed`**
+  (`null` = asked but not answered, `true` = agreed, `false` = denied). A
+  `confirmed: null` diagnosis is a question still waiting for the student —
+  render it and the golden path survives a reload mid-flow.
+* Only the **latest** attempt per item is reported.
+* `explanation` and `citations` are **not** replayed. They cost a model call to
+  produce and re-rendering yesterday's prose is not what resume is for; call
+  `POST .../answer` again if the student re-answers.
+* A set belonging to another student is `404 not_found`, not `403` — one
+  student must not be able to discover that another's set exists.
+
+> This endpoint is **read-only**. It writes no attempt, moves no mastery row and
+> touches no teacher aggregate. Reading a pending diagnosis is not confirming
+> it; only `POST /student/misconception-diagnosis/{id}/confirm` does that.
 
 ### Misconception check — `student-006`
 The answer response carries the diagnosis when the answer is wrong:
@@ -562,6 +649,7 @@ Every shape above is final enough to mock. Suggested order, matching `feature_li
 
 | When | Change |
 |---|---|
+| 2026-08-24 | **`student-009` — answers are now readable back, so a reload does not wipe them.** `GET /student/diagnostic` gains `submitted_at` and a `your_answer` on every item; new `GET /student/practice/{practice_set_id}` returns a set with `your_answer`, `correct` and the pending `diagnosis` (now carrying `confirmed`); `Gap` gains `latest_practice_set_id` so a client can find the set to resume. All additive — no existing field changed shape or meaning. The no-score rule is intact: diagnostic **correctness is still never stored**, only the answer text, so there remains nothing countable in the database and `correct_answer` still never leaves the server. |
 | 2026-08-23 | Initial draft covering all 32 features. |
 | 2026-08-23 | `/health` documented as always-200 with a `degraded` state; implemented in `infra-002`. |
 | 2026-08-23 | Guardrail narrowed to `/tutor/ask` only, and now requires intent + assignment match. `Gap` gains `suggested_prompts`. |

@@ -1,0 +1,89 @@
+==========================================================================
+[1] GET /student/diagnostic before submitting
+==========================================================================
+  diagnostic_id = 5   submitted_at = '2026-08-24T14:50:00.964655Z'
+  [PASS] no item leaks correct_answer
+  (this student has already submitted, so your_answer is populated below)
+
+==========================================================================
+[2] submit 5 of 8 answers, then read them back
+==========================================================================
+  submit -> HTTP 200: Found 3 prerequisite gaps.
+  [PASS] no score key in the submit response -- keys = ['gaps', 'message']
+  submitted_at = 2026-08-24T14:54:35.687351Z
+    item 121  your_answer = '`pip freeze` lists only what is installed in the active environment'
+    item 122  your_answer = 'They are set to None'
+    item 123  your_answer = 'The page they came from'
+    item 124  your_answer = 'GET, because it is a simpler request'
+    item 125  your_answer = None
+    item 126  your_answer = 'A stable auto-generated id'
+    item 127  your_answer = None
+    item 128  your_answer = None
+  [PASS] every answered item replays the exact string that was sent
+  [PASS] items never answered stay null
+  [PASS] submitted_at is set
+  [PASS] correct_answer still absent
+
+==========================================================================
+[3] re-submitting one item overwrites rather than duplicating
+==========================================================================
+    item 124 your_answer = 'Either one; the method makes no difference'
+  [PASS] item 124 shows the newer answer
+    restored to  'GET, because it is a simpler request'
+  [PASS] one row per item, always the latest
+
+==========================================================================
+[4] correctness is not stored for diagnostic items at all
+==========================================================================
+  diagnostic_responses columns: ['id', 'user_id', 'diagnostic_item_id', 'answer', 'at']
+  [PASS] no correctness/score column exists
+
+==========================================================================
+[5] a freshly generated practice set has nothing answered
+==========================================================================
+  set 15 | concept: HTTP methods, GET and POST | source: generated
+    item 64 your_answer=None correct=None diagnosis=None
+    item 65 your_answer=None correct=None diagnosis=None
+    item 66 your_answer=None correct=None diagnosis=None
+    item 67 your_answer=None correct=None diagnosis=None
+  [PASS] unanswered items have your_answer, correct and diagnosis all null
+  [PASS] GET echoes generate's shape -- keys = ['concept', 'items', 'practice_set_id', 'source']
+  [PASS] no correct_answer in the set
+
+==========================================================================
+[6] answer one wrong -> the pending diagnosis comes back on re-read
+==========================================================================
+  POST answer -> correct=False diagnosis id=488 label='Chooses GET for a request that changes server state'
+  GET  item 64 your_answer='GET' correct=False
+  GET  diagnosis = {"id": 488, "misconception_id": 15, "label": "Chooses GET for a request that changes server state", "question": "That answer usually comes from this reasoning: chooses GET for a request that changes server state. Does that match your thinking?", "confirmed": null}
+  [PASS] your_answer and correct replay the attempt
+  [PASS] the same diagnosis comes back
+  [PASS] it is still pending (confirmed null)
+  [PASS] explanation is NOT replayed
+  [PASS] citations are NOT replayed
+
+==========================================================================
+[7] confirming flips confirmed to true; the GET itself confirms nothing
+==========================================================================
+  [PASS] reading the set left the heatmap unchanged
+  confirm -> HTTP 204
+  confirmed now = True
+  [PASS] confirmed is true after confirming
+
+==========================================================================
+[8] another student's set is 404, not 403
+==========================================================================
+  HTTP 404: {"error": {"code": "not_found", "message": "No such practice set.", "detail": {}}}
+  [PASS] 404 not_found
+
+==========================================================================
+[9] gaps carry latest_practice_set_id
+==========================================================================
+  gap 486   HTTP methods, GET and POST                 latest_practice_set_id=15
+  gap 489   Class inheritance in Python                latest_practice_set_id=None
+  gap 490   The HTTP request and response cycle        latest_practice_set_id=None
+  [PASS] the gap just practised points at the newest set
+
+==========================================================================
+ALL CHECKS PASSED
+==========================================================================

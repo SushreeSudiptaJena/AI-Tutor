@@ -1,0 +1,21 @@
+=== [2] submit 5 of 8 answers (item 124 wrong, items 125/127/128 not answered) ===
+message: Found 3 prerequisite gaps.
+score-ish keys in response: none
+  gap 489 | Class inheritance in Python | latest_practice_set_id = None
+  gap 490 | The HTTP request and response cycle | latest_practice_set_id = None
+  gap 486 | HTTP methods, GET and POST | latest_practice_set_id = 11
+
+=== [2] GET /student/diagnostic again -- answers replayed ===
+submitted_at: 2026-08-24T14:49:49.154302Z
+  item 121  your_answer = '`pip freeze` lists only what is installed in the active environment'
+  item 122  your_answer = 'They are set to None'
+  item 123  your_answer = 'The page they came from'
+  item 124  your_answer = 'GET, because it is a simpler request'
+  item 125  your_answer = None
+  item 126  your_answer = 'A stable auto-generated id'
+  item 127  your_answer = None
+  item 128  your_answer = None
+  correct_answer leaked anywhere? False
+
+=== [3] re-submit item 124 with a DIFFERENT answer -- must overwrite, not duplicate ===
+  item 124 your_answer now = 'Either one; the method makes no difference'

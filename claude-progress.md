@@ -17,9 +17,9 @@ Every session **reads this first** and **writes to it last**.
 | **Current blocker** | None for new work. `infra-001`, `infra-003` and `infra-005` each need a second person to finish verifying; none blocks anything downstream. |
 | **Demo course** | **CSW2 — Computer Science Workshop 2 (Django).** Not physics. Every citation in the demo now opens a real page of a real ingested PDF. |
 | **Golden path status** | **COMPLETE, and re-verified end to end on CSW2.** diagnostic → gap attributed to CSW1 → lesson with alignment score + page-anchored citations → generated practice → wrong answer → specific misconception → confirm → teacher heatmap increments; deny leaves it unchanged. |
-| **Last verified** | 2026-08-24 — 271 tests pass, `./init.sh` green. **29 of 35 features passing; the other 6 are all blocked on other people, not on code.** |
+| **Last verified** | 2026-08-24 — 281 tests pass, `./init.sh` green, golden path re-run clean (heatmap 7 → 8). **31 of 37 features passing; the other 6 are all blocked on other people, not on code.** |
 | **Demo script** | `docs/demo-script.md` — written, and it is what `demo-001` runs. Rehearse the exact questions in it **while online**: the disk cache is what makes the offline fallback show real answers. |
-| **Student surface is complete** | `student-001` … `student-008` all passing. The API contract has no unbuilt student endpoint left. |
+| **Student surface is complete** | `student-001` … `student-009` all passing. The API contract has no unbuilt student endpoint left. `student-009` added answer read-back: `GET /student/diagnostic` carries `your_answer` + `submitted_at`, `GET /student/practice/{id}` replays a set with its answers and any pending misconception question, and `Gap` carries `latest_practice_set_id`. **A reload no longer wipes a student's answers.** |
 
 ### Environment facts
 
@@ -33,6 +33,8 @@ Every session **reads this first** and **writes to it last**.
 - **The mock provider must never assert subject matter.** It used to answer with Newton's-laws prose left over from the physics course, so with the wifi off an unrehearsed Django question came back with "draw a free-body diagram" at 80% alignment carrying five real Django citations. It now says `[offline placeholder]`. Anything seeded that is *subject-specific* is a demo-day hazard after a course change — check it, do not assume it.
 - **Offline works because of the disk cache, not because the mock is good.** The cache is keyed on `sha256(model + prompt)`, so a rehearsed question replays its real answer with no network. An unrehearsed one falls through to the placeholder. **Rehearse the exact demo questions online first.**
 - **`GET /` is a 404, and that is correct.** There is no root route; opening the bare tunnel URL in a browser returns `{"error":{"code":"not_found","message":"No such route."}}`. Use `/health` or `/docs` to check the backend is alive. This looks like a broken tunnel and is not one.
+- **`diagnostic_responses` is new (`student-009`) and `reset_demo_state.py` clears it.** It stores the answer text a student picked and *deliberately no correctness column* — that is what keeps the no-score stance true at the database level, and two tests guard it. If you ever add a reset path, clear this table too: otherwise the demo opens with every option already selected from the last rehearsal.
+- **Two re-runnable check scripts now exist.** `backend/scripts/smoke_golden_path.py` runs the whole golden path against a live backend and asserts the heatmap increments; `backend/scripts/verify_student_009.py` runs that feature's verification steps. Both mutate demo state — run `reset_demo_state.py` after.
 - **`reset_demo_state.py` is the pre-demo cleanup**, not `reset_db.py`. It deletes only transactional rows (attempts, diagnoses, gaps, mastery, generated practice, flags) and re-seeds the class history. `reset_db.py` drops `chunks` too — 3,000+ embeddings, ~40 minutes to regenerate.
 - **`cloudflared` is a standalone binary in `~/bin`**, not an installed service — the winget MSI needs elevation. `./tunnel.sh` starts it and prints the line to post to the team channel.
 - **Watch for stale servers.** A uvicorn left running from an earlier session was holding port 8000 and serving pre-auth code; `/health` answered 200 while every real route 404'd. `./tunnel.sh` now refuses to tunnel to a dead port, but check the port owner if routes vanish. **This bit again on 2026-08-24** — three uvicorns from the previous day were still up on 8011/8012/8013, all competing for the same Neon database. Check for strays with `Get-NetTCPConnection -State Listen`, not just port 8000.
@@ -48,6 +50,18 @@ Every session **reads this first** and **writes to it last**.
 ## Session Record
 
 *Newest entry at the top. One entry per session.*
+
+### Session 013 — 2026-08-24 — perf-001 and student-009
+
+| | |
+|---|---|
+| **Goal** | Answer a report that "everything loads super duper slow, a button responds after a minute, and the MCQ selection is not persistent." |
+| **Completed** | `perf-001` (request latency) and `student-009` (answers survive a reload, a contract change). 281 tests (was 272). |
+| **Verification run** | `perf-001`: query counts instrumented per request; `student-009`: its ten verification steps run live via a new re-runnable script, then the whole golden path re-run clean — heatmap 7 → 8 — and demo state reset afterwards. |
+| **Evidence recorded** | `evidence/perf-001/{measurements,query-counts}.txt`, `evidence/student-009/{verification,golden-path,demo-reset,diagnostic-resume,practice-resume}.txt` |
+| **Commits** | Two. |
+| **What verifying found that reading would not have** | **The slowness was never the app code** — `/languages` (no DB) answers in 7ms while `/health` (one `SELECT 1`) took 1.6–5.6s. Measuring separated the two costs that matter: opening a Neon connection is ~3.5s, running a query on an open one is ~0.12s. Every fix follows from that 30× gap, and the pool was raised *and pre-warmed in parallel* only because 20 connects take 71s sequentially but 6s in parallel — raising the pool without warming it made a burst measurably **worse** (11.3s vs 6.4s) before warming was added. **Three stale uvicorns from the previous day** were still running on 8011/8012/8013 against the same database. **`reset_demo_state.py` knew nothing about the new `diagnostic_responses` table**, so a pre-demo reset would have left the diagnostic opening with every option already selected from the last rehearsal — the app appearing to answer its own questions, on stage. And a batching edit left `latest` undefined at two call sites, turning `submit_diagnostic` into a 500 that only a live request surfaced. |
+| **Known risks** | **The latency floor is not fixed and cannot be fixed from this repo.** The compute is a shared 0.25 vCPU ~4,000 km away and queries largely serialise, so ~5 queries per request is a hard floor of roughly half a second; 20-client bursts still ranged 4.7–16.9s. `get_db()` also still holds a pooled connection across the whole provider call — releasing it around the LLM call touches every router and was judged too big for the time left. **Hit `/health` once after starting the backend** so the pool is warm before anyone clicks. `demo-001`, `a11y-001`, `auth-002` and `infra-001/003/005` remain blocked on other people, unchanged. |
 
 ### Session 012 — 2026-08-24 — infra-006, all teacher panels, all admin, i18n, a11y backend, demo prep
 

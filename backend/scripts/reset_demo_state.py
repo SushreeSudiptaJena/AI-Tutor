@@ -43,6 +43,7 @@ from sqlalchemy import delete, func, select
 from app.db import get_sessionmaker
 from app.models import (
     Attempt,
+    DiagnosticResponse,
     Gap,
     Mastery,
     MisconceptionDiagnosis,
@@ -60,6 +61,10 @@ PLAN = [
     ("practice sets", PracticeSet, None),
     ("gaps", Gap, None),
     ("mastery rows", Mastery, None),
+    # student-009. Without this the demo opens with every diagnostic option
+    # already selected from the last rehearsal -- which looks like the app
+    # answering its own questions, on stage.
+    ("diagnostic responses", DiagnosticResponse, None),
 ]
 
 
