@@ -1,0 +1,51 @@
+student-003 -- gap to lesson with the alignment badge and Show Source,
+live over HTTP against the real provider chain.
+
+signed in : asha@example.edu | role student | course_id 2
+
+==============================================================================
+student-003 -- open a gap, get a lesson with an alignment badge
+==============================================================================
+  gap      : Vector components
+  HTTP 200   outcome=answered
+  ALIGNMENT: 84%   (top_similarity 0.7752, threshold 0.7, sufficient=True)
+  citations (5) -- this is Show Source:
+    Concepts of Physics, Vol 1, p.118  (4. Vectors)
+      "A vector may be resolved into two perpendicular components. For a vector of magn..."
+    Concepts of Physics, Vol 1, p.143  (5. Newton's Laws of Motion)
+      "Newton's second law relates the net force on a body to its acceleration: F_net =..."
+    Concepts of Physics, Vol 1, p.121  (4. Vectors)
+      "Two perpendicular vectors are added using the Pythagorean theorem, not by arithm..."
+    Concepts of Physics, Vol 1, p.141  (5. Newton's Laws of Motion)
+      "When a block slides across a rough floor at constant speed, the applied push and..."
+    Concepts of Physics, Vol 1, p.133  (5. Newton's Laws of Motion)
+      "A free-body diagram shows every force acting on one chosen body, and nothing els..."
+
+  outcome is graded_work_refused: False  (must be False -- a gap lesson is never guardrailed)
+
+  --- lesson ---
+A vector can be split into two perpendicular components, one lying along the horizontal axis and one along the vertical axis [1].  
+Because the components form a right‑angled triangle with the original vector, trigonometry gives the magnitudes: the horizontal component equals the total magnitude multiplied by the cosine of the angle ( F cos θ ) and the vertical component equals the magnitude multiplied by the sine of the angle ( F sin θ ) [1].  These two perpendicular components can be recombined with the Pythagorean theorem to recover the original vector’s size, just as two perpendicular forces are added by that theorem rather than by simple arithmetic [3].
+
+**Worked example** – A force of 10 N acts 30° above the horizontal.  
+Horizontal component = 10 cos 30° ≈ 8.66 N; vertical component = 10 sin 30° = 5.0 N.  
+Using the Pythagorean theorem, √(8.66² + 5.0²) ≈ 10 N, confirming that the components correctly represent the original vector [3].
+
+The single mistake most students make is choosing the wrong trigonometric function for a component—using sin for the horizontal or cos for the vertical—so the components are swapped and the result is incorrect [1].
+  --- end ---
+
+==============================================================================
+student-003 -- a second gap gives a visibly different lesson
+==============================================================================
+  gap      : Free-body diagrams
+  ALIGNMENT: 86%
+  citations: [('Concepts of Physics, Vol 1', 133), ('Concepts of Physics, Vol 1', 138), ('Concepts of Physics, Vol 1', 147), ('Concepts of Physics, Vol 1', 143), ('Concepts of Physics, Vol 1', 141)]
+  same body as the first lesson: False  (must be False)
+  first 100 chars: A free‑body diagram is a picture that shows every external force acting on one chosen object, and no...
+
+==============================================================================
+student-003 -- another student's gap is not readable
+==============================================================================
+  a different student requesting gap 131: HTTP 404 (expect 404)
+  body: {"error":{"code":"not_found","message":"No such gap.","detail":{}}}
+  unauthenticated /student/course-summary: HTTP 401 (expect 401)

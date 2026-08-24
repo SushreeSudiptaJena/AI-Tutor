@@ -1,0 +1,65 @@
+student-002 -- prerequisite gap check, live over HTTP.
+The claim being evidenced is an ABSENCE: the response is a list of named
+gaps and carries no score, grade, percentage or count anywhere, and the
+answer key never leaves the server.
+
+signed in : asha@example.edu | role student | course_id 2
+
+==============================================================================
+student-002 -- the diagnostic never ships the answer key
+==============================================================================
+  HTTP 200   diagnostic_id=2   items=8
+  'correct_answer' anywhere in the response body: False  (must be False)
+    [41] (Vector components) A displacement of 20 m is directed 60 degrees north of east. W
+          options: ['10 m', '17.3 m', '20 m', '23.1 m']
+    [42] (Vector addition) Two perpendicular forces of 6 N and 8 N act at a point. What i
+          options: ['2 N', '10 N', '14 N', '48 N']
+    [43] (Free-body diagrams) A box hangs at rest from a single rope. How many forces act on
+          options: ['0', '1', '2', '3']
+
+==============================================================================
+student-002 -- answer some wrong, get NAMED GAPS and no grade
+==============================================================================
+  answered wrong on purpose:
+    Vector components        gave '17.3 m', correct was '10 m'
+    Free-body diagrams       gave '0', correct was '2'
+    Newton's second law      gave '0.33 m/s^2', correct was '3 m/s^2'
+    Friction                 gave 'the contact area', correct was 'the normal force'
+
+  HTTP 200
+  message : Found 4 prerequisite gaps.
+  top-level keys in the response: ['gaps', 'message']
+  contains          'score': False  (must be False)
+  contains          'grade': False  (must be False)
+  contains        'percent': False  (must be False)
+  contains  'correct_count': False  (must be False)
+  contains         'out of': False  (must be False)
+
+  gaps returned:
+    [131] Vector components
+          prerequisite course: Class 12 Physics
+          detected_from=diagnostic status=open
+          suggested: 'Explain vector components to me'
+    [132] Free-body diagrams
+          prerequisite course: Class 12 Physics
+          detected_from=diagnostic status=open
+          suggested: 'Explain free-body diagrams to me'
+    [133] Newton's second law
+          prerequisite course: Class 12 Physics
+          detected_from=diagnostic status=open
+          suggested: "Explain newton's second law to me"
+    [134] Friction
+          prerequisite course: Class 12 Physics
+          detected_from=diagnostic status=open
+          suggested: 'Explain friction to me'
+
+==============================================================================
+student-002 -- gaps are persisted rows, not a one-off result
+==============================================================================
+  HTTP 200   GET /student/gaps returns 4 gap(s)
+  same concepts as the submit response: True
+
+==============================================================================
+student-002 -- resubmitting does not duplicate a gap
+==============================================================================
+  gaps after a second identical submission: 4 (was 4)

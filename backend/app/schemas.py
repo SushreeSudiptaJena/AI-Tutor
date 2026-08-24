@@ -159,3 +159,32 @@ class TutorAskIn(BaseModel):
         if not re.match(r"^[a-z]{2}$", v):
             raise ValueError("language must be a two-letter code")
         return v
+
+
+# --- student diagnostic (student-002) ---------------------------------------
+
+class AnswerIn(BaseModel):
+    item_id: int
+    answer: str
+
+    @field_validator("answer")
+    @classmethod
+    def _answer(cls, v: str) -> str:
+        return v.strip()[:300]
+
+
+class DiagnosticSubmitIn(BaseModel):
+    """No score comes back from this, so none is accepted into it either --
+    there is no 'time_taken' or 'confidence' field to grow one out of."""
+
+    answers: list[AnswerIn]
+
+    @field_validator("answers")
+    @classmethod
+    def _answers(cls, v: list[AnswerIn]) -> list[AnswerIn]:
+        if not v:
+            raise ValueError("submit at least one answer")
+        seen = {a.item_id for a in v}
+        if len(seen) != len(v):
+            raise ValueError("the same item was answered more than once")
+        return v

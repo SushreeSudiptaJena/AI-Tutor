@@ -96,3 +96,69 @@ def ask(
         "citations": cites,
         "evidence": report.to_dict(),
     }
+
+
+def lesson(
+    db: OrmSession,
+    concept_name: str,
+    *,
+    course_id: int | None,
+    topic_name: str | None = None,
+    language: str = "en",
+    k: int = retrieval.DEFAULT_K,
+) -> dict:
+    """A `TutorResponse` teaching one concept from the approved material.
+
+    Concept-driven, not text-driven: the student never typed anything, they
+    clicked a gap. That is exactly why the graded-work guardrail must never run
+    here -- there is no "asking for the solution" to detect, so any refusal
+    would be a false positive on a student trying to learn. See rag-004 in
+    CLAUDE.md.
+
+    A lesson can still come back `insufficient_evidence`, and should: if the
+    approved corpus does not cover a prerequisite the diagnostic tests for, the
+    honest answer is to say so and flag it, not to improvise a lesson. That
+    combination -- we test it but we cannot teach it -- is precisely what a
+    teacher needs to see in the uncertainty panel.
+    """
+    query = f"Explain {concept_name}"
+    if topic_name:
+        query += f" in {topic_name}"
+
+    hits = retrieval.search(db, query, course_id=course_id, k=k)
+    report = evidence.assess(query, hits)
+
+    if not report.sufficient:
+        flag = UncertaintyFlag(
+            question=f"[gap lesson] {concept_name}",
+            alignment_score=report.alignment_score,
+            reason=report.reason or evidence.NO_MATERIAL,
+            course_id=course_id,
+            status="open",
+        )
+        db.add(flag)
+        db.flush()
+        return {
+            "outcome": "insufficient_evidence",
+            "language": "en",
+            "body": (
+                f"I don't have approved course material covering {concept_name} "
+                f"well enough to teach it. I've flagged it for your teacher."
+            ),
+            "citations": [],
+            "evidence": report.to_dict(),
+            "uncertainty_flag_id": flag.id,
+        }
+
+    context, cites = retrieval.grounding(hits)
+    result = complete(
+        prompts.render("gap_lesson", concept=concept_name, context=context),
+        max_tokens=ANSWER_MAX_TOKENS,
+    )
+    return {
+        "outcome": "answered",
+        "language": "en",
+        "body": result.text.strip(),
+        "citations": cites,
+        "evidence": report.to_dict(),
+    }

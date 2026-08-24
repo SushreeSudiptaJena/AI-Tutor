@@ -41,3 +41,22 @@ def test_unknown_route_uses_the_contract_error_envelope():
     r = client.get("/no-such-route")
     assert r.status_code == 404
     assert set(r.json()["error"]) == {"code", "message", "detail"}
+
+
+def test_a_resource_404_keeps_its_own_message():
+    """Starlette gives the status-code handler precedence over the
+    HTTPException one, so a blanket 404 handler answers "No such route." to a
+    route that exists and is telling you the *resource* does not. A frontend
+    reading that would show "endpoint missing" for a mistyped gap id."""
+    r = client.get("/student/gaps/999999/lesson",
+                   headers={"Authorization": "Bearer definitely-not-a-token"})
+    # No database here, so this is the 401 path -- the point is only that the
+    # generic route message is not what comes back.
+    assert r.json()["error"]["message"] != "No such route."
+
+
+def test_an_unmatched_path_still_says_no_such_route():
+    r = client.get("/no/such/path/at/all")
+    assert r.status_code == 404
+    assert r.json()["error"] == {"code": "not_found",
+                                 "message": "No such route.", "detail": {}}

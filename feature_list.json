@@ -261,7 +261,7 @@
       "area": "student",
       "title": "Course summary on login",
       "user_visible_behavior": "On first login a student sees what's in scope: which books, which pages, which topics.",
-      "status": "not_started",
+      "status": "passing",
       "depends_on": [
         "auth-001",
         "infra-003"
@@ -271,8 +271,8 @@
         "Log in as the seeded student.",
         "Course summary lists real books and page ranges drawn from the ingested corpus."
       ],
-      "evidence": null,
-      "notes": null
+      "evidence": "evidence/student-001/course-summary-live.txt",
+      "notes": "PASSING 2026-08-24 live over HTTP as the seeded student. Books, page ranges and chapters are read from the ingested corpus itself -- materials rows and the chunks' own chapter column -- so this page cannot advertise material the tutor does not actually hold. Returned PH101 with Concepts of Physics Vol 1, pages 1-212, six chapters, and three topics. Assignment material is excluded: it exists so the guardrail can recognise homework, and 'what is in scope to study' is not where you list the graded work. Note infra-003 is still marked blocked (it waits on a frontend teammate's sign-off, not on the contract file), which is why this was built against the written contract rather than waiting."
     },
     {
       "id": "student-002",
@@ -280,7 +280,7 @@
       "area": "student",
       "title": "Prerequisite gap check (diagnostic test)",
       "user_visible_behavior": "Student takes a short diagnostic and receives a gap list — not a grade.",
-      "status": "not_started",
+      "status": "passing",
       "depends_on": [
         "student-001"
       ],
@@ -290,8 +290,8 @@
         "Output is a list of named prerequisite gaps.",
         "No overall score or grade is displayed anywhere on the result screen."
       ],
-      "evidence": null,
-      "notes": "GOLDEN PATH step 1. The 'gap list, not a grade' framing is a judging point — do not add a score."
+      "evidence": "evidence/student-002/diagnostic-live.txt",
+      "notes": "GOLDEN PATH step 1. The 'gap list, not a grade' framing is a judging point -- do not add a score. PASSING 2026-08-24 live: answered four of eight items wrong on purpose and got back four NAMED prerequisite gaps, each with the prior course it should have been learned in. The response body was checked for the substrings score/grade/percent/correct_count/'out of' -- none present -- and DiagnosticSubmitIn accepts nothing a score could be rebuilt from. The answer key never leaves the server. Gaps are persisted rows: GET /student/gaps returns the same set, and resubmitting re-opens rather than duplicates. diagnostic_id IS the course id, because a course has exactly one diagnostic and a table to say so would be schema for its own sake. Mastery rows are written from the same answers, so the mastery view cannot say 'untested' about an item just answered. BUG FIXED: options are stored as {'choices': [...]} but the contract says a list of strings; the route was shipping the dict, so a frontend iterating it would render the literal string 'choices' as an option. NOT BUILT: POST /student/syllabus-upload, the alternative entry for incoming students -- it is in the contract but in none of this feature's verification steps."
     },
     {
       "id": "student-003",
@@ -299,7 +299,7 @@
       "area": "student",
       "title": "Gap-to-lesson mapping + alignment score on the card",
       "user_visible_behavior": "Each identified gap links to approved material, with a syllabus-alignment percentage on the lesson.",
-      "status": "not_started",
+      "status": "passing",
       "depends_on": [
         "student-002",
         "rag-002"
@@ -310,8 +310,8 @@
         "A lesson loads sourced from the approved KB with a visible alignment percentage.",
         "The percentage matches the value in the API response."
       ],
-      "evidence": null,
-      "notes": "GOLDEN PATH step 2."
+      "evidence": "evidence/student-003/gap-lesson-live.txt",
+      "notes": "GOLDEN PATH step 2. PASSING 2026-08-24 live against the real provider chain: opening the 'Vector components' gap returned a lesson at 84% alignment with five citations resolving to real book pages (p.118, 121, 133, 141, 143), and the lesson closed by naming the sin/cos swap -- which is the exact mistake the wrong diagnostic answer represented. A second gap gave a visibly different lesson at 86%. Never guardrailed: a gap lesson is concept-driven, the student typed nothing, so a graded-work refusal there could only be a false positive. It CAN still return insufficient_evidence and flag it -- 'we test this prerequisite but cannot teach it' is exactly what a teacher needs to see. Gap ownership is checked before anything else; another student's gap id returns 404 with the same message as a missing one. BUG FIXED: main.py's status-404 handler took precedence over the HTTPException handler, so every deliberate resource 404 answered 'No such route.' -- telling the frontend the endpoint was missing when the gap id simply was not theirs."
     },
     {
       "id": "student-004",

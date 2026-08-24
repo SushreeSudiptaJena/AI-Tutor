@@ -12,7 +12,7 @@ from fastapi.responses import JSONResponse
 from fastapi.requests import Request
 
 from . import config, db
-from .routers import auth, tutor
+from .routers import auth, student, tutor
 
 app = FastAPI(
     title="AI Tutor",
@@ -78,6 +78,19 @@ def validation_error(request: Request, exc: RequestValidationError) -> JSONRespo
 
 @app.exception_handler(404)
 def not_found(request: Request, exc: Exception) -> JSONResponse:
+    """404s, whether the route is unknown or the resource is.
+
+    Starlette gives a status-code handler precedence over the HTTPException
+    handler above, so this one sees *every* 404 -- including the ones routes
+    raise deliberately with their own message. It used to answer all of them
+    with "No such route.", which told a frontend the endpoint did not exist
+    when in fact the gap id did not belong to that student.
+
+    A route's own message wins; the generic one is only for a genuinely
+    unmatched path.
+    """
+    if isinstance(exc, HTTPException) and isinstance(exc.detail, dict):
+        return http_exception(request, exc)
     return error("not_found", "No such route.", 404)
 
 
@@ -111,4 +124,5 @@ def languages() -> dict:
 
 # --- routers ----------------------------------------------------------------
 app.include_router(auth.router)
+app.include_router(student.router)
 app.include_router(tutor.router)

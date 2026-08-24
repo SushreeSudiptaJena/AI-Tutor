@@ -1,0 +1,21 @@
+student-001 -- course summary on login, live over HTTP as the seeded student.
+Books and chapters are read from the ingested corpus itself, so this page
+cannot claim material the tutor does not actually have.
+
+signed in : asha@example.edu | role student | course_id 2
+
+==============================================================================
+student-001 -- course summary: which books, which pages, which topics
+==============================================================================
+  HTTP 200
+  course : PH101 - Mechanics
+  book   : [1] Concepts of Physics, Vol 1  pages 1–212
+             chapter: 2. Units and Quantities
+             chapter: 3. Motion Under Gravity
+             chapter: 4. Vectors
+             chapter: 5. Newton's Laws of Motion
+             chapter: 6. Friction
+             chapter: 7. Motion on an Incline
+  topics : ['Units and Quantities', 'Vectors and Forces', "Newton's Laws of Motion"]
+
+  assignment material advertised as study scope: False  (must be False)
