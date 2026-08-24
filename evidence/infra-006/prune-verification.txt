@@ -1,0 +1,106 @@
+infra-006 -- seed.py prunes content removed from the seed files
+===============================================================
+
+seed.py upserts by natural key: idempotent, but one-directional. Adding a
+concept to concepts.json adds a row; removing one left the row behind forever.
+That is how 'model-fields' -- dropped when it failed the corpus evidence check
+at 0.56 -- survived in the shared database and surfaced later in
+GET /student/mastery as a concept no seed file defined.
+
+Pruned types: concepts, misconceptions, seeded practice items, topics.
+diagnostic_items are exempt: seed_items() already deletes and recreates them
+wholesale, which prunes as a side effect.
+
+All runs below are against the live shared Neon database.
+
+
+==============================================================
+RUN 1 -- the first run with pruning enabled
+==============================================================
+It immediately found ten retired PH101 practice items still sitting in the
+practice table as live seeded content:
+
+  pruned           seeded practice item 'A 2 kg block is pushed across a rough floor a' (gone from the seed files)
+  pruned           seeded practice item 'A force of 10 N acts at 30 degrees above the ' (gone from the seed files)
+  pruned           seeded practice item 'Two forces act at a point: 3 N due east and 4' (gone from the seed files)
+  pruned           seeded practice item 'A 5 kg block rests on a frictionless incline ' (gone from the seed files)
+  pruned           seeded practice item 'A 1 kg ball and a 5 kg ball are released from' (gone from the seed files)
+  pruned           seeded practice item 'A block slides across a table. It is then tur' (gone from the seed files)
+  pruned           seeded practice item 'A ball is thrown vertically upward. Ignoring ' (gone from the seed files)
+  pruned           seeded practice item 'A book rests on a table. Which two forces for' (gone from the seed files)
+  pruned           seeded practice item 'An astronaut has a mass of 70 kg on Earth. On' (gone from the seed files)
+  pruned           seeded practice item 'A 10 kg crate sits on a floor with a coeffici' (gone from the seed files)
+
+The right outcome by luck, the WRONG RULE. That query was not scoped to the
+course being seeded, so a CSW2 run reached into PH101. practice.json describes
+ONE course; two teammates seeding two courses would have wiped each other's
+content. The practice prune is now joined through Concept -> Topic ->
+course_id like every other pass. Fixed before commit.
+
+
+==============================================================
+RUN 2 -- steady state, seed files untouched
+==============================================================
+
+  prune            nothing stale
+
+
+==============================================================
+RUN 3 -- remove an ORPHAN concept (custom-managers, no dependents)
+==============================================================
+
+  concepts         14
+  pruned           concept 'custom-managers' (gone from the seed files)
+
+
+==============================================================
+RUN 4 -- remove a concept the SEED FILES still reference
+==============================================================
+Removed filtering-records. Validation refuses before anything is written, so
+the prune is never even reached -- defence in depth:
+
+  SEED DATA IS INVALID - nothing was written:
+
+  - diagnostic[7] references unknown concept 'filtering-records'
+  - practice[9] references unknown concept 'filtering-records'
+  - demo_class.gap_counts references unknown concept 'filtering-records'
+
+
+==============================================================
+RUN 5 -- remove a concept a STUDENT HAS HISTORY ON  <-- the one that matters
+==============================================================
+Gave asha a mastery row on 'querysets', then removed querysets from
+concepts.json. Nothing else in the seed files references it, so validation
+passes and the prune IS reached:
+
+  concepts         14
+  KEPT             concept 'querysets' is not in the seed files any more, but has 1 mastery -- not deleted
+
+  querysets still in DB: True
+
+
+==============================================================
+WHAT THIS PROVES
+==============================================================
+1. Content removed from a seed file no longer lingers as a phantom.
+2. Nothing with dependents is EVER deleted -- a concept carrying a student's
+   gap or mastery row, a misconception behind a confirmed diagnosis, a
+   practice item somebody attempted. Those are reported out loud and left
+   alone: a seed file is not the right authority to delete a student's
+   history, and a content lead who removed something by mistake should see it
+   said rather than discover it later as missing data.
+3. Every pass is scoped to the course being seeded.
+4. Pruning is a no-op when the seed files and the database agree.
+
+
+RESTORED AFTERWARDS
+-------------------
+Seed files restored and the synthetic mastery row deleted. Final run:
+
+  topics           5
+  concepts         15
+  misconceptions   10
+  practice items   10
+  prune            nothing stale
+
+The database matches concepts.json exactly.

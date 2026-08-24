@@ -60,3 +60,40 @@ def test_an_unmatched_path_still_says_no_such_route():
     assert r.status_code == 404
     assert r.json()["error"] == {"code": "not_found",
                                  "message": "No such route.", "detail": {}}
+
+
+# ---------------------------------------------------------------------------
+# infra-006 -- seed.py prunes content removed from the seed files
+# ---------------------------------------------------------------------------
+
+def _seed_source() -> str:
+    import pathlib
+    return pathlib.Path("backend/scripts/seed.py").read_text(encoding="utf-8")
+
+
+def test_the_prune_never_deletes_anything_with_dependents():
+    """A concept carrying a student's gap, a misconception behind a confirmed
+    diagnosis, a practice item somebody attempted -- deleting any of those
+    takes real history with it, and a seed file is not the authority to do it."""
+    source = _seed_source()
+    body = source[source.index("def prune_removed"):source.index("def seed_corpus")]
+    assert "if deps:" in body and "continue" in body
+    assert "db.delete(row)" in body
+    # the delete must be unreachable while deps is truthy
+    assert body.index("if deps:") < body.index("db.delete(row)")
+
+
+def test_every_prune_pass_is_scoped_to_the_course_being_seeded():
+    """An unscoped pass deleted ten retired PH101 practice items on its first
+    run. Right outcome, wrong rule: two teammates seeding two courses would
+    wipe each other's content."""
+    source = _seed_source()
+    body = source[source.index("def prune_removed"):source.index("def seed_corpus")]
+    assert body.count("course_id == primary.id") == 4, (
+        "each of the four pruned types must be course-scoped"
+    )
+
+
+def test_the_prune_runs_before_the_demo_class_is_rebuilt():
+    source = _seed_source()
+    assert source.index("prune_removed(db, primary") < source.index("seed_demo_class(db, data")

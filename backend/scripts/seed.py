@@ -27,7 +27,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from sqlalchemy import delete, select
+from sqlalchemy import delete, select, func
 from sqlalchemy.orm import Session as OrmSession
 
 from app.db import get_sessionmaker
@@ -40,6 +40,7 @@ from app.models import (
     Department,
     DiagnosticItem,
     Gap,
+    Mastery,
     Material,
     Chunk,
     Misconception,
@@ -287,6 +288,135 @@ def seed_items(db: OrmSession, data: dict, primary: Course, concepts, topics):
     return misc, practice
 
 
+
+# ---------------------------------------------------------------------------
+# Pruning -- infra-006
+# ---------------------------------------------------------------------------
+
+def _count(db: OrmSession, model, condition) -> int:
+    return int(db.scalar(select(func.count()).select_from(model).where(condition)) or 0)
+
+
+def prune_removed(db: OrmSession, primary: Course, topics, concepts, misc, practice):
+    """Delete seeded content that has vanished from the seed files.
+
+    `seed.py` upserts by natural key, which makes it idempotent but also makes
+    it one-directional: adding a concept to `concepts.json` adds a row, and
+    removing one leaves the row behind forever. That row is not inert. It is a
+    phantom -- `model-fields`, dropped from the seed when it failed the corpus
+    evidence check, survived in the shared database and showed up months later
+    as a concept in `GET /student/mastery` that no seed file defined. Anything
+    that enumerates a whole course surfaces these; nothing else does, which is
+    why they can sit unnoticed.
+
+    `diagnostic_items` are exempt because `seed_items()` already deletes and
+    recreates them wholesale, which prunes as a side effect.
+
+    NOTHING WITH DEPENDENTS IS EVER DELETED
+    ---------------------------------------
+    A concept with a student's gap on it, a misconception behind a confirmed
+    diagnosis, a practice item somebody has attempted -- deleting any of those
+    takes real history with it, and a seed file is not the right authority to
+    make that call. Those are reported and left alone, so a content lead who
+    removed something by mistake sees it said out loud rather than discovering
+    it as missing data. Only genuine orphans go.
+    """
+    plans = [
+        (
+            "concept",
+            db.scalars(
+                select(Concept)
+                .join(Topic, Topic.id == Concept.topic_id)
+                .where(Topic.course_id == primary.id,
+                       Concept.id.not_in([c.id for c in concepts.values()] or [-1]))
+            ).all(),
+            lambda row: {
+                "gaps": _count(db, Gap, Gap.concept_id == row.id),
+                "mastery": _count(db, Mastery, Mastery.concept_id == row.id),
+                "practice": _count(db, PracticeItem, PracticeItem.concept_id == row.id),
+                "diagnostic": _count(db, DiagnosticItem,
+                                     DiagnosticItem.concept_id == row.id),
+            },
+        ),
+        (
+            "misconception",
+            db.scalars(
+                select(Misconception)
+                .join(Topic, Topic.id == Misconception.topic_id)
+                .where(Topic.course_id == primary.id,
+                       Misconception.id.not_in([m.id for m in misc.values()] or [-1]))
+            ).all(),
+            lambda row: {
+                "diagnoses": _count(db, MisconceptionDiagnosis,
+                                    MisconceptionDiagnosis.misconception_id == row.id),
+                "reteach units": _count(db, ReteachUnit,
+                                        ReteachUnit.misconception_id == row.id),
+            },
+        ),
+        (
+            # Scoped to this course, like everything else here. An unscoped
+            # version deleted ten retired PH101 practice items on its first
+            # run -- the right outcome by luck, the wrong rule: `practice.json`
+            # describes ONE course, so a run that seeds CSW2 must never be the
+            # thing that removes another course's content. Two teammates
+            # seeding two courses would otherwise wipe each other's.
+            "seeded practice item",
+            db.scalars(
+                select(PracticeItem)
+                .join(Concept, Concept.id == PracticeItem.concept_id)
+                .join(Topic, Topic.id == Concept.topic_id)
+                .where(
+                    Topic.course_id == primary.id,
+                    PracticeItem.is_seed.is_(True),
+                    PracticeItem.id.not_in([p.id for p in practice] or [-1]),
+                )
+            ).all(),
+            lambda row: {
+                "attempts": _count(db, Attempt, Attempt.practice_item_id == row.id),
+            },
+        ),
+        (
+            # Topics last: a topic is only an orphan once its concepts and
+            # misconceptions are gone, and the passes above may have just
+            # removed the last of them.
+            "topic",
+            db.scalars(
+                select(Topic).where(
+                    Topic.course_id == primary.id,
+                    Topic.id.not_in([t.id for t in topics.values()] or [-1]),
+                )
+            ).all(),
+            lambda row: {
+                "concepts": _count(db, Concept, Concept.topic_id == row.id),
+                "misconceptions": _count(db, Misconception,
+                                         Misconception.topic_id == row.id),
+                "uncertainty flags": _count(db, UncertaintyFlag,
+                                            UncertaintyFlag.topic_id == row.id),
+            },
+        ),
+    ]
+
+    removed, kept = 0, []
+    for label, rows, dependents_of in plans:
+        for row in rows:
+            name = getattr(row, "slug", None) or getattr(row, "prompt", "")[:45]
+            deps = {k: v for k, v in dependents_of(row).items() if v}
+            if deps:
+                kept.append((label, name, deps))
+                continue
+            db.delete(row)
+            removed += 1
+            log(f"  pruned           {label} {name!r} (gone from the seed files)")
+        db.flush()
+
+    for label, name, deps in kept:
+        detail = ", ".join(f"{v} {k}" for k, v in deps.items())
+        log(f"  KEPT             {label} {name!r} is not in the seed files any more, "
+            f"but has {detail} -- not deleted")
+
+    if not removed and not kept:
+        log("  prune            nothing stale")
+
 def seed_corpus(db: OrmSession, data: dict, primary: Course, admin: User) -> int:
     corpus = data["corpus"]
     if not corpus.get("enabled", True):
@@ -454,6 +584,8 @@ def main() -> None:
             log("  corpus (embedding, first run downloads the model)...")
             total = seed_corpus(db, data, primary, admin)
             log(f"  chunks           {total}")
+
+        prune_removed(db, primary, topics, concepts, misc, practice)
 
         seed_demo_class(db, data, primary, concepts, misc, practice, topics, teacher)
 
