@@ -35,6 +35,8 @@ Every session **reads this first** and **writes to it last**.
 - **`GET /` is a 404, and that is correct.** There is no root route; opening the bare tunnel URL in a browser returns `{"error":{"code":"not_found","message":"No such route."}}`. Use `/health` or `/docs` to check the backend is alive. This looks like a broken tunnel and is not one.
 - **`diagnostic_responses` is new (`student-009`) and `reset_demo_state.py` clears it.** It stores the answer text a student picked and *deliberately no correctness column* — that is what keeps the no-score stance true at the database level, and two tests guard it. If you ever add a reset path, clear this table too: otherwise the demo opens with every option already selected from the last rehearsal.
 - **Two re-runnable check scripts now exist.** `backend/scripts/smoke_golden_path.py` runs the whole golden path against a live backend and asserts the heatmap increments; `backend/scripts/verify_student_009.py` runs that feature's verification steps. Both mutate demo state — run `reset_demo_state.py` after.
+- **The reteach panel starts with ONE unit after a reset. Press “draft top 3 + top 3” to fill it.** `POST /teacher/reteach/suggest-top` (`teacher-008`) drafts three from the misconception heatmap and three from the prerequisite gap map; it takes about a minute of model calls the first time and is free after that (disk cache). It is idempotent — pressing it again creates nothing and skips with reasons — so it is safe to run during a rehearsal. **Do it before the demo, not during it.**
+- **The audit log hides `seed.run` by default** (`admin-004`), because every `reset_demo_state.py` run writes one and they had come to outnumber every real row. `?include_system=true` shows them.
 - **`reset_demo_state.py` is the pre-demo cleanup**, not `reset_db.py`. It deletes only transactional rows (attempts, diagnoses, gaps, mastery, generated practice, flags) and re-seeds the class history. `reset_db.py` drops `chunks` too — 3,000+ embeddings, ~40 minutes to regenerate.
 - **`cloudflared` is a standalone binary in `~/bin`**, not an installed service — the winget MSI needs elevation. `./tunnel.sh` starts it and prints the line to post to the team channel.
 - **Watch for stale servers.** A uvicorn left running from an earlier session was holding port 8000 and serving pre-auth code; `/health` answered 200 while every real route 404'd. `./tunnel.sh` now refuses to tunnel to a dead port, but check the port owner if routes vanish. **This bit again on 2026-08-24** — three uvicorns from the previous day were still up on 8011/8012/8013, all competing for the same Neon database. Check for strays with `Get-NetTCPConnection -State Listen`, not just port 8000.
@@ -52,6 +54,18 @@ Every session **reads this first** and **writes to it last**.
 ## Session Record
 
 *Newest entry at the top. One entry per session.*
+
+### Session 014 — 2026-08-24 — teacher-008, admin-004, and three answers
+
+| | |
+|---|---|
+| **Goal** | Four things raised while clicking through the harness: too few reteach units, "what is the verification queue", a 404 on admin Materials, and the audit log reading as machine output. |
+| **Completed** | `teacher-008` (reteach drafts from both rankings — contract + schema change) and `admin-004` (audit log summaries, seed noise hidden — contract change). The 404 was not a backend bug: the harness sent `/admin/courses//materials` from an empty input box, which matched no route, so the API answered a perfectly correct "No such route." Guarded and prefilled. 295 tests (was 288). |
+| **Verification run** | Both features verified live against the real corpus with re-runnable scripts; demo state reset afterwards. |
+| **Evidence recorded** | `evidence/teacher-008/verification.txt`, `evidence/admin-004/audit-log.txt` |
+| **Commits** | Two. |
+| **What verifying found that reading would not have** | **Taken literally, "the top three of each ranking" produced TWO reteach units** against the real corpus — one misconception refused at 43% for lack of evidence, and two gaps were already covered by a misconception unit. Every one of those a correct decision, and the result is still an empty-looking panel, which is the opposite of what was asked for. A row that yields no unit now advances to the next candidate rather than consuming a slot; the run then filled 3/3 and 3/3. **Overlap coverage was only recorded on the create path**, so a second press skipped the covering misconception as `already_drafted`, forgot the overlap, and drafted the duplicate the first press had correctly declined. **An audit row outlives what it points at** — a pruned reteach unit fell through to printing `reteach:32` back, the exact technical noise the summary field exists to remove. |
+| **Known risks** | `teacher-008` needed `backend/scripts/migrate_reteach_targets.py` because `create_all()` does not alter an existing table — **it has been run against the shared Neon database, but a teammate restoring from an older dump must run it again.** The reteach panel holds one unit after a reset; fill it with `suggest-top` before the demo, not during. Everything else unchanged: `demo-001`, `a11y-001`, `auth-002` and `infra-001/003/005` still need other people. |
 
 ### Session 013 — 2026-08-24 — perf-001 and student-009
 
