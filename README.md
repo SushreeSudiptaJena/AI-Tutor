@@ -124,3 +124,25 @@ evidence/              proof that features actually work
 - `.env`, `.venv/` and the LLM cache are gitignored. **Never commit a connection string or an API key.**
 - Share secrets in the team channel, not in the repo.
 - Teacher dashboard responses are anonymized at the API level — no student id, name, or email in any payload.
+
+---
+
+## AI assistance
+
+This project was built with AI assistance, and we'd rather say so than have you
+wonder.
+
+**What it was used for.** The backend (`backend/`) — API routes, services,
+ingestion, tests, and the `claude-progress.md` session log — was written with
+Claude Code as a coding assistant, across a series of working sessions.
+
+**What that did not replace.** Every feature in `feature_list.json` is marked
+`passing` only after its verification steps were run live and the actual
+terminal output was recorded under `evidence/`. Several bugs in this repo were
+found precisely because a claim was checked against a running system instead of
+being taken on trust — the write-ups are in `claude-progress.md`. The
+architecture decisions, the refusal-threshold calibration, the corpus, and the
+demo design are ours.
+
+**Why we're telling you.** A tutor that scores its own answers for evidence has
+no business being vague about where its code came from.
