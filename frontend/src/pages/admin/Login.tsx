@@ -1,326 +1,498 @@
-import { useState, type FormEvent } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import { login, setToken, ApiError } from "@/lib/api";
-import { USE_MOCK, mockLogin } from "@/lib/mock";
-import screenImage from "./screen.png";
+import { FormEvent, useState } from "react";
+import { api, ApiError } from "@/lib/api";
+
+type Role = "student" | "teacher" | "admin";
+
+type User = {
+  id: number;
+  email: string;
+  full_name: string;
+  role: Role;
+  course_id?: number | null;
+  preferred_language?: string;
+};
+
+type LoginResponse = {
+  token: string;
+  user: User;
+};
 
 export default function Login() {
-  const navigate = useNavigate();
-
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
-  async function handleSubmit(e: FormEvent<HTMLFormElement>) {
-    e.preventDefault();
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
 
-    setError(null);
+    setError("");
+
+    if (!email.trim() || !password) {
+      setError("Please enter your email and password.");
+      return;
+    }
+
     setLoading(true);
 
     try {
-      const { token, user } = USE_MOCK
-        ? await mockLogin(email, password)
-        : await login(email, password);
+      const result = await api<LoginResponse>("/auth/login", {
+        method: "POST",
+        body: {
+          email: email.trim(),
+          password,
+        },
+        auth: false,
+      });
 
-      setToken(token);
-
-      if (user.role === "admin") {
-        navigate("/admin");
-      } else {
-        navigate("/onboarding/1");
-      }
-    } catch (err) {
-      setError(
-        err instanceof ApiError
-          ? err.message
-          : "Couldn't log in. Try again."
+      /*
+       * Keep the token available for later authenticated requests.
+       *
+       * Your api.ts is the project's central API layer, so all future
+       * requests should continue to go through api().
+       */
+      localStorage.setItem("token", result.token);
+      localStorage.setItem(
+        "user",
+        JSON.stringify(result.user)
       );
+
+      /*
+       * The current App.tsx is not using React Router, so use normal
+       * browser navigation for now.
+       *
+       * These routes can be converted to React Router routes later.
+       */
+      switch (result.user.role) {
+        case "admin":
+          window.location.href = "/admin";
+          break;
+
+        case "teacher":
+          window.location.href = "/teacher";
+          break;
+
+        case "student":
+          window.location.href = "/onboarding1";
+          break;
+
+        default:
+          window.location.href = "/";
+      }
+    } catch (err: unknown) {
+      if (err instanceof ApiError) {
+        setError(
+          err.message || "Email or password is incorrect."
+        );
+      } else if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError("Email or password is incorrect.");
+      }
     } finally {
       setLoading(false);
     }
   }
 
   return (
-    <div className="min-h-screen bg-gray-100 text-gray-900 relative overflow-y-auto">
+    <div
+      style={{
+        minHeight: "100vh",
+        background: "#f4f0e7",
+        color: "#2b2926",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: "24px",
+        fontFamily:
+          '"Hanken Grotesk", Arial, sans-serif',
+      }}
+    >
+      <div
+        style={{
+          width: "100%",
+          maxWidth: "1050px",
+          minHeight: "620px",
+          display: "flex",
+          overflow: "hidden",
+          borderRadius: "28px",
+          background: "#ffffff",
+          boxShadow:
+            "0 25px 70px rgba(43, 41, 38, 0.16)",
+        }}
+      >
+        {/* =====================================================
+            LEFT PANEL
+        ===================================================== */}
 
-      {/* Background */}
-      <div className="fixed inset-0 z-0 pointer-events-none">
-        <div className="absolute inset-0 bg-gradient-to-br from-[#243138] via-[#121414] to-[#1e3600]" />
-        <div className="absolute inset-0 bg-black/20" />
-      </div>
-
-      {/* Top Navigation */}
-      <nav className="relative z-10 w-full absolute top-0 left-0">
-        <div className="flex justify-between items-center px-8 py-6 w-full max-w-7xl mx-auto">
-
-          {/* Logo */}
-          <div className="text-white text-2xl font-bold">
-            Nocturnal Scholar
-          </div>
-
-          {/* Navigation */}
-          <div className="hidden md:flex items-center gap-6 ml-auto mr-8">
-            <Link
-              to="/"
-              className="text-white/80 hover:text-white transition-colors"
-            >
-              Home
-            </Link>
-
-            <a
-              href="#"
-              className="text-white/80 hover:text-white transition-colors"
-            >
-              About
-            </a>
-          </div>
-
-          {/* Sign Up */}
-          <Link
-            to="/signup"
-            className="px-6 py-2 rounded-full border border-white/40 text-white hover:bg-white/10 transition-colors"
+        <div
+          style={{
+            width: "46%",
+            padding: "56px",
+            display: "none",
+            background:
+              "linear-gradient(145deg, #e8dfd1, #f7f1e6)",
+          }}
+          className="login-left-panel"
+        >
+          <div
+            style={{
+              height: "100%",
+              display: "flex",
+              flexDirection: "column",
+              justifyContent: "center",
+            }}
           >
-            Sign Up
-          </Link>
+            <div
+              style={{
+                fontFamily:
+                  '"Courier Prime", monospace',
+                fontSize: "11px",
+                letterSpacing: "0.18em",
+                textTransform: "uppercase",
+                color: "#c74620",
+                marginBottom: "22px",
+              }}
+            >
+              The Daily Edge
+            </div>
+
+            <h2
+              style={{
+                margin: 0,
+                fontFamily:
+                  '"EB Garamond", Georgia, serif',
+                fontSize: "54px",
+                lineHeight: "1.02",
+                fontWeight: 600,
+              }}
+            >
+              Knowledge is
+              <br />
+              the path,
+              <br />
+              not the peak.
+            </h2>
+
+            <div
+              style={{
+                width: "60px",
+                height: "1px",
+                background: "#e4552b",
+                marginTop: "28px",
+              }}
+            />
+
+            <p
+              style={{
+                marginTop: "24px",
+                maxWidth: "360px",
+                fontFamily:
+                  '"Courier Prime", monospace',
+                fontSize: "13px",
+                lineHeight: "1.8",
+                color: "#6f6862",
+              }}
+            >
+              Learn from your course material,
+              understand the reasoning, and build
+              the confidence to solve the next
+              problem yourself.
+            </p>
+          </div>
         </div>
-      </nav>
 
-      {/* Main Content */}
-      <main className="relative z-10 min-h-screen flex items-center justify-center p-4 w-full">
+        {/* =====================================================
+            RIGHT PANEL
+        ===================================================== */}
 
-        <div className="bg-white rounded-3xl w-full max-w-5xl flex overflow-hidden shadow-2xl min-h-[600px] mt-8 mb-8">
+        <div
+          style={{
+            flex: 1,
+            padding: "48px",
+            display: "flex",
+            flexDirection: "column",
+          }}
+        >
+          <a
+            href="/"
+            style={{
+              textDecoration: "none",
+              color: "#6f6862",
+              fontSize: "14px",
+            }}
+          >
+            ← Back
+          </a>
 
-          {/* LEFT IMAGE PANEL */}
-          <div className="hidden md:block md:w-[46%] relative bg-gray-100">
+          <div
+            style={{
+              width: "100%",
+              maxWidth: "430px",
+              margin: "auto",
+            }}
+          >
+            <div
+              style={{
+                fontFamily:
+                  '"Courier Prime", monospace',
+                fontSize: "10px",
+                letterSpacing: "0.15em",
+                textTransform: "uppercase",
+                color: "#9c948b",
+                marginBottom: "14px",
+              }}
+            >
+              Welcome back
+            </div>
 
-            <div className="w-full h-full overflow-hidden">
+            <h1
+              style={{
+                margin: "0 0 14px",
+                fontFamily:
+                  '"EB Garamond", Georgia, serif',
+                fontSize: "48px",
+                lineHeight: "1.05",
+                fontWeight: 600,
+                color: "#2b2926",
+              }}
+            >
+              Continue your learning.
+            </h1>
 
-              <img
-                src={screenImage}
-                alt="Mountain path illustration"
-                className="w-full h-full object-cover"
+            <p
+              style={{
+                margin: "0 0 36px",
+                color: "#6f6862",
+                fontSize: "15px",
+                lineHeight: "1.6",
+              }}
+            >
+              Sign in to continue where you left off.
+            </p>
+
+            <form onSubmit={handleSubmit}>
+              {/* EMAIL */}
+
+              <label
+                htmlFor="email"
+                style={{
+                  display: "block",
+                  fontSize: "13px",
+                  fontWeight: 600,
+                  marginBottom: "8px",
+                }}
+              >
+                Email
+              </label>
+
+              <input
+                id="email"
+                type="email"
+                autoComplete="email"
+                placeholder="you@example.com"
+                value={email}
+                disabled={loading}
+                onChange={(event) =>
+                  setEmail(event.target.value)
+                }
+                style={{
+                  width: "100%",
+                  padding: "13px 14px",
+                  borderRadius: "9px",
+                  border: "1px solid #dedad4",
+                  fontSize: "15px",
+                  outline: "none",
+                  marginBottom: "20px",
+                }}
               />
 
-            </div>
-          </div>
+              {/* PASSWORD */}
 
-          {/* RIGHT LOGIN PANEL */}
-          <div className="w-full md:w-[54%] p-8 md:p-12 lg:p-16 flex flex-col relative bg-white">
-
-            {/* Back Button */}
-            <button
-              type="button"
-              onClick={() => navigate(-1)}
-              className="inline-flex items-center text-gray-500 hover:text-gray-800 transition-colors mb-8 w-fit"
-            >
-              <span className="material-symbols-outlined text-[18px] mr-1">
-                arrow_back
-              </span>
-
-              Back
-            </button>
-
-            <div className="flex-grow flex flex-col justify-center max-w-md mx-auto w-full">
-
-              {/* Small heading */}
-              <span className="text-gray-500 uppercase tracking-wider text-xs font-semibold mb-4">
-                Welcome back
-              </span>
-
-              {/* Main heading */}
-              <h1 className="font-serif text-[42px] font-bold text-gray-900 mb-10 leading-tight">
-                Knowledge is the path, not the peak.
-              </h1>
-
-              {/* LOGIN FORM */}
-              <form
-                onSubmit={handleSubmit}
-                className="space-y-4"
-                noValidate
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  marginBottom: "8px",
+                }}
               >
+                <label
+                  htmlFor="password"
+                  style={{
+                    fontSize: "13px",
+                    fontWeight: 600,
+                  }}
+                >
+                  Password
+                </label>
 
-                {/* Email */}
-                <div>
-                  <label
-                    htmlFor="email"
-                    className="sr-only"
-                  >
-                    Email
-                  </label>
+                <a
+                  href="/forgot-password"
+                  style={{
+                    fontSize: "12px",
+                    color: "#6f6862",
+                    textDecoration: "none",
+                  }}
+                >
+                  Forgot password?
+                </a>
+              </div>
 
-                  <input
-                    id="email"
-                    type="email"
-                    required
-                    autoComplete="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="Email"
-                    className="w-full px-4 py-3 rounded-lg border border-gray-200 bg-white focus:outline-none focus:ring-2 focus:ring-[#7AB139] focus:border-transparent text-gray-900 placeholder-gray-400 transition-shadow"
-                  />
-                </div>
-
-                {/* Password */}
-                <div className="relative">
-
-                  <label
-                    htmlFor="password"
-                    className="sr-only"
-                  >
-                    Password
-                  </label>
-
-                  <input
-                    id="password"
-                    type={showPassword ? "text" : "password"}
-                    required
-                    autoComplete="current-password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="Password"
-                    className="w-full px-4 py-3 pr-12 rounded-lg border border-gray-200 bg-white focus:outline-none focus:ring-2 focus:ring-[#7AB139] focus:border-transparent text-gray-900 placeholder-gray-400 transition-shadow"
-                  />
-
-                  {/* Password visibility */}
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setShowPassword((value) => !value)
-                    }
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                    aria-label={
-                      showPassword
-                        ? "Hide password"
-                        : "Show password"
-                    }
-                  >
-                    <span className="material-symbols-outlined text-[20px]">
-                      {showPassword
-                        ? "visibility_off"
-                        : "visibility"}
-                    </span>
-                  </button>
-
-                </div>
-
-                {/* Forgot Password */}
-                <div className="flex justify-end pt-1">
-
-                  <Link
-                    to="/forgot-password"
-                    className="text-sm text-gray-500 hover:text-gray-800 transition-colors"
-                  >
-                    Forgot Password?
-                  </Link>
-
-                </div>
-
-                {/* Error */}
-                {error && (
-                  <p
-                    role="alert"
-                    className="text-red-600 text-sm"
-                  >
-                    {error}
-                  </p>
-                )}
-
-                {/* Login Button */}
-                <button
-                  type="submit"
+              <div
+                style={{
+                  position: "relative",
+                  marginBottom: "20px",
+                }}
+              >
+                <input
+                  id="password"
+                  type={
+                    showPassword
+                      ? "text"
+                      : "password"
+                  }
+                  autoComplete="current-password"
+                  placeholder="Enter your password"
+                  value={password}
                   disabled={loading}
-                  className="w-full bg-[#7AB139] hover:bg-[#689a2f] disabled:opacity-60 text-white font-semibold py-3 rounded-lg transition-colors mt-6 shadow-sm"
+                  onChange={(event) =>
+                    setPassword(event.target.value)
+                  }
+                  style={{
+                    width: "100%",
+                    padding: "13px 70px 13px 14px",
+                    borderRadius: "9px",
+                    border: "1px solid #dedad4",
+                    fontSize: "15px",
+                    outline: "none",
+                  }}
+                />
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    setShowPassword(
+                      (current) => !current
+                    )
+                  }
+                  style={{
+                    position: "absolute",
+                    right: "12px",
+                    top: "50%",
+                    transform:
+                      "translateY(-50%)",
+                    border: 0,
+                    background: "transparent",
+                    color: "#6f6862",
+                    cursor: "pointer",
+                    fontSize: "12px",
+                  }}
                 >
-                  {loading
-                    ? "Logging in…"
-                    : "Log In"}
+                  {showPassword
+                    ? "Hide"
+                    : "Show"}
                 </button>
-
-              </form>
-
-              {/* Divider */}
-              <div className="relative flex items-center py-6">
-
-                <div className="flex-grow border-t border-gray-200" />
-
-                <span className="flex-shrink-0 mx-4 text-gray-400 text-sm">
-                  Or continue with
-                </span>
-
-                <div className="flex-grow border-t border-gray-200" />
-
               </div>
 
-              {/* Google Button */}
+              {/* ERROR */}
+
+              {error && (
+                <div
+                  role="alert"
+                  style={{
+                    marginBottom: "18px",
+                    padding: "12px 14px",
+                    borderRadius: "8px",
+                    background: "#fff1ef",
+                    border:
+                      "1px solid #f0c6bf",
+                    color: "#a63b2b",
+                    fontSize: "13px",
+                    lineHeight: "1.5",
+                  }}
+                >
+                  {error}
+                </div>
+              )}
+
+              {/* LOGIN BUTTON */}
+
               <button
-                type="button"
-                className="w-full flex items-center justify-center bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 font-semibold py-3 rounded-lg transition-colors shadow-sm"
+                type="submit"
+                disabled={loading}
+                style={{
+                  width: "100%",
+                  border: 0,
+                  borderRadius: "9px",
+                  padding: "14px",
+                  background: loading
+                    ? "#a8c980"
+                    : "#7AB139",
+                  color: "#ffffff",
+                  fontSize: "14px",
+                  fontWeight: 600,
+                  cursor: loading
+                    ? "not-allowed"
+                    : "pointer",
+                }}
               >
-
-                <svg
-                  className="w-5 h-5 mr-3"
-                  viewBox="0 0 24 24"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <path
-                    d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-                    fill="#4285F4"
-                  />
-
-                  <path
-                    d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-                    fill="#34A853"
-                  />
-
-                  <path
-                    d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
-                    fill="#FBBC05"
-                  />
-
-                  <path
-                    d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
-                    fill="#EA4335"
-                  />
-                </svg>
-
-                Continue with Google
-
+                {loading
+                  ? "Logging in..."
+                  : "Log in"}
               </button>
+            </form>
 
-              {/* Sign Up */}
-              <p className="text-center text-gray-500 text-sm mt-8 mb-6">
+            {/* SIGNUP */}
 
-                Don't have an account?{" "}
+            <p
+              style={{
+                marginTop: "28px",
+                textAlign: "center",
+                fontSize: "13px",
+                color: "#6f6862",
+              }}
+            >
+              Don't have an account?{" "}
+              <a
+                href="/signup"
+                style={{
+                  color: "#7AB139",
+                  fontWeight: 600,
+                  textDecoration: "none",
+                }}
+              >
+                Create account
+              </a>
+            </p>
 
-                <Link
-                  to="/signup"
-                  className="text-[#7AB139] hover:underline font-medium"
-                >
-                  Sign up
-                </Link>
-
-              </p>
-
-              {/* Footer */}
-              <div className="mt-auto pt-4 border-t border-gray-100 flex items-center justify-center text-gray-400 text-xs">
-
-                <span className="material-symbols-outlined text-[16px] mr-2">
-                  school
-                </span>
-
-                <span>
-                  Nocturnal Scholar — Where Knowledge Comes Alive
-                </span>
-
-              </div>
-
+            <div
+              style={{
+                marginTop: "36px",
+                paddingTop: "18px",
+                borderTop:
+                  "1px solid #eeeeea",
+                textAlign: "center",
+                color: "#aaa39b",
+                fontFamily:
+                  '"Courier Prime", monospace',
+                fontSize: "10px",
+              }}
+            >
+              The Daily Edge — where knowledge comes alive.
             </div>
           </div>
-
         </div>
-      </main>
+      </div>
+
+      <style>{`
+        @media (min-width: 768px) {
+          .login-left-panel {
+            display: block !important;
+          }
+        }
+      `}</style>
     </div>
   );
 }
