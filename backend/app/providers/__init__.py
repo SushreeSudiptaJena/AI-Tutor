@@ -10,10 +10,17 @@ Order of operations:
                   ->  miss? walk the provider chain, first success wins
                   ->  store and return
 
-The chain is GLM -> Gemini -> Groq -> Groq(alternate model) -> mock,
-deliberately across DIFFERENT vendors so one outage or rate limit cannot take
-out its own backup. mock is last, so the worst case is "generic answers", never
-"the app is broken" in front of judges.
+The chain runs fastest-first across DIFFERENT vendors, so one outage or rate
+limit cannot take out its own backup:
+
+    groq -> gemini -> glm -> groq(alternate model) -> glm-coding -> mock
+
+glm-coding is last among the real vendors on purpose. It is the only one on a
+paid subscription rather than a free tier -- so it is the likeliest to still
+answer when the others are rate-limited -- but it measured 17-23s, and putting
+it earlier would make the common case slow to insure against the rare one.
+mock is last of all, so the worst case is "generic answers", never "the app is
+broken" in front of judges.
 """
 
 from __future__ import annotations
@@ -21,7 +28,7 @@ from __future__ import annotations
 from .. import config
 from . import cache
 from .base import AllProvidersFailed, Completion, Provider, ProviderError
-from .http_providers import gemini, glm, groq
+from .http_providers import gemini, glm, glm_coding, groq
 from .mock import MockProvider
 
 __all__ = [
@@ -64,6 +71,20 @@ def chain() -> list[Provider]:
     alt = config.FALLBACK_MODEL_GROQ_ALTERNATIVE
     if alt and config.FALLBACK_API_KEY_GROQ:
         out.append(groq(alt))
+
+    # GLM through the coding plan: the LAST real vendor, deliberately.
+    #
+    # It is the only one on a paid subscription rather than a free tier, so it
+    # is the one least likely to be rate-limited when everything else is. But
+    # it measured 17-23s against groq's 1-3s, so putting it any earlier would
+    # make the common case slow to buy insurance against the rare one.
+    #
+    # Placed after mock would be useless (mock never fails), so it goes here:
+    # the last thing that can give a real answer before we settle for a
+    # placeholder.
+    coding = glm_coding()
+    if coding.configured and not any(p.model == coding.model for p in out):
+        out.append(coding)
 
     out.append(MockProvider())  # last resort, never fails
     return out

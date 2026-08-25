@@ -1,0 +1,11 @@
+  plain          8.74s -> 'READY'
+  with system    4.13s -> 'READY'
+  json schema    3.08s -> '{"answer": "READY"}'
+  provider: glm-coding | model: glm-5.3 | configured: True
+  live chain:
+    1. groq:openai/gpt-oss-120b
+    2. gemini:gemini-3.6-flash
+    3. glm:glm-4.5-flash
+    4. groq:qwen/qwen3.6-27b
+    5. glm-coding:glm-5.3
+    6. mock:mock-1

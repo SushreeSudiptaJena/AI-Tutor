@@ -46,6 +46,17 @@ def _schema_instruction(json_schema: dict | None) -> str:
 DEFAULT_MAX_TOKENS = 2048
 MIN_MAX_TOKENS = 1024
 
+# The header Anthropic-compatible endpoints require. A constant, not a magic
+# string, because a wrong value fails as a 400 that reads like a bad key.
+ANTHROPIC_VERSION = "2023-06-01"
+
+# GLM through the coding plan measured 17-23s on a trivial prompt -- it is a
+# reasoning model on a subscription endpoint, not a fast one. The 18s shared
+# read budget would time it out MOST of the time, and a provider that always
+# times out is worse than one that is absent: it costs 18s before the chain
+# moves on. It is last, so a longer budget here delays nothing else.
+SLOW_TIMEOUT = httpx.Timeout(connect=5.0, read=40.0, write=10.0, pool=5.0)
+
 _THINK_RE = re.compile(r"<think>.*?</think>", re.DOTALL | re.IGNORECASE)
 
 
@@ -203,6 +214,91 @@ class GeminiProvider:
         return _strip_fences(text) if json_schema else text
 
 
+class AnthropicCompatProvider:
+    """A vendor speaking Anthropic's /v1/messages shape.
+
+    Exists for Zhipu's GLM Coding Plan. The same GLM key reaches two different
+    endpoints that are billed from two different pools:
+
+        /api/paas/v4/chat/completions   pay-as-you-go, OpenAI-shaped
+        /api/anthropic/v1/messages      the subscription, Anthropic-shaped
+
+    Measured on this account: every paid model on the first returns
+    `429 error 1113` -- insufficient balance -- while the second answers 200
+    for glm-5.3 with the identical key. So this is not a nicer way to call the
+    same thing; it is the only way to reach the plan that is actually paid for.
+    """
+
+    def __init__(self, *, name: str, base_url: str, api_key: str, model: str):
+        self.name = name
+        self.base_url = base_url.rstrip("/")
+        self.api_key = api_key
+        self.model = model
+
+    @property
+    def configured(self) -> bool:
+        return bool(self.api_key and self.model)
+
+    def complete(
+        self,
+        prompt: str,
+        *,
+        system: str = "",
+        json_schema: dict | None = None,
+        temperature: float = 0.0,
+        max_tokens: int = DEFAULT_MAX_TOKENS,
+    ) -> str:
+        if not self.configured:
+            raise ProviderError(self.name, "no API key or model configured", retryable=False)
+
+        max_tokens = max(max_tokens, MIN_MAX_TOKENS)
+        body: dict = {
+            "model": self.model,
+            "max_tokens": max_tokens,
+            "temperature": temperature,
+            "messages": [{"role": "user",
+                          "content": prompt + _schema_instruction(json_schema)}],
+        }
+        # Anthropic's shape puts the system prompt beside the messages, not
+        # inside them as a role.
+        if system:
+            body["system"] = system
+
+        try:
+            r = httpx.post(
+                f"{self.base_url}/v1/messages",
+                headers={"x-api-key": self.api_key,
+                         "anthropic-version": ANTHROPIC_VERSION,
+                         "Content-Type": "application/json"},
+                json=body,
+                timeout=SLOW_TIMEOUT,
+            )
+        except httpx.HTTPError as exc:
+            raise ProviderError(self.name, f"network error: {type(exc).__name__}") from exc
+
+        if r.status_code != 200:
+            raise ProviderError(self.name, f"HTTP {r.status_code}: {r.text[:180]}")
+
+        try:
+            blocks = r.json()["content"]
+        except (KeyError, ValueError, TypeError) as exc:
+            raise ProviderError(self.name, f"unexpected response shape: {r.text[:180]}") from exc
+
+        # Thinking models emit `thinking` blocks alongside `text` ones. Join
+        # only the visible text, the same way the Gemini provider does.
+        text = "".join(
+            b.get("text", "") for b in blocks
+            if isinstance(b, dict) and b.get("type") == "text"
+        ).strip()
+        text = _strip_reasoning(text)
+        if not text:
+            raise ProviderError(
+                self.name,
+                "empty response after reasoning tokens - raise max_tokens",
+            )
+        return _strip_fences(text) if json_schema else text
+
+
 # --- factories --------------------------------------------------------------
 
 def glm() -> OpenAICompatProvider:
@@ -211,6 +307,18 @@ def glm() -> OpenAICompatProvider:
         base_url="https://open.bigmodel.cn/api/paas/v4",
         api_key=config.GLM_API_KEY,
         model=config.GLM_MODEL,
+    )
+
+
+def glm_coding() -> AnthropicCompatProvider:
+    """GLM through the coding plan. Slow (17-23s measured) but genuinely paid
+    for, which is why it sits at the very end of the chain rather than the
+    front -- see providers/__init__.chain()."""
+    return AnthropicCompatProvider(
+        name="glm-coding",
+        base_url=config.GLM_ANTHROPIC_BASE_URL,
+        api_key=config.GLM_API_KEY,
+        model=config.GLM_CODING_MODEL,
     )
 
 

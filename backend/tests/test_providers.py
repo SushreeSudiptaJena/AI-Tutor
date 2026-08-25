@@ -4,6 +4,7 @@ The HTTP providers are exercised against fakes; the real vendors are checked by
 backend/scripts/bench_providers.py and recorded in evidence/infra-004/.
 """
 
+import inspect
 import json
 
 import pytest
@@ -186,3 +187,91 @@ def test_mock_only_chain_never_fails(monkeypatch):
     monkeypatch.setattr(config, "PROVIDER", "mock")
     r = complete("explain something", use_cache=False)
     assert isinstance(r, Completion) and r.provider == "mock" and r.text
+
+
+def hp_mod():
+    from app.providers import http_providers
+
+    return http_providers
+
+
+# ---------------------------------------------------------------------------
+# infra-004 -- GLM through the coding plan, last in the chain
+# ---------------------------------------------------------------------------
+
+def test_glm_coding_is_the_last_real_vendor_before_mock():
+    """It is the only provider on a paid subscription rather than a free tier,
+    so it is the likeliest to answer when everything else is rate-limited --
+    but it is slow, so it must not lead."""
+    from app.providers import chain_names
+
+    names = [n.split(":")[0] for n in chain_names()]
+    assert "glm-coding" in names, names
+    assert names[-1] == "mock", names
+    assert names[-2] == "glm-coding", names
+
+
+def test_the_coding_plan_uses_a_different_endpoint_than_pay_as_you_go():
+    """Same key, two pools. Every paid model on /api/paas/v4 answers
+    'insufficient balance'; the Anthropic-shaped endpoint answers 200. Pointing
+    this at the OpenAI-shaped URL would silently reinstate the dead path."""
+    from app.providers.http_providers import glm, glm_coding
+
+    assert "/api/anthropic" in glm_coding().base_url
+    assert "/api/paas/v4" in glm().base_url
+    assert glm_coding().base_url != glm().base_url
+
+
+def test_glm_coding_gets_a_longer_read_budget_than_the_shared_one():
+    """It measured 17-23s on a cold call against an 18s shared budget. A
+    provider that always times out is worse than one that is absent: it costs
+    the whole budget before the chain moves on."""
+    from app.providers import http_providers as hp
+
+    assert hp.SLOW_TIMEOUT.read > hp.TIMEOUT.read
+    assert "SLOW_TIMEOUT" in inspect.getsource(hp.AnthropicCompatProvider.complete)
+
+
+def test_the_anthropic_provider_reads_only_visible_text_blocks():
+    """A thinking model emits `thinking` blocks beside `text` ones. Joining all
+    of them would put the model's reasoning in front of a student."""
+    source = inspect.getsource(hp_mod().AnthropicCompatProvider.complete)
+    assert 'b.get("type") == "text"' in source
+
+
+def test_the_anthropic_provider_sends_system_beside_the_messages():
+    """Anthropic's shape has no system ROLE; a system message smuggled into
+    `messages` is either ignored or rejected."""
+    source = inspect.getsource(hp_mod().AnthropicCompatProvider.complete)
+    assert 'body["system"] = system' in source
+    assert '"role": "system"' not in source
+
+
+def test_a_failing_chain_reaches_glm_coding_before_mock(monkeypatch):
+    """The whole point of its position: it must actually be tried."""
+    from app.providers import chain
+    from app.providers.base import ProviderError
+
+    tried = []
+    providers = chain()
+    for p in providers:
+        if p.name == "mock":
+            continue
+
+        def fail(*a, _n=p.name, **kw):
+            tried.append(_n)
+            if _n == "glm-coding":
+                return "reached"
+            raise ProviderError(_n, "simulated outage")
+
+        monkeypatch.setattr(p, "complete", fail)
+
+    for p in providers:
+        try:
+            out = p.complete("x")
+        except ProviderError:
+            continue
+        assert out == "reached"
+        break
+    assert tried[-1] == "glm-coding", tried
+    assert "glm-coding" in tried

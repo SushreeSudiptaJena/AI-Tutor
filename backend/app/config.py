@@ -42,6 +42,13 @@ PROVIDER = _get("PROVIDER", "glm")
 
 GLM_API_KEY = _get("GLM_API_KEY")
 GLM_MODEL = _get("GLM_MODEL", "glm-4-flash")
+# The GLM Coding Plan is billed from a different pool than the pay-as-you-go
+# API and speaks Anthropic's shape, not OpenAI's. Same key, different door:
+# every paid model on /api/paas/v4 returns "insufficient balance" while this
+# one answers. Slow (17-23s measured), so it sits last in the chain.
+GLM_ANTHROPIC_BASE_URL = _get("GLM_ANTHROPIC_BASE_URL",
+                              "https://open.bigmodel.cn/api/anthropic")
+GLM_CODING_MODEL = _get("GLM_CODING_MODEL", "glm-5.3")
 
 FALLBACK_API_KEY_GEMINI = _get("FALLBACK_API_KEY_GEMINI")
 FALLBACK_MODEL_GEMINI = _get("FALLBACK_MODEL_GEMINI")
