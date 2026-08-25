@@ -311,3 +311,103 @@ export const updateCourseTerm = (
     term_end?: string | null;
   },
 ) => api<Course>(`/admin/courses/${courseId}/term`, { method: "PUT", body: input });
+
+// --- student surface (student-001 .. 009, rag-003/004) ----------------------
+
+export type CourseSummary = {
+  course: { code: string; title: string };
+  books: { title: string; kind: string }[];
+  topics: { id: number; name: string }[];
+};
+
+export type Gap = {
+  id: number;
+  concept: string;
+  prerequisite_course: string;
+  detected_from: "diagnostic" | "syllabus_upload" | "practice";
+  status: "open" | "improving" | "closed";
+  suggested_prompts: string[];
+  latest_practice_set_id: number | null;
+};
+
+export type MasteryTopic = {
+  topic_id: number;
+  topic: string;
+  concepts: { id: number; name: string; state: "solid" | "shaky" | "untested" }[];
+};
+
+export type Assignment = {
+  id: number;
+  title: string;
+  body: string;
+  assigned_at: string;
+  citations: Citation[];
+};
+
+export type PracticeItemDto = {
+  id: number;
+  prompt: string;
+  kind: string;
+  options: string[] | null;
+  gap_id?: number;
+  your_answer?: string | null;
+  correct?: boolean | null;
+  diagnosis?: PracticeDiagnosis | null;
+};
+
+export type PracticeDiagnosis = {
+  id: number;
+  misconception_id: number;
+  label: string;
+  question: string;
+  confirmed?: boolean | null;
+};
+
+export type AnswerResult = {
+  correct: boolean;
+  correct_answer: string;
+  explanation: string;
+  citations: Citation[];
+  diagnosis: PracticeDiagnosis | null;
+};
+
+export type PracticeSet = {
+  practice_set_id: number;
+  concept: string;
+  source: string;
+  items: PracticeItemDto[];
+};
+
+export type DiagnosticDto = {
+  diagnostic_id: number;
+  submitted_at: string | null;
+  items: (PracticeItemDto & { concept?: string })[];
+};
+
+export const getCourseSummary = () => api<CourseSummary>("/student/course-summary");
+export const getGaps = () => api<{ items: Gap[] }>("/student/gaps");
+export const getGapLesson = (gapId: number, language = "en") =>
+  api<TutorResponse>(`/student/gaps/${gapId}/lesson?language=${language}`);
+export const getMastery = () => api<{ items: MasteryTopic[] }>("/student/mastery");
+export const getAssignments = () => api<{ items: Assignment[] }>("/student/assignments");
+export const getDiagnostic = () => api<DiagnosticDto>("/student/diagnostic");
+export const submitDiagnostic = (diagnosticId: number, answers: { item_id: number; answer: string }[]) =>
+  api<{ gaps: Gap[]; message: string }>(`/student/diagnostic/${diagnosticId}/submit`, {
+    method: "POST",
+    body: { answers },
+  });
+export const generatePractice = (gapId: number, count = 3) =>
+  api<PracticeSet>("/student/practice/generate", { method: "POST", body: { gap_id: gapId, count } });
+export const getPracticeSet = (setId: number) => api<PracticeSet>(`/student/practice/${setId}`);
+export const answerPractice = (setId: number, itemId: number, answer: string) =>
+  api<AnswerResult>(`/student/practice/${setId}/answer`, {
+    method: "POST",
+    body: { item_id: itemId, answer },
+  });
+export const confirmMisconception = (diagnosisId: number, confirmed: boolean) =>
+  api<void>(`/student/misconception-diagnosis/${diagnosisId}/confirm`, {
+    method: "POST",
+    body: { confirmed },
+  });
+export const askTutor = (question: string, language = "en") =>
+  api<TutorResponse>("/tutor/ask", { method: "POST", body: { question, language } });

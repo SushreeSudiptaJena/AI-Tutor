@@ -972,6 +972,40 @@
       ],
       "evidence": "evidence/admin-008/verification.txt",
       "notes": "Raised by the owner 2026-08-25 after clicking the dashboard: the avatar and Settings were dead links from person 4's mockup, and course structure was read-only even though POST /admin/courses and PUT /admin/courses/{id}/term have been live since admin-002/admin-005. Entirely frontend -- no backend change. Verification must not leave test courses in the shared DB: create, verify, then remove the row by hand (there is deliberately no DELETE /admin/courses). Do not PUT term on real courses during verification -- the window is load-bearing for admin-006's delete guard. PASSING 2026-08-25. All ten verification steps run live: profile facts from /auth/me; language PATCH persisted (and was reset); logout 204 then dead token 401; provider chain live (groq active, 5 fallbacks, 140 cache entries); ZZTST course created and listed; term PUT round-tripped (semester 4, batch 2026, 2026-09-01 -> 2026-12-15); inverted window refused with the contract's 422; course.create + course.set_term audit rows written; the ZZTST row then removed by hand (no DELETE /admin/courses by design) with its audit rows deliberately left -- target is a string and outlives what it names, same precedent as material.delete. Build green (44 modules), pytest exit 0. Frontend-only feature; no backend change."
+    },
+    {
+      "id": "frontend-002",
+      "priority": 46,
+      "area": "frontend",
+      "title": "Student dashboard wired to the live API (golden path UI)",
+      "user_visible_behavior": "A student logs in at /login, sees their real course, takes/resumes the diagnostic, sees their gaps, opens a lesson with a real alignment badge and page-anchored citations, practises with generated items, answers wrong, confirms the AI-diagnosed misconception, and sees teacher-assigned reteach units.",
+      "status": "passing",
+      "depends_on": [
+        "student-001",
+        "student-002",
+        "student-003",
+        "student-005",
+        "student-006",
+        "student-007",
+        "student-009",
+        "rag-003",
+        "auth-001"
+      ],
+      "demo_mode": "live",
+      "verification": [
+        "Login as the seeded student; the greeting shows the real name and course from /auth/me + /student/course-summary, not 'Alex'.",
+        "Stat cards show real counts: open gaps, solid/shaky concepts from /student/mastery, assigned reteach from /student/assignments.",
+        "Diagnostic renders the real items and resumes: previously picked answers are pre-selected from your_answer.",
+        "Submitting the diagnostic shows the server's message and gap count -- no score is computed or shown anywhere.",
+        "Lessons: a gap's lesson renders with the real alignment_percent badge and citations showing book title + page number.",
+        "Practice: items generated (or resumed via latest_practice_set_id), wrong answer shows correct_answer + explanation + the named misconception question.",
+        "Confirming the diagnosis shows the 'teacher will see this' state; denying shows the excluded state.",
+        "Ask Tutor renders all three outcomes as answers, not errors.",
+        "npm --prefix frontend run build passes; python -m pytest backend/tests -q still passes.",
+        "reset_demo_state.py is run afterwards -- verification mutates demo state."
+      ],
+      "evidence": "evidence/frontend-002/verification.txt",
+      "notes": "Raised by the owner 2026-08-25: teammate's student-UI push (a47c9f7) shipped a 633-line static Dashboard with hardcoded 'Good morning, Alex!', 'Circular Motion' and a HARDCODED 82% alignment badge -- the one number the rubric scores. Login and both onboarding screens in that push were already real and are kept as-is (the student login is preserved as StudentLogin.tsx; the unified login moved to /admin/login). The Dashboard rewrite keeps that push's design shell and replaces the data layer. The alignment badge and the misconception confirm flow are the golden path; hardcoded versions of either are worse than none. PASSING 2026-08-25. Full golden path run live as asha: real greeting (Asha R / CSW2); diagnostic resumed from your_answer; ONE rehearsed wrong answer (demo-script.md's GET answer) -> 'Found 1 prerequisite gap: HTTP methods, GET and POST, from CSW1'; lesson answered at a REAL 66% alignment with Django-book pages 1010/445/447; practice set 19, wrong GET -> correct:False/POST + diagnosis 724 'Chooses GET for a request that changes server state'; confirm 204; teacher heatmap (as ravi) shows the same misconception at confirmed_count 8. Tutor: answered at 88% with 3 citations AND insufficient_evidence (flag 93) -- both 200. Stat feeds: mastery 7 solid/1 shaky/7 untested; assignments 0 (empty state renders, not an error). An earlier accidental all-correct submit produced 'No prerequisite gaps found' -- the no-score stance holds client-side too: the UI computes no totals anywhere. reset_demo_state.py run after. Build green, pytest exit 0."
     }
   ]
 }

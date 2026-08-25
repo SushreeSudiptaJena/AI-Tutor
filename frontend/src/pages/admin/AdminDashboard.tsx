@@ -8,7 +8,6 @@ import {
   deleteMaterial,
   getLanguages,
   getMe,
-  getProviderStatus,
   listAuditLog,
   listCourses,
   listDepartments,
@@ -1200,17 +1199,11 @@ function SettingsView({
   const [langs, setLangs] = useState<{ code: string; label: string }[]>([]);
   const [langError, setLangError] = useState<string | null>(null);
   const [savingLang, setSavingLang] = useState(false);
-  const [providers, setProviders] = useState<{
-    active: string;
-    fallbacks_available: string[];
-    cache_enabled: boolean;
-  } | null>(null);
 
   useEffect(() => {
     getLanguages()
       .then((r) => setLangs(r.items))
       .catch((err) => setLangError(errorText(err)));
-    getProviderStatus().then(setProviders).catch(() => setProviders(null));
   }, []);
 
   async function changeLanguage(code: string) {
@@ -1231,7 +1224,7 @@ function SettingsView({
         <div>
           <h1 className="font-display-lg text-display-lg text-on-surface mb-2">Settings</h1>
           <p className="font-body-lg text-body-lg text-on-surface-variant">
-            Your preferences and the system's live configuration.
+            Your preferences for how the tutor talks to you.
           </p>
         </div>
 
@@ -1264,33 +1257,6 @@ function SettingsView({
           )}
         </section>
 
-        <section className="ns-glass-panel rounded-xl p-card-inner-padding">
-          <h2 className="font-headline-sm text-headline-sm text-on-surface mb-4 flex items-center gap-2">
-            <Icon name="dns" className="text-tertiary" />
-            Provider chain
-          </h2>
-          <p className="font-body-md text-body-md text-on-surface-variant mb-4">
-            Which model is answering right now, and what takes over if it can't.
-            Every call is disk-cached -- the demo replays identically offline.
-          </p>
-          {providers ? (
-            <dl>
-              <Fact label="Active provider" value={providers.active} />
-              <Fact
-                label="Fallbacks"
-                value={providers.fallbacks_available.join(" → ") || "none"}
-              />
-              <Fact
-                label="Disk cache"
-                value={providers.cache_enabled ? "enabled" : "disabled"}
-              />
-            </dl>
-          ) : (
-            <p className="font-body-md text-body-md text-on-surface-variant">
-              Provider status unavailable right now.
-            </p>
-          )}
-        </section>
 
         <section className="ns-glass-panel rounded-xl p-card-inner-padding">
           <h2 className="font-headline-sm text-headline-sm text-on-surface mb-4 flex items-center gap-2">

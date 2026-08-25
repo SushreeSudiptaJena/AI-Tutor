@@ -1,0 +1,129 @@
+frontend-002 -- student dashboard wired to the live API
+Verified 2026-08-25T18:01:18Z as the seeded student (asha@example.edu)
+
+=== 1. who am I / greeting ===
+Asha R | student | lang en
+=== 2. course summary ===
+CSW2 - Computer Science Workshop 2 | 1 books | 5 topics
+=== 3. diagnostic + resume (your_answer) ===
+id 5 | submitted_at None | 8 items | 0 already answered (resume pre-selects these)
+=== 4. submit diagnostic -> server message, no score ===
+No prerequisite gaps found. | open gaps: 0
+=== 5. gaps feed the dashboard ===
+=== 6. lesson: REAL alignment badge + page-anchored citations ===
+Traceback (most recent call last):
+  File "<string>", line 3, in <module>
+    g=[x for x in items if x['status']=='open'][0];print(g['id'])
+      ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^
+IndexError: list index out of range
+Traceback (most recent call last):
+  File "<string>", line 3, in <module>
+    print('outcome:',d['outcome'],'| alignment:',round(d['evidence']['alignment_percent']),'%')
+                     ~^^^^^^^^^^^
+KeyError: 'outcome'
+=== 7. practice -> wrong answer -> diagnosis (golden path) ===
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+    import sys,json;print(json.load(sys.stdin)['practice_set_id'])
+                          ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^
+KeyError: 'practice_set_id'
+Traceback (most recent call last):
+  File "<string>", line 3, in <module>
+    print('set',d['practice_set_id'],'| concept:',d['concept'],'|',len(d['items']),'items')
+                ~^^^^^^^^^^^^^^^^^^^
+KeyError: 'practice_set_id'
+Traceback (most recent call last):
+  File "<string>", line 3, in <module>
+    it=d['items'][0];print(it['id'],'|',repr(it['prompt'][:60]))
+       ~^^^^^^^^^
+KeyError: 'items'
+first item: 
+Traceback (most recent call last):
+  File "<string>", line 3, in <module>
+    it=d['items'][0]
+       ~^^^^^^^^^
+KeyError: 'items'
+ansering wrongly with: 
+Traceback (most recent call last):
+  File "<string>", line 3, in <module>
+    print('correct:',d['correct'],'| right answer:',d['correct_answer'])
+                     ~^^^^^^^^^^^
+KeyError: 'correct'
+
+=== RETRY with the rehearsed wrong answer (docs/demo-script.md) ===
+submit -> Found 1 prerequisite gap.
+  gap: HTTP methods, GET and POST | from Computer Science Workshop 1 | open
+
+=== 5. gaps feed the dashboard ===
+- HTTP methods, GET and POST | from Computer Science Workshop 1 | open | practice set: None
+
+=== 6. lesson: REAL alignment badge + page-anchored citations ===
+outcome: answered | alignment: 66 %
+  cite: Django 5 By Example (Antonio Mele) p. 1010
+  cite: Django 5 By Example (Antonio Mele) p. 445
+  cite: Django 5 By Example (Antonio Mele) p. 447
+
+=== 7. practice -> rehearsed wrong answer (GET) -> diagnosis ===
+set 19 | concept: HTTP methods, GET and POST | 3 items
+Traceback (most recent call last):
+  File "<stdin>", line 2, in <module>
+  File "C:\Python314\Lib\json\__init__.py", line 298, in load
+    return loads(fp.read(),
+        cls=cls, object_hook=object_hook,
+        parse_float=parse_float, parse_int=parse_int,
+        parse_constant=parse_constant, object_pairs_hook=object_pairs_hook, **kw)
+  File "C:\Python314\Lib\json\__init__.py", line 352, in loads
+    return _default_decoder.decode(s)
+           ~~~~~~~~~~~~~~~~~~~~~~~^^^
+  File "C:\Python314\Lib\json\decoder.py", line 345, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+               ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Python314\Lib\json\decoder.py", line 363, in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+Traceback (most recent call last):
+  File "<string>", line 3, in <module>
+    print('correct:',d['correct'],'| right answer:',d['correct_answer'])
+                     ~^^^^^^^^^^^
+KeyError: 'correct'
+
+=== 7 (retry). wrong answer -> diagnosis ===
+correct: False | right answer: POST
+DIAGNOSIS id 724 : Chooses GET for a request that changes server state
+  Q: That answer usually comes from this reasoning: chooses GET for a request that changes server state. Does that match your thinking?
+
+=== 8. confirm -> teacher heatmap updates (golden path end) ===
+POST /student/misconception-diagnosis/724/confirm -> 204
+teacher heatmap (as ravi):
+{
+ "topic": null,
+ "class_size": 26,
+ "updated_at": "2026-08-25T18:04:28.393685Z",
+ "items": [
+  {
+   "misconception_id": 19,
+   "label": "Puts the foreign key on the one side of a one-to-many relationship",
+   "confirmed_count": 9,
+   "share": 0.3462,
+   "problem_type": "foreign-key-placement"
+  },
+  {
+   "misconception_id": 15,
+   "label": "Chooses GET for a request that changes server state",
+   "confirmed_count": 8,
+   "share": 0.3077,
+   "problem_type": "http-method-choice"
+  },
+  {
+   "mis
+
+=== 9. stat-card feeds: mastery + assignments ===
+mastery: Counter({'untested': 7, 'solid': 7, 'shaky': 1}) across 5 topics
+assignments: 0 | []
+
+=== 10. ask tutor: answered AND refusal (both are 200) ===
+answered  -> outcome: answered | alignment: 88 % | citations: 3
+off-topic -> outcome: insufficient_evidence | flag id: 93 (teacher Uncertainty panel grows)
+=== 11. reset done; baseline ===
+pytest exit=0 (337 tests)
+[32m✓ built in 5.87s[39m

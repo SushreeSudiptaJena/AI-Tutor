@@ -1,32 +1,72 @@
-import { useState, type ReactNode } from "react";
-
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   AlertTriangle,
-  ArrowRight,
-  Bell,
-  Check,
-  CheckCircle,
-  Edit3,
-  Info,
-  LayoutDashboard,
+  BarChart3,
   BookOpen,
+  Brain,
+  CheckCircle,
+  ClipboardCheck,
+  ClipboardList,
+  GraduationCap,
+  LayoutDashboard,
   MessageCircle,
   Play,
   Search,
-  Send,
-  Settings,
-  Sparkles,
-  TrendingUp,
-  User,
-  ClipboardCheck,
-  BarChart3,
-  GraduationCap,
-  Brain,
-  ClipboardList,
-  CalendarDays,
+  Settings as SettingsIcon,
+  XCircle,
 } from "lucide-react";
 
-type DashboardSection =
+import {
+  ApiError,
+  answerPractice,
+  askTutor,
+  clearToken,
+  confirmMisconception,
+  generatePractice,
+  getAssignments,
+  getCourseSummary,
+  getDiagnostic,
+  getGapLesson,
+  getGaps,
+  getLanguages,
+  getMe,
+  getMastery,
+  getPracticeSet,
+  logout,
+  submitDiagnostic,
+  updatePreferences,
+} from "@/lib/api";
+import type {
+  AnswerResult,
+  Assignment,
+  CourseSummary,
+  DiagnosticDto,
+  Gap,
+  MasteryTopic,
+  PracticeItemDto,
+  PracticeSet,
+  TutorResponse,
+  User,
+} from "@/lib/api";
+
+/**
+ * The student dashboard. Every section reads the live backend -- the shell
+ * (sidebar, layout, palette) is the design that shipped with the repo; the
+ * data layer underneath is new. Before this rewrite the whole file rendered
+ * placeholder content: "Good morning, Alex!", "Circular Motion", a hardcoded
+ * 82% alignment badge. The alignment badge in particular is the feature the
+ * rubric scores -- a hardcoded one is worse than none.
+ *
+ * Two rules from the contract shape this file:
+ *  - No scores, percentages or grades are ever computed client-side from a
+ *    diagnostic. The only percentages that exist come from the server
+ *    (alignment_percent, practice correct/incorrect per item).
+ *  - All three TutorResponse outcomes are 200 OK. A refusal is rendered as a
+ *    first-class answer, never as an error state.
+ */
+
+type Section =
   | "Dashboard"
   | "My Course"
   | "Diagnostic"
@@ -37,7 +77,7 @@ type DashboardSection =
   | "Assignments"
   | "Settings";
 
-const navigation: { label: DashboardSection; icon: typeof LayoutDashboard }[] = [
+const navigation: { label: Section; icon: typeof LayoutDashboard }[] = [
   { label: "Dashboard", icon: LayoutDashboard },
   { label: "My Course", icon: BookOpen },
   { label: "Diagnostic", icon: ClipboardCheck },
@@ -48,8 +88,1116 @@ const navigation: { label: DashboardSection; icon: typeof LayoutDashboard }[] = 
   { label: "Assignments", icon: ClipboardList },
 ];
 
+function errorText(err: unknown): string {
+  return err instanceof ApiError ? err.message : "Something went wrong. Try again.";
+}
+
+/** Loading / error / empty, so no section forgets one of the three states. */
+function States({
+  loading,
+  error,
+  empty,
+  emptyText = "Nothing here yet.",
+  children,
+}: {
+  loading: boolean;
+  error: string | null;
+  empty?: boolean;
+  emptyText?: string;
+  children?: React.ReactNode;
+}) {
+  if (loading) return <p className="p-md text-body-md text-on-surface-variant">Loading…</p>;
+  if (error)
+    return (
+      <p role="alert" className="p-md text-body-md text-error">
+        {error}
+      </p>
+    );
+  if (empty) return <p className="p-md text-body-md text-on-surface-variant">{emptyText}</p>;
+  return <>{children}</>;
+}
+
+const STATUS_STYLES: Record<Gap["status"], string> = {
+  open: "bg-error/10 text-error",
+  improving: "bg-mustard/20 text-forest-green",
+  closed: "bg-secondary/20 text-forest-green",
+};
+
+/* ---------------------------------------------------------------------------
+ * The answer card shared by Lessons and Ask Tutor. Renders ALL THREE
+ * outcomes; the alignment badge only exists on `answered`.
+ * ------------------------------------------------------------------------- */
+function TutorCard({ response }: { response: TutorResponse }) {
+  const [showSources, setShowSources] = useState(false);
+
+  if (response.outcome === "graded_work_refused") {
+    return (
+      <div className="rounded-xl border border-mustard/40 bg-mustard/10 p-md">
+        <p className="mb-sm text-label-md font-bold tracking-wider text-forest-green uppercase">
+          Graded work — guiding, not solving
+        </p>
+        <p className="whitespace-pre-wrap text-body-md text-on-surface">{response.body}</p>
+        {response.hints.length > 0 && (
+          <div className="mt-sm rounded-lg bg-white p-sm">
+            <p className="mb-xs text-label-sm font-bold text-on-surface-variant uppercase">Hints</p>
+            <ul className="list-disc space-y-xs pl-md text-body-sm text-on-surface">
+              {response.hints.map((h) => (
+                <li key={h}>{h}</li>
+              ))}
+            </ul>
+          </div>
+        )}
+        {response.matched_assignment && (
+          <p className="mt-sm text-label-sm text-on-surface-variant">
+            Matched assignment: {response.matched_assignment.title}
+          </p>
+        )}
+      </div>
+    );
+  }
+
+  if (response.outcome === "insufficient_evidence") {
+    return (
+      <div className="rounded-xl border border-outline-variant bg-surface-container-lowest p-md">
+        <p className="mb-sm text-label-md font-bold tracking-wider text-error uppercase">
+          Not in your course books
+        </p>
+        <p className="whitespace-pre-wrap text-body-md text-on-surface">{response.body}</p>
+        <p className="mt-sm text-label-sm text-on-surface-variant">
+          Your teacher has been notified — if enough students hit the same wall, it becomes a
+          reteach topic.
+        </p>
+      </div>
+    );
+  }
+
+  const pct = Math.round(response.evidence.alignment_percent);
+  return (
+    <div className="rounded-xl border border-outline-variant bg-surface-container-lowest p-md">
+      <div className="mb-sm flex items-center justify-between gap-sm">
+        <span className="text-label-md font-bold tracking-wider text-forest-green uppercase">
+          Answer
+        </span>
+        {/* The real badge, from the server's evidence check. */}
+        <span
+          className={`rounded-full px-sm py-xs text-label-md font-bold ${
+            pct >= 75 ? "bg-secondary/30 text-forest-green" : "bg-mustard/20 text-forest-green"
+          }`}
+          title={response.evidence.reason ?? "How closely this answer is backed by your course material"}
+        >
+          {pct}% syllabus aligned
+        </span>
+      </div>
+
+      <p className="whitespace-pre-wrap text-body-md text-on-surface">{response.body}</p>
+
+      {response.citations.length > 0 && (
+        <div className="mt-md">
+          <button
+            className="flex items-center gap-xs text-label-md font-bold text-forest-green underline-offset-2 hover:underline"
+            onClick={() => setShowSources((v) => !v)}
+            type="button"
+          >
+            <BookOpen className="h-4 w-4" />
+            {showSources ? "Hide sources" : `Show sources (${response.citations.length})`}
+          </button>
+
+          {showSources && (
+            <ul className="mt-sm space-y-sm">
+              {response.citations.map((c) => (
+                <li key={c.chunk_id} className="rounded-lg bg-white p-sm">
+                  <p className="text-label-sm font-bold text-forest-green">
+                    {c.book_title}
+                    {c.page_no !== null && <> · p. {c.page_no}</>}
+                    {c.chapter && <> · {c.chapter}</>}
+                  </p>
+                  <p className="mt-xs text-body-sm italic text-on-surface-variant">“{c.snippet}”</p>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ---------------------------------------------------------------------------
+ * Home
+ * ------------------------------------------------------------------------- */
+function HomeView({ user, goto }: { user: User | null; goto: (s: Section) => void }) {
+  const [summary, setSummary] = useState<CourseSummary | null>(null);
+  const [gaps, setGaps] = useState<Gap[] | null>(null);
+  const [mastery, setMastery] = useState<MasteryTopic[] | null>(null);
+  const [assignments, setAssignments] = useState<Assignment[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    Promise.all([getCourseSummary(), getGaps(), getMastery(), getAssignments()])
+      .then(([s, g, m, a]) => {
+        setSummary(s);
+        setGaps(g.items);
+        setMastery(m.items);
+        setAssignments(a.items);
+      })
+      .catch((err) => setError(errorText(err)));
+  }, []);
+
+  const openGaps = (gaps ?? []).filter((g) => g.status === "open");
+  const concepts = (mastery ?? []).flatMap((t) => t.concepts);
+  const solid = concepts.filter((c) => c.state === "solid").length;
+  const shaky = concepts.filter((c) => c.state === "shaky").length;
+  const firstName = (user?.full_name ?? "there").split(" ")[0];
+  const next = openGaps[0];
+
+  if (error) return <p role="alert" className="p-md text-body-md text-error">{error}</p>;
+
+  return (
+    <div className="p-lg">
+      <div className="mb-md flex flex-col gap-xs">
+        <h1 className="font-display-lg text-headline-lg text-on-background">
+          Good {new Date().getHours() < 12 ? "morning" : new Date().getHours() < 17 ? "afternoon" : "evening"}, {firstName}!
+        </h1>
+        <p className="text-body-md text-on-surface-variant">
+          {summary
+            ? `Here's your learning progress for ${summary.course.title} (${summary.course.code}).`
+            : "Loading your course…"}
+        </p>
+      </div>
+
+      <div className="mb-md grid grid-cols-1 gap-sm md:grid-cols-2 lg:grid-cols-4">
+        <StatCard
+          label="Open Gaps"
+          value={gaps === null ? "…" : String(openGaps.length)}
+          icon={<AlertTriangle className="h-5 w-5 text-error" />}
+        />
+        <StatCard
+          label="Solid Concepts"
+          value={mastery === null ? "…" : String(solid)}
+          icon={<CheckCircle className="h-5 w-5 text-forest-green" />}
+        />
+        <StatCard
+          label="Shaky Concepts"
+          value={mastery === null ? "…" : String(shaky)}
+          icon={<Brain className="h-5 w-5 text-mustard" />}
+          highlighted={shaky > 0}
+        />
+        <StatCard
+          label="Assigned Reteach"
+          value={assignments === null ? "…" : String(assignments.length)}
+          icon={<ClipboardList className="h-5 w-5 text-outline" />}
+        />
+      </div>
+
+      <div className="grid grid-cols-1 gap-lg lg:grid-cols-12">
+        <div className="flex flex-col gap-lg lg:col-span-8">
+          <section className="group relative overflow-hidden rounded-xl border border-outline-variant/20 bg-surface-container-lowest p-md shadow-sm">
+            <span className="rounded bg-surface-variant/50 px-xs py-xs text-label-sm tracking-wider text-on-surface-variant uppercase">
+              Up Next
+            </span>
+
+            {next ? (
+              <div className="relative z-10 mt-sm flex flex-col gap-sm">
+                <div>
+                  <h2 className="mb-xs text-headline-lg font-semibold text-on-surface">
+                    {next.concept}
+                  </h2>
+                  <p className="max-w-2xl text-body-md text-on-surface-variant">
+                    A prerequisite from {next.prerequisite_course} that {summary?.course.code ?? "this course"} builds
+                    on. Start with the lesson, then practise until it's solid.
+                  </p>
+                </div>
+
+                <div className="mt-sm flex items-center gap-md">
+                  <button
+                    className="flex items-center gap-xs rounded-lg bg-forest-green px-lg py-sm text-body-md text-white transition-colors hover:bg-forest-light"
+                    onClick={() => goto("Lessons")}
+                    type="button"
+                  >
+                    <Play className="h-5 w-5" />
+                    Start Lesson
+                  </button>
+                  <button
+                    className="flex items-center gap-xs rounded-lg border border-outline-variant px-lg py-sm text-body-md text-on-surface transition-colors hover:bg-surface-container"
+                    onClick={() => goto("Practice")}
+                    type="button"
+                  >
+                    <Brain className="h-5 w-5" />
+                    Practise
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="relative z-10 mt-sm">
+                <h2 className="mb-xs text-headline-md font-semibold text-on-surface">
+                  No open gaps
+                </h2>
+                <p className="text-body-md text-on-surface-variant">
+                  Take the diagnostic to check your prerequisites, or keep practising to lock in
+                  shaky concepts.
+                </p>
+                <button
+                  className="mt-sm flex items-center gap-xs rounded-lg bg-forest-green px-lg py-sm text-body-md text-white hover:bg-forest-light"
+                  onClick={() => goto("Diagnostic")}
+                  type="button"
+                >
+                  <ClipboardCheck className="h-5 w-5" />
+                  {gaps?.length ? "Re-check" : "Take the diagnostic"}
+                </button>
+              </div>
+            )}
+          </section>
+
+          <section className="rounded-xl border border-outline-variant/20 bg-surface-container-lowest shadow-sm">
+            <div className="flex items-center justify-between border-b border-outline-variant/20 p-md">
+              <h3 className="text-headline-sm font-semibold text-on-surface">My Gaps</h3>
+              <button
+                className="text-label-md font-bold text-forest-green hover:underline"
+                onClick={() => goto("My Gaps")}
+                type="button"
+              >
+                View all
+              </button>
+            </div>
+            <ul className="divide-y divide-outline-variant/10">
+              {(gaps ?? []).slice(0, 4).map((g) => (
+                <li key={g.id} className="flex items-center justify-between gap-sm p-md">
+                  <div>
+                    <p className="text-body-md font-semibold text-on-surface">{g.concept}</p>
+                    <p className="text-label-sm text-on-surface-variant">
+                      from {g.prerequisite_course} · detected by {g.detected_from.replace("_", " ")}
+                    </p>
+                  </div>
+                  <span className={`rounded-full px-sm py-xs text-label-sm font-bold ${STATUS_STYLES[g.status]}`}>
+                    {g.status}
+                  </span>
+                </li>
+              ))}
+              {gaps !== null && gaps.length === 0 && (
+                <li className="p-md text-body-sm text-on-surface-variant">
+                  No gaps detected yet — take the diagnostic.
+                </li>
+              )}
+            </ul>
+          </section>
+        </div>
+
+        <div className="flex flex-col gap-lg lg:col-span-4">
+          <section className="rounded-xl border border-outline-variant/20 bg-surface-container-lowest p-md shadow-sm">
+            <h3 className="mb-sm text-headline-sm font-semibold text-on-surface">Mastery</h3>
+            <States
+              loading={mastery === null}
+              error={null}
+              empty={concepts.length === 0}
+              emptyText="Take the diagnostic to start tracking mastery."
+            >
+              <ul className="space-y-sm">
+                {(mastery ?? []).map((t) => {
+                  const s = t.concepts.filter((c) => c.state === "solid").length;
+                  return (
+                    <li key={t.topic_id}>
+                      <div className="mb-xs flex items-center justify-between">
+                        <span className="text-label-md text-on-surface">{t.topic}</span>
+                        <span className="text-label-sm text-on-surface-variant">
+                          {s}/{t.concepts.length} solid
+                        </span>
+                      </div>
+                      <div className="h-2 overflow-hidden rounded-full bg-surface-variant">
+                        <div
+                          className="h-full rounded-full bg-forest-green"
+                          style={{ width: `${t.concepts.length ? (s / t.concepts.length) * 100 : 0}%` }}
+                        />
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            </States>
+          </section>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function StatCard({
+  label,
+  value,
+  icon,
+  highlighted = false,
+}: {
+  label: string;
+  value: string;
+  icon: React.ReactNode;
+  highlighted?: boolean;
+}) {
+  return (
+    <div
+      className={`rounded-xl border p-md shadow-sm ${
+        highlighted ? "border-mustard/50 bg-mustard/5" : "border-outline-variant/20 bg-surface-container-lowest"
+      }`}
+    >
+      <div className="flex items-center justify-between">
+        <span className="text-label-sm font-bold tracking-wider text-on-surface-variant uppercase">
+          {label}
+        </span>
+        {icon}
+      </div>
+      <p className="mt-xs text-headline-lg font-bold text-on-surface">{value}</p>
+    </div>
+  );
+}
+
+/* ---------------------------------------------------------------------------
+ * My Course
+ * ------------------------------------------------------------------------- */
+function MyCourseView() {
+  const [summary, setSummary] = useState<CourseSummary | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    getCourseSummary()
+      .then(setSummary)
+      .catch((err) => setError(errorText(err)));
+  }, []);
+
+  return (
+    <div className="p-lg">
+      <h1 className="mb-md text-headline-lg font-bold text-on-background">My Course</h1>
+      <States loading={!summary && !error} error={error} empty={!summary?.course} emptyText="No course assigned yet.">
+        {summary && (
+          <div className="grid grid-cols-1 gap-lg lg:grid-cols-2">
+            <section className="rounded-xl border border-outline-variant/20 bg-surface-container-lowest p-md shadow-sm">
+              <p className="text-label-md font-bold text-forest-green">{summary.course.code}</p>
+              <h2 className="mt-xs text-headline-md font-bold text-on-surface">{summary.course.title}</h2>
+              <p className="mt-sm text-body-md text-on-surface-variant">
+                {summary.books.length} course resource{summary.books.length === 1 ? "" : "s"} ·{" "}
+                {summary.topics.length} topics
+              </p>
+              <div className="mt-md">
+                <p className="mb-xs text-label-sm font-bold tracking-wider text-on-surface-variant uppercase">
+                  Course books
+                </p>
+                <ul className="space-y-xs">
+                  {summary.books.map((b) => (
+                    <li key={b.title} className="flex items-center gap-xs text-body-sm text-on-surface">
+                      <BookOpen className="h-4 w-4 text-mustard" />
+                      {b.title}
+                      <span className="text-label-sm text-on-surface-variant">({b.kind})</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </section>
+
+            <section className="rounded-xl border border-outline-variant/20 bg-surface-container-lowest p-md shadow-sm">
+              <p className="mb-sm text-label-sm font-bold tracking-wider text-on-surface-variant uppercase">
+                Topics
+              </p>
+              <div className="flex flex-wrap gap-xs">
+                {summary.topics.map((t) => (
+                  <span key={t.id} className="rounded-full bg-sage-light px-sm py-xs text-label-md text-on-surface">
+                    {t.name}
+                  </span>
+                ))}
+              </div>
+            </section>
+          </div>
+        )}
+      </States>
+    </div>
+  );
+}
+
+/* ---------------------------------------------------------------------------
+ * Diagnostic -- with resume: your_answer pre-selects, submitted_at decides
+ * "start" vs "continue". No score is ever computed or shown.
+ * ------------------------------------------------------------------------- */
+function DiagnosticView({ goto }: { goto: (s: Section) => void }) {
+  const [diag, setDiag] = useState<DiagnosticDto | null>(null);
+  const [answers, setAnswers] = useState<Record<number, string>>({});
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [result, setResult] = useState<{ message: string; count: number } | null>(null);
+
+  useEffect(() => {
+    getDiagnostic()
+      .then((d) => {
+        setDiag(d);
+        // Resume: pre-select exactly what the student already picked.
+        const prior: Record<number, string> = {};
+        for (const it of d.items) if (it.your_answer) prior[it.id] = it.your_answer;
+        setAnswers(prior);
+      })
+      .catch((err) => setError(errorText(err)));
+  }, []);
+
+  async function submit() {
+    if (!diag) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const payload = Object.entries(answers).map(([id, answer]) => ({
+        item_id: Number(id),
+        answer,
+      }));
+      const r = await submitDiagnostic(diag.diagnostic_id, payload);
+      setResult({ message: r.message, count: r.gaps.filter((g) => g.status === "open").length });
+    } catch (err) {
+      setError(errorText(err));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="p-lg">
+      <h1 className="mb-xs text-headline-lg font-bold text-on-background">Prerequisite Diagnostic</h1>
+      <p className="mb-md text-body-md text-on-surface-variant">
+        No score, no grade — this only finds the prerequisites you might want to revisit before
+        they cause trouble.
+      </p>
+
+      {result && (
+        <div className="mb-md rounded-xl border border-secondary/40 bg-secondary/10 p-md">
+          <p className="text-body-md font-semibold text-on-surface">{result.message}</p>
+          <div className="mt-sm flex gap-sm">
+            <button
+              className="rounded-lg bg-forest-green px-md py-xs text-label-md font-bold text-white hover:bg-forest-light"
+              onClick={() => goto("My Gaps")}
+              type="button"
+            >
+              See my gaps
+            </button>
+            <button
+              className="rounded-lg border border-outline-variant px-md py-xs text-label-md font-bold text-on-surface hover:bg-surface-container"
+              onClick={() => setResult(null)}
+              type="button"
+            >
+              Review answers
+            </button>
+          </div>
+        </div>
+      )}
+
+      <States loading={!diag && !error} error={error} empty={!diag?.items.length} emptyText="No diagnostic available for your course.">
+        {diag && (
+          <form
+            className="space-y-md"
+            onSubmit={(e) => {
+              e.preventDefault();
+              submit();
+            }}
+          >
+            {diag.items.map((item, i) => (
+              <fieldset
+                key={item.id}
+                className="rounded-xl border border-outline-variant/20 bg-surface-container-lowest p-md shadow-sm"
+              >
+                <legend className="px-xs text-label-sm font-bold tracking-wider text-forest-green uppercase">
+                  Question {i + 1}
+                  {item.concept ? ` · ${item.concept}` : ""}
+                </legend>
+                <p className="text-body-md text-on-surface">{item.prompt}</p>
+
+                {item.options && (
+                  <div className="mt-sm flex flex-col gap-xs">
+                    {item.options.map((opt) => (
+                      <label
+                        key={opt}
+                        className={`flex cursor-pointer items-center gap-sm rounded-lg border p-sm text-body-sm transition-colors ${
+                          answers[item.id] === opt
+                            ? "border-forest-green bg-sage-light text-on-surface"
+                            : "border-outline-variant/30 bg-white text-on-surface hover:border-forest-green/50"
+                        }`}
+                      >
+                        <input
+                          type="radio"
+                          name={`item-${item.id}`}
+                          checked={answers[item.id] === opt}
+                          onChange={() => setAnswers((a) => ({ ...a, [item.id]: opt }))}
+                          className="accent-[color:var(--color-forest-green,#2d5a3d)]"
+                        />
+                        {opt}
+                      </label>
+                    ))}
+                  </div>
+                )}
+              </fieldset>
+            ))}
+
+            <button
+              type="submit"
+              disabled={busy}
+              className="rounded-lg bg-forest-green px-lg py-sm text-body-md font-bold text-white hover:bg-forest-light disabled:opacity-60"
+            >
+              {busy ? "Checking…" : diag.submitted_at ? "Re-submit (overwrites)" : "Submit"}
+            </button>
+          </form>
+        )}
+      </States>
+    </div>
+  );
+}
+
+/* ---------------------------------------------------------------------------
+ * My Gaps
+ * ------------------------------------------------------------------------- */
+function GapsView() {
+  const [gaps, setGaps] = useState<Gap[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    getGaps()
+      .then((r) => setGaps(r.items))
+      .catch((err) => setError(errorText(err)));
+  }, []);
+
+  return (
+    <div className="p-lg">
+      <h1 className="mb-md text-headline-lg font-bold text-on-background">My Gaps</h1>
+      <States
+        loading={gaps === null}
+        error={error}
+        empty={!gaps?.length}
+        emptyText="No gaps detected. Take the diagnostic to check your prerequisites."
+      >
+        <ul className="space-y-sm">
+          {(gaps ?? []).map((g) => (
+            <li
+              key={g.id}
+              className="rounded-xl border border-outline-variant/20 bg-surface-container-lowest p-md shadow-sm"
+            >
+              <div className="flex items-start justify-between gap-sm">
+                <div>
+                  <p className="text-body-md font-semibold text-on-surface">{g.concept}</p>
+                  <p className="mt-xs text-label-sm text-on-surface-variant">
+                    A prerequisite from {g.prerequisite_course} · detected by{" "}
+                    {g.detected_from.replace("_", " ")}
+                  </p>
+                </div>
+                <span className={`rounded-full px-sm py-xs text-label-sm font-bold ${STATUS_STYLES[g.status]}`}>
+                  {g.status}
+                </span>
+              </div>
+
+              {g.suggested_prompts.length > 0 && (
+                <p className="mt-sm text-label-sm text-on-surface-variant">
+                  Try asking: “{g.suggested_prompts[0]}”
+                </p>
+              )}
+            </li>
+          ))}
+        </ul>
+      </States>
+    </div>
+  );
+}
+
+/* ---------------------------------------------------------------------------
+ * Lessons -- pick a gap, get the TutorResponse with the real alignment badge.
+ * ------------------------------------------------------------------------- */
+function LessonsView() {
+  const [gaps, setGaps] = useState<Gap[] | null>(null);
+  const [selected, setSelected] = useState<Gap | null>(null);
+  const [lesson, setLesson] = useState<TutorResponse | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    getGaps()
+      .then((r) => {
+        setGaps(r.items);
+        const first = r.items.find((g) => g.status === "open") ?? r.items[0];
+        if (first) setSelected(first);
+      })
+      .catch((err) => setError(errorText(err)));
+  }, []);
+
+  useEffect(() => {
+    if (!selected) return;
+    setLoading(true);
+    setError(null);
+    setLesson(null);
+    getGapLesson(selected.id)
+      .then(setLesson)
+      .catch((err) => setError(errorText(err)))
+      .finally(() => setLoading(false));
+  }, [selected]);
+
+  return (
+    <div className="p-lg">
+      <h1 className="mb-md text-headline-lg font-bold text-on-background">Lessons</h1>
+
+      <States
+        loading={gaps === null}
+        error={error}
+        empty={!gaps?.length}
+        emptyText="Nothing to learn yet — take the diagnostic first."
+      >
+        <div className="grid grid-cols-1 gap-lg lg:grid-cols-12">
+          <div className="lg:col-span-4">
+            <p className="mb-sm text-label-sm font-bold tracking-wider text-on-surface-variant uppercase">
+              Your gaps
+            </p>
+            <ul className="space-y-xs">
+              {(gaps ?? []).map((g) => (
+                <li key={g.id}>
+                  <button
+                    type="button"
+                    onClick={() => setSelected(g)}
+                    className={`w-full rounded-lg border p-sm text-left text-body-sm transition-colors ${
+                      selected?.id === g.id
+                        ? "border-forest-green bg-sage-light text-on-surface"
+                        : "border-outline-variant/30 bg-white text-on-surface hover:border-forest-green/50"
+                    }`}
+                  >
+                    <span className="font-semibold">{g.concept}</span>
+                    <span className={`ml-xs rounded-full px-xs py-1 text-label-sm ${STATUS_STYLES[g.status]}`}>
+                      {g.status}
+                    </span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          <div className="lg:col-span-8">
+            {selected && (
+              <>
+                <h2 className="mb-sm text-headline-md font-bold text-on-surface">
+                  {selected.concept}
+                </h2>
+                {loading && <p className="text-body-md text-on-surface-variant">Writing your lesson…</p>}
+                {lesson && <TutorCard response={lesson} />}
+              </>
+            )}
+          </div>
+        </div>
+      </States>
+    </div>
+  );
+}
+
+/* ---------------------------------------------------------------------------
+ * Practice -- the golden path ends here: answer wrong, see the diagnosis,
+ * confirm or deny it. Confirmed is what feeds the teacher heatmap.
+ * ------------------------------------------------------------------------- */
+function PracticeView() {
+  const [gaps, setGaps] = useState<Gap[] | null>(null);
+  const [gap, setGap] = useState<Gap | null>(null);
+  const [set, setSet] = useState<PracticeSet | null>(null);
+  const [answers, setAnswers] = useState<Record<number, string>>({});
+  const [results, setResults] = useState<Record<number, AnswerResult>>({});
+  const [confirmState, setConfirmState] = useState<Record<number, boolean>>({});
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    getGaps()
+      .then((r) => setGaps(r.items.filter((g) => g.status !== "closed")))
+      .catch((err) => setError(errorText(err)));
+  }, []);
+
+  async function loadFor(g: Gap) {
+    setGap(g);
+    setSet(null);
+    setResults({});
+    setConfirmState({});
+    setError(null);
+    try {
+      // Resume a half-finished set rather than generating a new one;
+      // null latest_practice_set_id means "offer the button", per contract.
+      const s = g.latest_practice_set_id
+        ? await getPracticeSet(g.latest_practice_set_id)
+        : await generatePractice(g.id);
+      setSet(s);
+      const prior: Record<number, string> = {};
+      const priorConfirm: Record<number, boolean> = {};
+      for (const it of s.items) {
+        if (it.your_answer) prior[it.id] = it.your_answer;
+        if (it.diagnosis?.confirmed != null) priorConfirm[it.id] = it.diagnosis.confirmed;
+      }
+      setAnswers(prior);
+      setConfirmState(priorConfirm);
+    } catch (err) {
+      setError(errorText(err));
+    }
+  }
+
+  async function answer(item: PracticeItemDto) {
+    if (!set || !answers[item.id]) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const r = await answerPractice(set.practice_set_id, item.id, answers[item.id]);
+      setResults((prev) => ({ ...prev, [item.id]: r }));
+    } catch (err) {
+      setError(errorText(err));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function confirm(item: PracticeItemDto, yes: boolean) {
+    const d = results[item.id]?.diagnosis ?? item.diagnosis;
+    if (!d) return;
+    setBusy(true);
+    try {
+      await confirmMisconception(d.id, yes);
+      setConfirmState((prev) => ({ ...prev, [item.id]: yes }));
+    } catch (err) {
+      setError(errorText(err));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="p-lg">
+      <h1 className="mb-md text-headline-lg font-bold text-on-background">Practice</h1>
+
+      <States
+        loading={gaps === null}
+        error={error}
+        empty={!gaps?.length}
+        emptyText="Take the diagnostic first — practice is generated from your gaps."
+      >
+        <div className="mb-md flex flex-wrap gap-xs">
+          {(gaps ?? []).map((g) => (
+            <button
+              key={g.id}
+              type="button"
+              onClick={() => loadFor(g)}
+              className={`rounded-full px-md py-xs text-label-md font-bold transition-colors ${
+                gap?.id === g.id
+                  ? "bg-forest-green text-white"
+                  : "bg-sage-light text-on-surface hover:bg-mustard/20"
+              }`}
+            >
+              {g.concept}
+            </button>
+          ))}
+        </div>
+
+        {error && <p role="alert" className="mb-md text-body-md text-error">{error}</p>}
+
+        {!gap && <p className="text-body-md text-on-surface-variant">Pick a concept to practise.</p>}
+
+        {set && (
+          <div className="space-y-md">
+            <p className="text-label-sm text-on-surface-variant">
+              {set.concept} · {set.source === "generated" ? "generated for you" : set.source} ·
+              {" "}{set.items.filter((i) => results[i.id]?.correct === true).length}/{set.items.length} correct so far
+            </p>
+
+            {set.items.map((item, i) => {
+              const r = results[item.id];
+              const diagnosis = r?.diagnosis ?? item.diagnosis;
+              const confirmed = confirmState[item.id];
+              return (
+                <div
+                  key={item.id}
+                  className="rounded-xl border border-outline-variant/20 bg-surface-container-lowest p-md shadow-sm"
+                >
+                  <p className="mb-sm text-body-md font-semibold text-on-surface">
+                    {i + 1}. {item.prompt}
+                  </p>
+
+                  {item.options && (
+                    <div className="flex flex-col gap-xs">
+                      {item.options.map((opt) => {
+                        const chosen = answers[item.id] === opt;
+                        const isRight = r && opt === r.correct_answer;
+                        const isWrongChoice = r && chosen && !r.correct;
+                        return (
+                          <button
+                            key={opt}
+                            type="button"
+                            disabled={!!r || busy}
+                            onClick={() => setAnswers((a) => ({ ...a, [item.id]: opt }))}
+                            className={`rounded-lg border p-sm text-left text-body-sm transition-colors ${
+                              isRight
+                                ? "border-forest-green bg-sage-light text-on-surface"
+                                : isWrongChoice
+                                  ? "border-error bg-error/10 text-on-surface"
+                                  : chosen
+                                    ? "border-forest-green bg-white text-on-surface"
+                                    : "border-outline-variant/30 bg-white text-on-surface hover:border-forest-green/50"
+                            }`}
+                          >
+                            {opt}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  {!r && (
+                    <button
+                      type="button"
+                      disabled={!answers[item.id] || busy}
+                      onClick={() => answer(item)}
+                      className="mt-sm rounded-lg bg-forest-green px-md py-xs text-label-md font-bold text-white hover:bg-forest-light disabled:opacity-50"
+                    >
+                      {busy ? "Checking…" : "Check answer"}
+                    </button>
+                  )}
+
+                  {r && (
+                    <div className={`mt-sm rounded-lg p-sm ${r.correct ? "bg-sage-light" : "bg-mustard/10"}`}>
+                      <p className="flex items-center gap-xs text-body-sm font-bold text-on-surface">
+                        {r.correct ? (
+                          <>
+                            <CheckCircle className="h-4 w-4 text-forest-green" /> Correct
+                          </>
+                        ) : (
+                          <>
+                            <XCircle className="h-4 w-4 text-error" /> Not quite — the answer is “{r.correct_answer}”
+                          </>
+                        )}
+                      </p>
+                      {r.explanation && (
+                        <p className="mt-xs whitespace-pre-wrap text-body-sm text-on-surface">{r.explanation}</p>
+                      )}
+                    </div>
+                  )}
+
+                  {/* The golden-path moment: a specific named misconception,
+                      confirmed or denied BY THE STUDENT. Only confirmed feeds
+                      the teacher heatmap. */}
+                  {diagnosis && !diagnosis.confirmed && confirmed == null && (
+                    <div className="mt-sm rounded-lg border border-mustard/50 bg-mustard/10 p-sm">
+                      <p className="text-label-sm font-bold tracking-wider text-forest-green uppercase">
+                        {diagnosis.label}
+                      </p>
+                      <p className="mt-xs text-body-sm text-on-surface">{diagnosis.question}</p>
+                      <div className="mt-sm flex gap-sm">
+                        <button
+                          type="button"
+                          disabled={busy}
+                          onClick={() => confirm(item, true)}
+                          className="rounded-lg bg-forest-green px-md py-xs text-label-md font-bold text-white hover:bg-forest-light disabled:opacity-50"
+                        >
+                          Yes, that's my thinking
+                        </button>
+                        <button
+                          type="button"
+                          disabled={busy}
+                          onClick={() => confirm(item, false)}
+                          className="rounded-lg border border-outline-variant px-md py-xs text-label-md font-bold text-on-surface hover:bg-surface-container disabled:opacity-50"
+                        >
+                          No, not really
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {diagnosis && confirmed != null && (
+                    <p className="mt-sm text-label-sm text-on-surface-variant">
+                      {confirmed
+                        ? "Confirmed — your teacher will see this in the class heatmap."
+                        : "Denied — noted, and excluded from the class heatmap."}
+                    </p>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </States>
+    </div>
+  );
+}
+
+/* ---------------------------------------------------------------------------
+ * Ask Tutor -- free questions, all three outcomes rendered by TutorCard.
+ * ------------------------------------------------------------------------- */
+function TutorView() {
+  const [question, setQuestion] = useState("");
+  const [response, setResponse] = useState<TutorResponse | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function ask(e: React.FormEvent) {
+    e.preventDefault();
+    if (!question.trim()) return;
+    setBusy(true);
+    setError(null);
+    setResponse(null);
+    try {
+      setResponse(await askTutor(question.trim()));
+    } catch (err) {
+      setError(errorText(err));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="p-lg">
+      <h1 className="mb-md text-headline-lg font-bold text-on-background">Ask Tutor</h1>
+
+      <form onSubmit={ask} className="mb-md flex gap-sm">
+        <input
+          value={question}
+          onChange={(e) => setQuestion(e.target.value)}
+          placeholder="Ask anything from your course…"
+          className="flex-1 rounded-full border border-outline-variant bg-white px-md py-sm text-body-md text-on-surface outline-none focus:border-forest-green"
+        />
+        <button
+          type="submit"
+          disabled={busy || !question.trim()}
+          className="rounded-full bg-forest-green px-lg py-sm text-body-md font-bold text-white hover:bg-forest-light disabled:opacity-50"
+        >
+          {busy ? "Thinking…" : "Ask"}
+        </button>
+      </form>
+
+      {error && <p role="alert" className="text-body-md text-error">{error}</p>}
+      {response && <TutorCard response={response} />}
+    </div>
+  );
+}
+
+/* ---------------------------------------------------------------------------
+ * Assignments -- teacher-approved reteach units only.
+ * ------------------------------------------------------------------------- */
+function AssignmentsView() {
+  const [items, setItems] = useState<Assignment[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    getAssignments()
+      .then((r) => setItems(r.items))
+      .catch((err) => setError(errorText(err)));
+  }, []);
+
+  return (
+    <div className="p-lg">
+      <h1 className="mb-md text-headline-lg font-bold text-on-background">Assignments</h1>
+      <States
+        loading={items === null}
+        error={error}
+        empty={!items?.length}
+        emptyText="No reteach units assigned yet. When your teacher assigns one, it appears here."
+      >
+        <ul className="space-y-sm">
+          {(items ?? []).map((a) => (
+            <li
+              key={a.id}
+              className="rounded-xl border border-outline-variant/20 bg-surface-container-lowest p-md shadow-sm"
+            >
+              <div className="flex items-baseline justify-between gap-sm">
+                <h2 className="text-body-md font-semibold text-on-surface">{a.title}</h2>
+                <span className="text-label-sm text-on-surface-variant">
+                  {a.assigned_at ? new Date(a.assigned_at).toLocaleDateString() : ""}
+                </span>
+              </div>
+              <p className="mt-xs whitespace-pre-wrap text-body-sm text-on-surface-variant">{a.body}</p>
+            </li>
+          ))}
+        </ul>
+      </States>
+    </div>
+  );
+}
+
+/* ---------------------------------------------------------------------------
+ * Settings -- language preference and logout, same semantics as the admin's.
+ * ------------------------------------------------------------------------- */
+function StudentSettingsView({ user, onUserChanged }: { user: User | null; onUserChanged: (u: User) => void }) {
+  const navigate = useNavigate();
+  const [langs, setLangs] = useState<{ code: string; label: string }[]>([]);
+  const [langError, setLangError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    getLanguages()
+      .then((r) => setLangs(r.items))
+      .catch((err) => setLangError(errorText(err)));
+  }, []);
+
+  async function changeLanguage(code: string) {
+    setLangError(null);
+    setBusy(true);
+    try {
+      onUserChanged(await updatePreferences(code));
+    } catch (err) {
+      setLangError(errorText(err));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function doLogout() {
+    try {
+      await logout();
+    } catch {
+      // token is unusable for anything real; drop it regardless
+    } finally {
+      clearToken();
+      navigate("/login", { replace: true });
+    }
+  }
+
+  return (
+    <div className="p-lg">
+      <h1 className="mb-md text-headline-lg font-bold text-on-background">Settings</h1>
+
+      <section className="mb-md rounded-xl border border-outline-variant/20 bg-surface-container-lowest p-md shadow-sm">
+        <p className="mb-sm text-headline-sm font-semibold text-on-surface">Language</p>
+        <p className="mb-sm text-body-sm text-on-surface-variant">
+          Questions are answered in the language you pick — ask in Hindi, get Hindi back.
+        </p>
+        <select
+          value={user?.preferred_language ?? "en"}
+          disabled={busy || !user}
+          onChange={(e) => changeLanguage(e.target.value)}
+          className="rounded-lg border border-outline-variant bg-white px-md py-sm text-body-md text-on-surface outline-none focus:border-forest-green"
+        >
+          {langs.map((l) => (
+            <option key={l.code} value={l.code}>
+              {l.label}
+            </option>
+          ))}
+        </select>
+        {langError && (
+          <p role="alert" className="mt-sm text-body-sm text-error">
+            {langError}
+          </p>
+        )}
+      </section>
+
+      <section className="rounded-xl border border-outline-variant/20 bg-surface-container-lowest p-md shadow-sm">
+        <p className="mb-sm text-headline-sm font-semibold text-on-surface">Session</p>
+        <p className="mb-sm text-body-sm text-on-surface-variant">
+          Logging out invalidates the session on the server, not just here.
+        </p>
+        <button
+          type="button"
+          onClick={doLogout}
+          className="rounded-lg border border-error/40 px-md py-xs text-label-md font-bold text-error hover:bg-error/10"
+        >
+          Log out
+        </button>
+      </section>
+    </div>
+  );
+}
+
+/* ---------------------------------------------------------------------------
+ * Shell
+ * ------------------------------------------------------------------------- */
 export default function Dashboard() {
-  const [activeSection, setActiveSection] = useState<DashboardSection>("Dashboard");
+  const [activeSection, setActiveSection] = useState<Section>("Dashboard");
+  const [user, setUser] = useState<User | null>(null);
+
+  useEffect(() => {
+    getMe()
+      .then(setUser)
+      .catch(() => setUser(null));
+  }, []);
 
   return (
     <div className="min-h-screen bg-background text-on-background">
@@ -87,8 +1235,6 @@ export default function Dashboard() {
 
           <div className="flex-1" />
 
-          {/* IMPORTANT:
-              This is intentionally the Assignments-page illustration. */}
           <div className="mt-auto border-t border-white/10 pt-4">
             <button
               aria-current={activeSection === "Settings" ? "page" : undefined}
@@ -100,7 +1246,7 @@ export default function Dashboard() {
               onClick={() => setActiveSection("Settings")}
               type="button"
             >
-              <Settings className="mr-sm h-5 w-5" />
+              <SettingsIcon className="mr-sm h-5 w-5 shrink-0" />
               Settings
             </button>
           </div>
@@ -121,513 +1267,31 @@ export default function Dashboard() {
           </div>
 
           <div className="flex items-center gap-md">
-            <button className="rounded-full p-xs text-on-surface-variant transition-colors hover:bg-surface-container">
-              <Bell className="h-5 w-5" />
-            </button>
-
-            <div className="flex items-center gap-sm border-l border-outline-variant pl-md">
-              <div className="hidden text-right sm:block">
-                <p className="font-headline-sm text-label-md leading-none font-bold text-on-surface">
-                  Alex Rivera
-                </p>
-                <p className="text-label-sm text-on-surface-variant">
-                  Grade 11 Student
-                </p>
-              </div>
-
-              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#1a3d34]">
-                <User className="h-[18px] w-[18px] text-white" />
-              </div>
+            <span className="text-body-sm font-semibold text-on-surface">
+              {user ? user.full_name : "…"}
+            </span>
+            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-forest-green text-label-md font-bold text-white">
+              {user ? user.full_name.slice(0, 1).toUpperCase() : "…"}
             </div>
           </div>
         </header>
 
-        {/* Page */}
-        <main className="min-h-screen bg-background pt-16">
-          <div className="flex w-full flex-col gap-lg p-lg">
-            <div className={activeSection === "Dashboard" ? "" : "hidden"}>
-            {/* Greeting */}
-            <div className="mb-md flex flex-col gap-xs">
-              <h1 className="font-display-lg text-headline-lg text-on-background">
-                Good morning, Alex!
-              </h1>
-              <p className="text-body-md text-on-surface-variant">
-                Here's your learning progress for Physics 101.
-              </p>
-            </div>
-
-            {/* Stats */}
-            <div className="mb-md grid grid-cols-1 gap-sm md:grid-cols-2 lg:grid-cols-4">
-              <StatCard
-                label="Open Gaps"
-                value="4"
-                icon={<AlertTriangle className="h-5 w-5 text-error" />}
-              />
-
-              <StatCard
-                label="Lessons Completed"
-                value="12"
-                icon={<CheckCircle className="h-5 w-5 text-secondary" />}
-              />
-
-              <StatCard
-                label="Practice Accuracy"
-                value="88%"
-                icon={<TrendingUp className="h-5 w-5 text-primary" />}
-                highlighted
-              />
-
-              <StatCard
-                label="Pending Assignments"
-                value="2"
-                icon={<ClipboardList className="h-5 w-5 text-outline" />}
-              />
-            </div>
-
-            {/* Main content + AI Tutor */}
-            <div className="grid grid-cols-1 gap-lg lg:grid-cols-12">
-              <div className="flex flex-col gap-lg lg:col-span-8">
-                {/* Up Next */}
-                <section className="group relative overflow-hidden rounded-xl border border-outline-variant/20 bg-surface-container-lowest p-md shadow-sm">
-                  <div className="absolute inset-0 bg-gradient-to-br from-primary to-transparent opacity-10 transition-opacity duration-500 group-hover:opacity-20" />
-
-                  <div className="relative z-10 flex flex-col gap-md">
-                    <div className="flex items-center justify-between">
-                      <span className="rounded bg-surface-variant/50 px-xs py-base text-label-sm tracking-wider text-on-surface-variant uppercase">
-                        Up Next
-                      </span>
-
-                      <span className="flex items-center gap-xs rounded-full bg-[#D6B34A] px-sm py-xs text-label-md text-on-surface">
-                        <CheckCircle className="h-4 w-4" />
-                        82% Syllabus Aligned
-                      </span>
-                    </div>
-
-                    <div>
-                      <h2 className="mb-xs text-headline-lg font-semibold text-on-surface">
-                        Circular Motion
-                      </h2>
-
-                      <p className="max-w-2xl text-body-md text-on-surface-variant">
-                        Dive into the mechanics of objects in uniform circular
-                        motion. We'll cover centripetal acceleration, angular
-                        velocity, and practical applications in planetary
-                        orbits.
-                      </p>
-                    </div>
-
-                    <div className="mt-sm flex items-center gap-md">
-                      <button className="flex items-center gap-xs rounded-lg bg-primary px-lg py-sm text-body-md text-on-primary transition-colors hover:bg-primary/90">
-                        <Play className="h-5 w-5" />
-                        Resume Lesson
-                      </button>
-
-                      <div className="flex items-center gap-sm">
-                        <div className="h-2 w-32 overflow-hidden rounded-full bg-surface-variant">
-                          <div className="h-full w-[60%] rounded-full bg-secondary" />
-                        </div>
-
-                        <span className="text-label-sm text-on-surface-variant">
-                          60% Complete
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                </section>
-
-                {/* My Gaps */}
-                <section className="rounded-xl border border-outline-variant/20 bg-surface-container-lowest shadow-sm">
-                  <div className="flex items-center justify-between border-b border-outline-variant/20 p-md">
-                    <h3 className="text-headline-sm font-semibold text-on-surface">
-                      My Gaps
-                    </h3>
-                    <span className="text-label-sm text-on-surface-variant uppercase">
-                      3 Identified Topics
-                    </span>
-                  </div>
-
-                  <div>
-                    <GapRow
-                      title="Newton's Third Law"
-                      description="Struggling with action-reaction pair identification."
-                      highlighted
-                    />
-
-                    <GapRow
-                      title="Friction & Force"
-                      description="Difficulty distinguishing static vs. kinetic friction."
-                    />
-
-                    <GapRow
-                      title="Work-Energy Theorem"
-                      description="Low accuracy in practice problems involving non-conservative forces."
-                    />
-                  </div>
-                </section>
-
-                {/* Recent Activity */}
-                <section className="rounded-xl border border-outline-variant/20 bg-surface-container-lowest p-md shadow-sm">
-                  <h3 className="mb-md text-headline-sm font-semibold text-on-surface">
-                    Recent Activity
-                  </h3>
-
-                  <div className="relative flex flex-col gap-md">
-                    <div className="absolute bottom-4 left-4 top-4 w-px bg-outline-variant/30" />
-
-                    <Activity
-                      icon={<Check className="h-4 w-4" />}
-                      iconClass="bg-secondary text-on-secondary"
-                      title="Completed:"
-                      activity="Kinematics Quiz"
-                      detail="Score: 92% • 2 hours ago"
-                    />
-
-                    <Activity
-                      icon={<Edit3 className="h-4 w-4" />}
-                      iconClass="bg-surface-container-highest text-on-surface-variant"
-                      title="Attempted:"
-                      activity="Gravity Practice"
-                      detail="15/20 Correct • Yesterday"
-                    />
-                  </div>
-                </section>
-              </div>
-
-              {/* AI Tutor */}
-              <section className="flex h-[800px] flex-col overflow-hidden rounded-xl border border-outline-variant/20 bg-surface-container-lowest shadow-lg lg:col-span-4">
-                <div className="flex shrink-0 items-center gap-sm bg-primary p-sm text-on-primary">
-                  <Sparkles className="h-5 w-5" />
-
-                  <div>
-                    <h3 className="text-body-md font-semibold">
-                      AI Tutor
-                    </h3>
-                    <p className="text-label-sm opacity-80">
-                      Physics 101 Assistant
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex-1 overflow-y-auto bg-surface-container-low p-md">
-                  <div className="flex flex-col gap-md">
-                    <TutorMessage user>
-                      Explain centripetal force.
-                    </TutorMessage>
-
-                    <TutorMessage>
-                      <p>
-                        Centripetal force is the net force that acts on an
-                        object to keep it moving along a circular path. It is
-                        always directed towards the center of curvature of the
-                        path.
-                      </p>
-
-                      <div className="mt-sm rounded bg-white/10 p-xs">
-                        <span className="block text-label-sm opacity-70">
-                          CITATION
-                        </span>
-                        <span className="text-body-sm font-medium">
-                          Concepts of Physics, Vol 1, p.143
-                        </span>
-                      </div>
-
-                      <span className="mt-sm inline-flex items-center gap-xs rounded bg-secondary-container px-xs py-base text-label-sm text-on-secondary-container">
-                        <BookOpen className="h-3.5 w-3.5" />
-                        Syllabus Aligned
-                      </span>
-                    </TutorMessage>
-
-                    <TutorMessage user>
-                      Can you solve question 5 from the homework?
-                    </TutorMessage>
-
-                    <div className="flex flex-col items-start">
-                      <div className="max-w-[90%] rounded-2xl rounded-tl-sm border-l-4 border-primary bg-surface-variant p-sm shadow-sm">
-                        <div className="flex items-center gap-xs text-label-md text-primary">
-                          <Info className="h-4 w-4" />
-                          ASSIGNMENT DETECTED
-                        </div>
-
-                        <p className="mt-xs text-body-sm">
-                          I can't solve graded questions directly, but I can
-                          offer a hint! Consider the conservation of energy
-                          principle for this setup. Would you like me to
-                          explain that concept?
-                        </p>
-                      </div>
-                    </div>
-
-                    <TutorMessage user>
-                      What about string theory?
-                    </TutorMessage>
-
-                    <div className="flex items-start gap-sm">
-                      <Info className="mt-0.5 h-5 w-5 shrink-0 text-amber-600" />
-
-                      <p className="rounded-2xl rounded-tl-sm border border-amber-400/50 bg-amber-50 p-sm text-body-sm text-amber-900 shadow-sm">
-                        I don't have approved material on this topic yet. My
-                        focus is strictly on your current syllabus.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="shrink-0 border-t border-outline-variant/20 bg-surface p-sm">
-                  <div className="flex items-center rounded-full border border-outline-variant/30 bg-surface-container px-sm py-xs transition-colors focus-within:border-secondary">
-                    <input
-                      type="text"
-                      placeholder="Ask a question..."
-                      className="w-full bg-transparent px-sm py-xs text-body-md text-on-surface outline-none placeholder:text-on-surface-variant/60"
-                    />
-
-                    <button className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#D6B34A] text-[#1b1c17] transition-colors hover:bg-[#D6B34A]/90">
-                      <Send className="h-5 w-5" />
-                    </button>
-                  </div>
-                </div>
-              </section>
-            </div>
-            </div>
-            {activeSection !== "Dashboard" && <DashboardSectionView section={activeSection} />}
-          </div>
+        <main className="pt-16">
+          {activeSection === "Dashboard" && (
+            <HomeView user={user} goto={setActiveSection} />
+          )}
+          {activeSection === "My Course" && <MyCourseView />}
+          {activeSection === "Diagnostic" && <DiagnosticView goto={setActiveSection} />}
+          {activeSection === "My Gaps" && <GapsView />}
+          {activeSection === "Lessons" && <LessonsView />}
+          {activeSection === "Practice" && <PracticeView />}
+          {activeSection === "Ask Tutor" && <TutorView />}
+          {activeSection === "Assignments" && <AssignmentsView />}
+          {activeSection === "Settings" && (
+            <StudentSettingsView user={user} onUserChanged={setUser} />
+          )}
         </main>
       </div>
-    </div>
-  );
-}
-
-function DashboardSectionView({ section }: { section: Exclude<DashboardSection, "Dashboard"> }) {
-  const content: Record<Exclude<DashboardSection, "Dashboard">, { title: string; description: string; items: { title: string; detail: string; action: string }[] }> = {
-    "My Course": {
-      title: "My Course",
-      description: "Your Physics 101 syllabus and learning progress.",
-      items: [
-        { title: "Physics 101", detail: "12 of 18 lessons completed", action: "Continue course" },
-        { title: "Course resources", detail: "4 approved books and reference materials", action: "View resources" },
-      ],
-    },
-    Diagnostic: {
-      title: "Diagnostic",
-      description: "Find prerequisite gaps and build your learning path.",
-      items: [
-        { title: "Prerequisite diagnostic", detail: "A quick check of your current understanding", action: "Start diagnostic" },
-        { title: "Latest result", detail: "3 concepts need another look", action: "Review result" },
-      ],
-    },
-    "My Gaps": {
-      title: "My Gaps",
-      description: "Topics to revisit based on your diagnostic and practice work.",
-      items: [
-        { title: "Newton's Third Law", detail: "Action-reaction pair identification", action: "Start lesson" },
-        { title: "Friction & Force", detail: "Static versus kinetic friction", action: "Start lesson" },
-        { title: "Work-Energy Theorem", detail: "Non-conservative force problems", action: "Start lesson" },
-      ],
-    },
-    Lessons: {
-      title: "Lessons",
-      description: "Continue learning with syllabus-aligned lessons.",
-      items: [
-        { title: "Circular Motion", detail: "60% complete · 18 minutes remaining", action: "Resume lesson" },
-        { title: "Gravitation", detail: "Next lesson · Ready to begin", action: "Start lesson" },
-      ],
-    },
-    Practice: {
-      title: "Practice",
-      description: "Build confidence with targeted questions.",
-      items: [
-        { title: "Newton's Laws practice", detail: "10 questions · Focus: identified gaps", action: "Start practice" },
-        { title: "Gravity practice", detail: "15 of 20 correct", action: "Review attempt" },
-      ],
-    },
-    "Ask Tutor": {
-      title: "Ask Tutor",
-      description: "Ask about approved course material and receive cited explanations.",
-      items: [
-        { title: "Continue your conversation", detail: "Your tutor is ready to explain Physics 101", action: "Open tutor" },
-        { title: "Suggested question", detail: "How does centripetal acceleration work?", action: "Ask this" },
-      ],
-    },
-    Assignments: {
-      title: "Assignments",
-      description: "Track your upcoming and completed coursework.",
-      items: [
-        { title: "Circular motion worksheet", detail: "Due tomorrow · Not started", action: "View assignment" },
-        { title: "Kinematics quiz", detail: "Completed · Score: 92%", action: "Review score" },
-      ],
-    },
-    Settings: {
-      title: "Settings",
-      description: "Manage your profile and learning preferences.",
-      items: [
-        { title: "Profile", detail: "Alex Rivera · Grade 11 Student", action: "Edit profile" },
-        { title: "Language", detail: "English · Hindi available", action: "Change language" },
-      ],
-    },
-  };
-
-  const current = content[section];
-
-  return (
-    <section className="w-full max-w-4xl">
-      <div className="mb-lg">
-        <p className="text-label-sm font-bold tracking-widest text-secondary uppercase">Student workspace</p>
-        <h1 className="mt-xs text-headline-lg font-semibold text-on-background">{current.title}</h1>
-        <p className="mt-xs text-body-md text-on-surface-variant">{current.description}</p>
-      </div>
-      <div className="grid gap-md md:grid-cols-2">
-        {current.items.map((item) => (
-          <article className="border border-outline-variant/30 bg-surface-container-lowest p-lg shadow-sm" key={item.title}>
-            <h2 className="text-headline-sm font-semibold text-on-surface">{item.title}</h2>
-            <p className="mt-sm text-body-md text-on-surface-variant">{item.detail}</p>
-            <button className="mt-lg flex items-center gap-xs bg-primary px-md py-sm text-body-sm font-semibold text-on-primary transition-colors hover:bg-secondary" type="button">
-              {item.action}
-              <ArrowRight className="h-4 w-4" />
-            </button>
-          </article>
-        ))}
-      </div>
-    </section>
-  );
-}
-
-function StatCard({
-  label,
-  value,
-  icon,
-  highlighted = false,
-}: {
-  label: string;
-  value: string;
-  icon: ReactNode;
-  highlighted?: boolean;
-}) {
-  return (
-    <div
-      className={`relative flex flex-col gap-sm overflow-hidden rounded-xl border border-outline-variant/20 bg-surface-container-lowest p-md shadow-sm ${
-        highlighted ? "" : ""
-      }`}
-    >
-      {highlighted && (
-        <div className="absolute inset-0 bg-gradient-to-br from-primary to-transparent opacity-10" />
-      )}
-
-      <div className="relative z-10 flex items-center justify-between">
-        <span className="text-label-sm text-on-surface-variant uppercase">
-          {label}
-        </span>
-        {icon}
-      </div>
-
-      <div
-        className={`relative z-10 text-display-lg ${
-          highlighted ? "text-primary" : "text-on-surface"
-        }`}
-      >
-        {value}
-      </div>
-    </div>
-  );
-}
-
-function GapRow({
-  title,
-  description,
-  highlighted = false,
-}: {
-  title: string;
-  description: string;
-  highlighted?: boolean;
-}) {
-  return (
-    <div className="group flex items-center justify-between border-b border-outline-variant/10 p-md transition-colors hover:bg-surface-container-low last:border-b-0">
-      <div className="flex items-start gap-sm">
-        <div className="mt-xs flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-error-container text-on-error-container">
-          <AlertTriangle className="h-[18px] w-[18px]" />
-        </div>
-
-        <div>
-          <h4 className="text-body-lg font-semibold text-on-surface">
-            {title}
-          </h4>
-          <p className="text-body-sm text-on-surface-variant">
-            {description}
-          </p>
-        </div>
-      </div>
-
-      <button
-        className={`flex items-center gap-xs rounded px-sm py-xs text-body-sm transition-opacity ${
-          highlighted
-            ? "bg-[#D6B34A] text-[#1b1c17]"
-            : "bg-surface-container-highest text-on-surface"
-        } opacity-0 group-hover:opacity-100`}
-      >
-        Start Lesson
-        <ArrowRight className="h-4 w-4" />
-      </button>
-    </div>
-  );
-}
-
-function Activity({
-  icon,
-  iconClass,
-  title,
-  activity,
-  detail,
-}: {
-  icon: React.ReactNode;
-  iconClass: string;
-  title: string;
-  activity: string;
-  detail: string;
-}) {
-  return (
-    <div className="relative z-10 flex items-start gap-md">
-      <div
-        className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${iconClass}`}
-      >
-        {icon}
-      </div>
-
-      <div>
-        <p className="text-body-md">
-          <span className="font-semibold">{title}</span> {activity}
-        </p>
-        <p className="text-body-sm text-on-surface-variant">{detail}</p>
-      </div>
-    </div>
-  );
-}
-
-function TutorMessage({
-  children,
-  user = false,
-}: {
-  children: ReactNode;
-  user?: boolean;
-}) {
-  return (
-    <div className={`flex flex-col gap-xs ${user ? "items-end" : "items-start"}`}>
-      <div
-        className={`max-w-[90%] rounded-2xl px-md py-sm shadow-sm ${
-          user
-            ? "rounded-tr-sm border border-outline-variant/40 bg-surface text-on-surface"
-            : "rounded-tl-sm bg-secondary text-on-secondary"
-        }`}
-      >
-        {typeof children === "string" ? (
-          <p className="text-body-md">{children}</p>
-        ) : (
-          <div className="text-body-md">{children}</div>
-        )}
-      </div>
-
-      {user && (
-        <span className="mr-xs text-label-sm text-on-surface-variant">
-          10:42 AM
-        </span>
-      )}
     </div>
   );
 }
