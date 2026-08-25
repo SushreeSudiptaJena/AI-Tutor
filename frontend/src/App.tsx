@@ -7,6 +7,7 @@ import StudentLogin from "@/pages/auth/Login";
 import OnboardingCourse from "@/pages/student/OnboardingCourse";
 import OnboardingDiagnostic from "@/pages/student/OnboardingDiagnostic";
 import Dashboard from "@/pages/student/Dashboard";
+import TeacherDashboard from "@/pages/teacher/TeacherDashboard";
 
 export default function App() {
   return (
@@ -20,6 +21,7 @@ export default function App() {
         <Route path="/onboarding/course" element={<OnboardingCourse />} />
         <Route path="/onboarding/diagnostic" element={<OnboardingDiagnostic />} />
         <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/teacher" element={<TeacherDashboard />} />
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
     </BrowserRouter>
