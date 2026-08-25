@@ -2,6 +2,8 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import RequireAuth from "@/components/RequireAuth";
 import Login from "@/pages/auth/Login";
 import StudentLogin from "@/pages/auth/StudentLogin";
+import Signup from "@/pages/auth/Signup";
+import ForgotPassword from "@/pages/auth/ForgotPassword";
 import AdminDashboard from "@/pages/admin/AdminDashboard";
 import Onboarding1 from "@/pages/onboarding/Onboarding1";
 import Onboarding2 from "@/pages/onboarding/Onboarding2";
@@ -19,6 +21,14 @@ export default function App() {
             POST /auth/login through lib/api. */}
         <Route path="/login" element={<StudentLogin />} />
         <Route path="/admin/login" element={<Login />} />
+        <Route path="/signup" element={<Signup />} />
+
+        {/*
+          auth-002: forgot-password is UI-only BY CONTRACT -- this page must
+          never issue a network request. There is no backend endpoint and that
+          is a recorded decision, not a gap.
+        */}
+        <Route path="/forgot-password" element={<ForgotPassword />} />
 
         <Route path="/onboarding/1" element={<Onboarding1 />} />
         <Route path="/onboarding/2" element={<Onboarding2 />} />
