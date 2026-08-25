@@ -173,3 +173,107 @@ export const updatePreferences = (preferred_language: string) =>
     method: "PATCH",
     body: { preferred_language },
   });
+
+// --- admin (admin-001 .. admin-006) -----------------------------------
+//
+// Shapes mirror `_course_out`, `_material_out` and the audit-log row in
+// backend/app/routers/admin.py. Every one of these is admin-only server-side:
+// a non-admin token gets 403, which is the guard, not the UI.
+
+export type Department = { id: number; name: string };
+
+export type Course = {
+  id: number;
+  code: string;
+  title: string;
+  department_id: number | null;
+  prerequisite_courses: { id: number; code: string; title: string }[];
+  semester: number | null;
+  admission_batches: number[];
+  term_start: string | null;
+  term_end: string | null;
+};
+
+/** `kind` is the closed list the backend accepts -- see admin-007. */
+export type MaterialKind = "textbook" | "syllabus" | "assignment" | "reference";
+
+export type Material = {
+  id: number;
+  course_id: number;
+  title: string;
+  kind: MaterialKind;
+  version: number;
+  status: "active" | "archived";
+  page_count: number | null;
+  uploaded_by: string | null;
+  uploaded_at: string | null;
+  ingest_status: string;
+  chunk_count: number;
+};
+
+export type AuditRow = {
+  id: number;
+  actor_email: string;
+  action: string;
+  target: string;
+  at: string;
+  detail: Record<string, unknown>;
+  /** admin-004: a plain sentence. Render this, keep the rest behind details. */
+  summary: string;
+};
+
+export const listDepartments = () =>
+  api<{ items: Department[] }>("/admin/departments");
+
+export const listCourses = () => api<{ items: Course[] }>("/admin/courses");
+
+export const getCourse = (courseId: number) =>
+  api<Course>(`/admin/courses/${courseId}`);
+
+export const listMaterials = (courseId: number, includeArchived = false) =>
+  api<{ items: Material[] }>(
+    `/admin/courses/${courseId}/materials?include_archived=${includeArchived}`,
+  );
+
+/** multipart. `chapter_map` is optional and omitted when empty. */
+export const uploadMaterial = (
+  courseId: number,
+  file: File,
+  kind: MaterialKind,
+  title: string,
+  chapterMap?: string,
+) => {
+  const form = new FormData();
+  form.append("file", file);
+  form.append("kind", kind);
+  form.append("title", title);
+  if (chapterMap) form.append("chapter_map", chapterMap);
+  return upload<Material>(`/admin/courses/${courseId}/materials`, form);
+};
+
+export const archiveMaterial = (materialId: number) =>
+  api<Material>(`/admin/materials/${materialId}/archive`, { method: "POST" });
+
+/**
+ * admin-006. Guarded server-side: `409 mid_term` when the material is already
+ * ingested and the course is inside its teaching window. Callers must surface
+ * that message rather than swallowing it -- it tells the admin to archive.
+ */
+export const deleteMaterial = (materialId: number) =>
+  api<void>(`/admin/materials/${materialId}`, { method: "DELETE" });
+
+export const listAuditLog = (opts: {
+  limit?: number;
+  offset?: number;
+  actor?: string;
+  action?: string;
+  includeSystem?: boolean;
+} = {}) => {
+  const q = new URLSearchParams();
+  q.set("limit", String(opts.limit ?? 50));
+  q.set("offset", String(opts.offset ?? 0));
+  if (opts.actor) q.set("actor", opts.actor);
+  if (opts.action) q.set("action", opts.action);
+  if (opts.includeSystem) q.set("include_system", "true");
+  return api<{ items: AuditRow[]; total: number }>(`/admin/audit-log?${q}`);
+};

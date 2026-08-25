@@ -64,6 +64,28 @@
   --text-label-md--line-height: 16px;
   --text-label-sm: 11px;
   --text-label-sm--line-height: 14px;
+
+  /* ------------------------------------------------------------------
+   * Admin-surface tokens (restored during the student-UI merge).
+   * The student screens bring their own scale (--spacing-xs..xl,
+   * --font-family-*), which replaced these; the admin dashboard and the
+   * auth screens still use them, so both scales now live side by side.
+   * ------------------------------------------------------------------ */
+  --spacing-unit: 8px;
+  --spacing-card-inner-padding: 24px;
+  --spacing-container-padding: 32px;
+  --spacing-section-gap: 48px;
+  --spacing-gutter: 24px;
+
+  --font-sans: 'Hanken Grotesk', system-ui, sans-serif;
+  --font-serif: 'Newsreader', serif;
+  --font-headline-sm: 'Hanken Grotesk', system-ui, sans-serif;
+  --font-headline-md: 'Hanken Grotesk', system-ui, sans-serif;
+  --font-body-md: 'Hanken Grotesk', system-ui, sans-serif;
+  --font-body-lg: 'Hanken Grotesk', system-ui, sans-serif;
+  --font-label-md: 'Hanken Grotesk', system-ui, sans-serif;
+  --font-label-sm: 'Hanken Grotesk', system-ui, sans-serif;
+
 }
 
 :root { color-scheme: light; }
@@ -77,9 +99,73 @@ a:focus-visible, button:focus-visible, input:focus-visible { outline: 2px solid 
 ::-webkit-scrollbar { display: none; }
 
 @media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after { transition-duration: 0.001ms !important; animation-duration: 0.001ms !important; }
+  * {
+    transition-duration: 0.001ms !important;
+    animation-duration: 0.001ms !important;
+  }
 }
-@theme {
+/* ---------------------------------------------------------------------------
+ * Design-system classes for the admin surface.
+ *
+ * These were injected at runtime by `useDesignSystemBootstrap()` in
+ * AdminDashboard.tsx, alongside a <script src="cdn.tailwindcss.com"> that
+ * rebuilt the whole theme in the browser. Both are gone now: every colour,
+ * spacing and type token that script configured is already in the @theme
+ * block above, so the CDN was generating a second, competing stylesheet --
+ * and doing it over the network, which meant the entire admin dashboard
+ * rendered unstyled the moment the wifi dropped. On a demo whose offline
+ * story is the whole point, the UI must not be the thing that needs the
+ * internet.
+ * ------------------------------------------------------------------------- */
+
+.ns-glass-card {
+  background: rgba(18, 20, 20, 0.7);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.ns-glass-panel {
+  background: rgba(36, 49, 56, 0.4);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.ns-ai-accent-glow {
+  box-shadow: 0 0 20px rgba(122, 177, 57, 0.3);
+}
+
+.ns-btn-primary {
+  background: linear-gradient(135deg, #1e3600, #2e4f00);
+  border: 1px solid rgba(157, 215, 91, 0.2);
+  color: #b8f473;
+}
+
+.ns-btn-primary:hover {
+  background: linear-gradient(135deg, #2e4f00, #1e3600);
+  box-shadow: 0 0 15px rgba(157, 215, 91, 0.2);
+}
+
+.ns-custom-scrollbar::-webkit-scrollbar { width: 8px; height: 8px; }
+.ns-custom-scrollbar::-webkit-scrollbar-track { background: rgba(255, 255, 255, 0.02); border-radius: 4px; }
+.ns-custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.1); border-radius: 4px; }
+.ns-custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.2); }
+
+/* ---------------------------------------------------------------------------
+ * Teacher-scope tokens (111d770's converted Stitch screens).
+ *
+ * These arrived as a SECOND global @theme, which redefined shared token
+ * names (--color-tertiary flipped the student lime to dark brown,
+ * --font-headline-md swapped Manrope for Montserrat) and bled into every
+ * other screen -- the same collision the student merge had. Same fix as
+ * .admin-scope below: the whole teacher palette lives on a wrapper class
+ * that TeacherDashboard puts on its root, so CSS vars resolve at the
+ * element and the closest definition wins. Only genuinely new, unshared
+ * tokens (radius, sidebar width) could safely have stayed global; they live
+ * here too so the teacher screens have one home.
+ * ------------------------------------------------------------------------- */
+.teacher-scope {
   --color-on-error: #ffffff;
   --color-tertiary: #2a1e00;
   --color-on-primary-container: #83a4a3;
@@ -144,16 +230,6 @@ a:focus-visible, button:focus-visible, input:focus-visible { outline: 2px solid 
 .font-label-sm { font-family: "Inter", sans-serif; font-size: 12px; line-height: 16px; font-weight: 600; }
 .font-body-md { font-family: "Inter", sans-serif; font-size: 16px; line-height: 24px; font-weight: 400; }
 .font-display-lg { font-family: "Montserrat", sans-serif; font-size: 48px; line-height: 56px; letter-spacing: -0.02em; font-weight: 700; }
-.text-headline-md { font-size: 24px; line-height: 32px; }
-.text-label-md { font-size: 14px; line-height: 20px; }
-.text-label-sm { font-size: 12px; line-height: 16px; }
-.text-body-md { font-size: 16px; line-height: 24px; }
-.text-display-lg { font-size: 48px; line-height: 56px; }
-
-/* a11y-001 hooks: the toggles set these classes on <html>. */
-html.text-lg-mode { font-size: 18px; }
-html.text-xl-mode { font-size: 21px; }
-html.high-contrast { filter: contrast(1.35); }
 
 @keyframes dash {
   to { stroke-dashoffset: -100; }

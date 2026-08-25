@@ -1,7 +1,7 @@
 // USE_MOCK lets auth pages be built/demoed before the backend or tunnel is
 // reachable (handbook section 9.4). Flip to false once your VITE_API_BASE
 // points at a live backend and auth-001 is verified against it.
-export const USE_MOCK = true;
+export const USE_MOCK = false;
 
 import type { User, Role } from "./api";
 

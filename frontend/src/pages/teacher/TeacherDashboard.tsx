@@ -49,7 +49,10 @@ export default function TeacherDashboard() {
   }
 
   return (
-    <div onClick={handleNavigation}>
+    /* teacher-scope carries the teacher palette (see index.css): the merged
+       @theme serves three design systems now, and a shared token name must
+       resolve to the definition made for THIS surface, not the last one. */
+    <div className="teacher-scope" onClick={handleNavigation}>
       <ActivePage />
     </div>
   );
