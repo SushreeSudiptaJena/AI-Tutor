@@ -1,14 +1,16 @@
-<!DOCTYPE html><html class="dark" lang="en" style=""><head>
-<meta charset="utf-8">
-<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
 <title>What will you use this for? - Nocturnal Scholar</title>
 <!-- Material Symbols -->
-<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
 <!-- Google Fonts: Hanken Grotesk -->
-<link href="https://fonts.googleapis.com" rel="preconnect">
-<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect">
-<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:ital,wght@0,100..900;1,100..900&amp;display=swap" rel="stylesheet"><link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&amp;display=swap" rel="stylesheet">
-<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:ital,wght@0,100..900;1,100..900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
 <!-- Tailwind CSS -->
 <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
 <!-- Tailwind Theme Config -->
@@ -122,12 +124,12 @@
 
         .glass-card.selected {
             background: rgba(184, 244, 115, 0.08); /* tertiary-fixed tint */
-            border-color: #9dd75b;
+            border-color: theme('colors.tertiary');
             box-shadow: 0 0 30px rgba(184, 244, 115, 0.15);
         }
         
         .btn-primary-glow {
-            background: linear-gradient(135deg, #9dd75b 0%, #70a62f 100%);
+            background: linear-gradient(135deg, theme('colors.tertiary') 0%, theme('colors.on-tertiary-container') 100%);
             box-shadow: 0 4px 20px rgba(184, 244, 115, 0.3);
             transition: all 0.3s ease;
         }
@@ -138,7 +140,7 @@
         }
     </style>
 </head>
-<body class="bg-background text-on-background min-h-screen flex flex-col items-center justify-center font-body-md overflow-x-hidden selection:bg-tertiary selection:text-on-tertiary relative"><div class="fixed top-0 left-0 w-full h-1 bg-surface-container z-50"><div class="h-full w-full bg-tertiary" style="background-color: #7AB139;"></div></div>
+<body class="bg-background text-on-background min-h-screen flex flex-col items-center justify-center font-body-md overflow-x-hidden selection:bg-tertiary selection:text-on-tertiary relative">
 <!-- TopAppBar Shell Suppressed for Linear/Transactional Flow -->
 <!-- Main Content Container -->
 <main class="w-full max-w-4xl px-container-padding py-section-gap flex flex-col items-center justify-center flex-grow z-10 relative">
@@ -147,10 +149,10 @@
 <span class="text-on-surface-variant font-label-md text-label-md tracking-widest uppercase">Step 2 of 2</span>
 </div>
 <!-- Heading -->
-<div class="text-center max-w-2xl mb-8">
+<div class="text-center mb-12 max-w-2xl">
 <!-- Note: User requested elegant serif, but design system dictates Hanken Grotesk. Sticking to design system for consistency but using display typography. -->
-<h1 class="font-display-lg text-display-lg text-primary tracking-tight mb-2" style="font-family: &quot;DM Serif Display&quot;, serif; font-weight: 700;">What will you use this for?</h1>
-
+<h1 class="font-display-lg text-display-lg text-primary tracking-tight mb-4">What will you use this for?</h1>
+<p class="font-body-lg text-body-lg text-on-surface-variant">Select all that apply to help us tailor your AI-assisted research environment.</p>
 </div>
 <!-- Selection Grid -->
 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-gutter w-full mb-section-gap">
@@ -185,16 +187,18 @@
 <span class="font-headline-sm text-headline-sm text-on-surface">Other</span>
 </button>
 </div>
-<footer class="w-full flex flex-col items-center justify-center pb-8 gap-4 px-container-padding mt-8 z-20"><button class="bg-tertiary text-on-tertiary font-label-md text-label-md px-8 py-3 rounded-full w-64 text-center flex justify-center items-center gap-2 btn-primary-glow" style="background-color: #7AB139;">Continue<span class="material-symbols-outlined text-xl">arrow_forward</span></button><a class="text-label-sm font-label-sm text-on-surface-variant hover:text-on-surface transition-colors underline underline-offset-4 decoration-on-surface-variant/50 hover:decoration-on-surface" href="#">Skip for now</a><p class="text-label-sm font-label-sm text-on-surface-variant/50 mt-2">© 2024 Nocturnal Scholar.</p></footer></main>
+</main>
 <!-- Footer Component (Shared JSON execution) -->
 <!-- Content: exact strings. Styles: style_ keys mapped. -->
-
-
-
-
-
-
-
-
-
+<footer class="bg-transparent fixed bottom-0 w-full flex flex-col items-center justify-center pb-8 gap-2 z-20">
+<!-- Primary Action -->
+<button class="btn-primary-glow text-on-tertiary font-label-md text-label-md px-8 py-3 rounded-full mb-4 w-64 text-center flex justify-center items-center gap-2">
+            Continue
+            <span class="material-symbols-outlined text-xl" data-icon="arrow_forward" style="font-variation-settings: 'FILL' 0;">arrow_forward</span>
+</button>
+<!-- Skip Link -->
+<a class="text-on-surface-variant dark:text-on-surface-variant hover:text-on-surface dark:hover:text-on-surface font-label-sm text-label-sm transition-colors Active: opacity-80 underline" href="#">Skip for now</a>
+<!-- Copyright -->
+<span class="text-on-surface-variant dark:text-on-surface-variant font-label-sm text-label-sm mt-4 opacity-50">© 2024 Nocturnal Scholar.</span>
+</footer>
 </body></html>
