@@ -483,3 +483,52 @@ def test_a_single_oversized_source_is_still_included():
     """The budget must not produce an answered response with zero citations."""
     context, cites = retrieval.grounding([hit(0.9, text="x" * 9000)], max_chars=1000)
     assert len(cites) == 1 and context
+
+
+# ---------------------------------------------------------------------------
+# ingest-003 -- a half-ingested book must not be retrievable
+# ---------------------------------------------------------------------------
+
+def test_retrieval_requires_the_material_to_be_finished_not_just_active():
+    """`status` says whether a material is CURRENT. `ingest_status` says
+    whether it is FINISHED. Filtering only on the first meant an interrupted
+    813-page textbook served live answers out of the 320 chunks that happened
+    to land -- with perfectly formed page citations."""
+    import inspect
+
+    from app.services import retrieval
+
+    source = inspect.getsource(retrieval._search)
+    assert 'Material.ingest_status == "complete"' in source
+    assert 'Material.status == "active"' in source
+
+
+def test_the_completeness_guard_is_not_tied_to_include_archived():
+    """Asking for archived material is a deliberate admin choice; being served
+    a half-written one is never a choice. The two filters must not share a
+    branch, or `include_archived=True` would quietly re-admit partial books."""
+    import inspect
+
+    from app.services import retrieval
+
+    source = inspect.getsource(retrieval._search)
+    guard = source.index('Material.ingest_status == "complete"')
+    branch = source.index("if not include_archived:")
+    tail = source[branch:guard]
+    # the guard sits AFTER the branch closes, at function indentation
+    assert '\n    stmt = stmt.where(Material.ingest_status == "complete")' in source, (
+        "the completeness guard must apply unconditionally, not inside the "
+        "include_archived branch"
+    )
+    assert guard > branch
+
+
+def test_the_course_summary_only_advertises_finished_books():
+    """Otherwise 'what is in scope for you to study' lists a partial book with
+    the chapters that landed and a page range covering the ones that did not."""
+    import inspect
+
+    from app.routers import student
+
+    source = inspect.getsource(student.course_summary)
+    assert 'Material.ingest_status == "complete"' in source

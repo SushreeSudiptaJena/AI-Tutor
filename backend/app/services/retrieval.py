@@ -103,6 +103,19 @@ def _search(
         # student's current book does not have.
         stmt = stmt.where(Material.status == "active")
 
+    # ingest-003. `status` says whether the material is CURRENT; this says
+    # whether it is FINISHED, and they are not the same question.
+    #
+    # An ingest writes its chunks in committed batches with ingest_status
+    # 'running' throughout, so a process killed midway leaves a real, active,
+    # partially-populated book behind. Filtering only on `status` meant those
+    # chunks were retrievable: an interrupted 813-page textbook served live
+    # answers out of the 320 chunks that happened to land, with perfectly
+    # formed page citations and no indication anywhere that the other 1,733
+    # were missing. A partial book is worse than an absent one -- an absent
+    # book refuses honestly, a partial one answers wrongly and looks right.
+    stmt = stmt.where(Material.ingest_status == "complete")
+
     return [
         Hit(
             chunk_id=chunk.id,

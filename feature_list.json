@@ -838,17 +838,20 @@
       "area": "ingest",
       "title": "A half-ingested book is live in retrieval",
       "user_visible_behavior": "After an interrupted ingest, a student gets answers and citations out of whatever fraction of the book got written before it stopped -- and nothing anywhere says the book is incomplete.",
-      "status": "not_started",
+      "status": "passing",
       "depends_on": [],
       "demo_mode": "live",
       "verification": [
-        "Interrupt an ingest partway, then search that course: the partial material returns NO hits.",
-        "retrieval excludes ingest_status != 'complete', alongside its existing Material.status == 'active' filter.",
-        "An interrupted ingest leaves the material in a state a re-run can recover from, and chunk_count matches the rows actually written.",
-        "Re-running after an interruption does not duplicate chunks."
+        "A material with ingest_status='running' and real chunks returns ZERO retrieval hits, even though its status is 'active'.",
+        "include_archived=True does not re-admit it -- the completeness guard is unconditional, not part of that branch.",
+        "Flipping the SAME material to 'complete' makes it retrievable, so the guard is about completeness rather than hiding things.",
+        "GET /student/course-summary does not advertise an unfinished book either.",
+        "ingest_pdfs.py --doctor reports unfinished ingests and any chunk_count that drifted from the rows present; without --fix it changes nothing.",
+        "--doctor --fix deletes the partial material and its chunks, and CORRECTS a drifted chunk_count rather than deleting that material.",
+        "python -m pytest backend/tests -q passes and ./init.sh still passes."
       ],
-      "evidence": null,
-      "notes": "FOUND 2026-08-25, by killing the DLD textbook ingest partway and then searching. retrieval._search filters on Material.status == 'active' and NEVER looks at ingest_status, so material 19 -- ingest_status='running', 320 of 2053 chunks written, chunk_count still 0 -- answered a live DLD query with citations at p.130-131. Two faults, one visible: (1) retrieval has no completeness guard; (2) an interrupted ingest leaves ingest_status='running' with orphan chunks and chunk_count=0, and nothing detects or cleans it. The partial material was deleted by hand. This is worse than ingest-002 because a TEXTBOOK is quotable -- it puts real page-anchored citations from a fraction of a book under 'Show Source', which looks exactly like a working citation. Fix the retrieval guard first; it is the one that is student-visible."
+      "evidence": "evidence/ingest-003/verification.txt",
+      "notes": "PASSING 2026-08-25. Found by killing the DLD textbook ingest partway and then searching. retrieval._search filtered on Material.status == 'active' and never looked at ingest_status -- and those answer DIFFERENT questions: `status` says whether a material is CURRENT, `ingest_status` says whether it is FINISHED. An ingest writes its chunks in committed batches with ingest_status='running' throughout, so the row was honest; nothing read it. The interrupted 813-page textbook served live answers out of the 320 chunks that happened to land, with perfectly formed page citations and nothing anywhere saying the other 1,733 were missing. A partial book is worse than an absent one: an absent book refuses honestly, a partial one answers wrongly and looks right. The guard is placed OUTSIDE the include_archived branch on purpose -- asking for archived material is a deliberate admin choice, being served a half-written one never is -- and a test asserts that, because putting it inside the branch would have been the natural place and would have left include_archived=True re-admitting partial books. GET /student/course-summary had the same hole and would have advertised a partial book with the chapters that landed and a page range covering the ones that did not. SECOND HALF: the guard makes a dead ingest SAFE but also SILENT -- a book that stopped at 15% simply never appears, and 'the tutor cannot find anything about adders' is a confusing way to learn an ingest died. So ingest_pdfs.py --doctor reports unfinished ingests and chunk_count drift, and --fix clears them. Note it deletes an unfinished material but only CORRECTS a drifted count: the first cannot be trusted, the second is just a stale number over good rows. 337 tests (was 334). Re-runnable: backend/scripts/verify_ingest_003.py."
     },
     {
       "id": "admin-005",

@@ -44,7 +44,7 @@ for _stream in (sys.stdout, sys.stderr):
     except (AttributeError, ValueError):
         pass
 
-from sqlalchemy import select
+from sqlalchemy import delete, select
 
 from app.db import get_sessionmaker
 from app.models import Course, Department, Material, User
@@ -256,6 +256,75 @@ def do_verify(db, plan: list[dict], args) -> int:
     return failures
 
 
+def cmd_doctor(db, args) -> int:
+    """ingest-003 -- find ingests that never finished, and optionally clear them.
+
+    An ingest writes its chunks in committed batches with `ingest_status`
+    'running' throughout, so a killed process leaves an honest row saying so.
+    Nothing looked at that row. Retrieval now refuses such material, which
+    makes it safe -- but also silent: a book that stopped at 15% simply never
+    appears, and "the tutor cannot find anything about adders" is a confusing
+    way to learn that an ingest died.
+
+    So this reports them out loud. `--fix` deletes the partial chunks and the
+    material row, which is what makes the next `ingest_pdfs.py` run rebuild it
+    from scratch.
+    """
+    from sqlalchemy import func
+
+    from app.models import Chunk
+
+    stalled = db.scalars(
+        select(Material)
+        .where(Material.ingest_status != "complete")
+        .order_by(Material.id)
+    ).all()
+
+    # A different fault, and worth catching in the same sweep: the run finished
+    # but chunk_count disagrees with the rows actually present.
+    mismatched = []
+    for m in db.scalars(
+        select(Material).where(Material.ingest_status == "complete")
+    ).all():
+        actual = int(db.scalar(
+            select(func.count()).select_from(Chunk).where(Chunk.material_id == m.id)
+        ) or 0)
+        if actual != m.chunk_count:
+            mismatched.append((m, actual))
+
+    if not stalled and not mismatched:
+        print("  No unfinished ingests, and every chunk_count matches. Nothing to do.")
+        return 0
+
+    for m in stalled:
+        actual = int(db.scalar(
+            select(func.count()).select_from(Chunk).where(Chunk.material_id == m.id)
+        ) or 0)
+        print(f"  UNFINISHED  material {m.id:<4} {m.ingest_status:<9} "
+              f"{actual:>5} chunks written, chunk_count says {m.chunk_count}"
+              f"   {m.title[:44]}")
+        print("              not retrievable (ingest-003 guard), so students see "
+              "nothing from it")
+        if args.fix:
+            db.execute(delete(Chunk).where(Chunk.material_id == m.id))
+            db.delete(m)
+            print(f"              -> deleted. Re-run ingestion to rebuild it.")
+
+    for m, actual in mismatched:
+        print(f"  COUNT OFF   material {m.id:<4} complete  {actual:>5} chunks present, "
+              f"chunk_count says {m.chunk_count}   {m.title[:44]}")
+        if args.fix:
+            m.chunk_count = actual
+            print(f"              -> chunk_count corrected to {actual}")
+
+    if args.fix:
+        db.commit()
+        print("\n  Fixed.")
+    else:
+        print("\n  Nothing was changed. Re-run with --fix to clear them.")
+    return 0
+
+
 def report_checks(checks: list[ingest.ChunkCheck]) -> int:
     """Print the sampled span checks. Returns how many failed."""
     failures = 0
@@ -286,6 +355,10 @@ def main() -> None:
                     help="re-embed material already in the database")
     ap.add_argument("--dry-run", action="store_true")
     ap.add_argument("--verify", action="store_true")
+    ap.add_argument("--doctor", action="store_true",
+                    help="report ingests that never finished (ingest-003)")
+    ap.add_argument("--fix", action="store_true",
+                    help="with --doctor: delete partial material so it can be re-ingested")
     ap.add_argument("--sample", type=int, default=3)
     args = ap.parse_args()
 
@@ -312,6 +385,9 @@ def main() -> None:
 
     db = get_sessionmaker()()
     try:
+        if args.doctor:
+            sys.exit(cmd_doctor(db, args))
+
         if args.verify:
             failures = do_verify(db, plan, args)
             print(f"\n{'FAILED' if failures else 'PASS'} -- {failures} chunk(s) did not verify.")

@@ -1,0 +1,50 @@
+==========================================================================
+[1] a material mid-ingest: real chunks, ingest_status='running'
+==========================================================================
+  material 32: status='active' ingest_status='running' chunks=1 chunk_count=0
+  [PASS] it is 'active' -- so a status-only filter would serve it
+  [PASS] its chunks really are in the database
+
+==========================================================================
+[2] retrieval must not return it
+==========================================================================
+  retrieval.search -> 0 hits
+  [PASS] a half-ingested book is not retrievable
+  include_archived=True -> 0 hits
+  [PASS] include_archived does not re-admit it either
+
+==========================================================================
+[3] once complete, the SAME material is retrievable
+==========================================================================
+  retrieval.search -> 1 hits
+  [PASS] the guard is about completeness, not about hiding everything
+    p.130 sim=0.763 Half-written Logic Book
+
+==========================================================================
+[4] --doctor finds an unfinished ingest and a chunk_count that drifted
+==========================================================================
+  --doctor (report only):
+  UNFINISHED  material 32   running       1 chunks written, chunk_count says 0   Half-written Logic Book
+              not retrievable (ingest-003 guard), so students see nothing from it
+  COUNT OFF   material 33   complete      1 chunks present, chunk_count says 99   Count Drifted
+
+  Nothing was changed. Re-run with --fix to clear them.
+  [PASS] reporting changes nothing
+
+  --doctor --fix:
+  UNFINISHED  material 32   running       1 chunks written, chunk_count says 0   Half-written Logic Book
+              not retrievable (ingest-003 guard), so students see nothing from it
+              -> deleted. Re-run ingestion to rebuild it.
+  COUNT OFF   material 33   complete      1 chunks present, chunk_count says 99   Count Drifted
+              -> chunk_count corrected to 1
+
+  Fixed.
+  [PASS] the unfinished material is gone
+  [PASS] its partial chunks went with it
+  [PASS] the drifted chunk_count was corrected, not deleted -- chunk_count=1
+
+  (throwaway course cleaned up)
+
+==========================================================================
+ALL CHECKS PASSED
+==========================================================================

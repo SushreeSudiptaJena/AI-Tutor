@@ -163,6 +163,10 @@ def course_summary(
         .where(
             Material.course_id == course.id,
             Material.status == "active",
+            # ingest-003: and FINISHED. A half-ingested book would otherwise be
+            # advertised here as course material, with the chapters that
+            # happened to land and a page range covering the ones that did not.
+            Material.ingest_status == "complete",
             Material.kind.in_(retrieval.LESSON_KINDS),
         )
         .order_by(Material.id)
