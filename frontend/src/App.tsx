@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import RequireAuth from "@/components/RequireAuth";
 import Login from "@/pages/auth/Login";
 import StudentLogin from "@/pages/auth/StudentLogin";
+import Landing from "@/pages/Landing";
 import Signup from "@/pages/auth/Signup";
 import ForgotPassword from "@/pages/auth/ForgotPassword";
 import AdminDashboard from "@/pages/admin/AdminDashboard";
@@ -16,6 +17,9 @@ export default function App() {
   return (
     <BrowserRouter>
       <Routes>
+        {/* The front door: both logins reachable from one place. */}
+        <Route path="/" element={<Landing />} />
+
         {/* Two doors: students enter at /login (Anu's screen, routes by
             course_id), admins at /admin/login. Both hit the same
             POST /auth/login through lib/api. */}

@@ -1316,7 +1316,7 @@ export default function AdminDashboard() {
   }, []);
 
   return (
-    <div className="bg-surface min-h-screen text-on-surface font-sans">
+    <div className="admin-scope bg-surface min-h-screen text-on-surface font-sans">
       <Sidebar active={activeTab} onSelect={setActiveTab} />
       <div className="ml-64 flex flex-col min-h-screen">
         <TopBar title={TITLES[activeTab]} user={user} onSelect={setActiveTab} />

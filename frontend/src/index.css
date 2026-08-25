@@ -41,6 +41,8 @@
   --font-family-label-md: "JetBrains Mono", monospace;
   --font-family-label-sm: "JetBrains Mono", monospace;
   --font-family-serif: "Playfair Display", serif;
+  --font-sans: "Inter", sans-serif;
+  --font-serif: "Playfair Display", serif;
   --spacing-xs: 8px;
   --spacing-sm: 16px;
   --spacing-md: 24px;
@@ -64,28 +66,6 @@
   --text-label-md--line-height: 16px;
   --text-label-sm: 11px;
   --text-label-sm--line-height: 14px;
-
-  /* ------------------------------------------------------------------
-   * Admin-surface tokens (restored during the student-UI merge).
-   * The student screens bring their own scale (--spacing-xs..xl,
-   * --font-family-*), which replaced these; the admin dashboard and the
-   * auth screens still use them, so both scales now live side by side.
-   * ------------------------------------------------------------------ */
-  --spacing-unit: 8px;
-  --spacing-card-inner-padding: 24px;
-  --spacing-container-padding: 32px;
-  --spacing-section-gap: 48px;
-  --spacing-gutter: 24px;
-
-  --font-sans: 'Hanken Grotesk', system-ui, sans-serif;
-  --font-serif: 'Newsreader', serif;
-  --font-headline-sm: 'Hanken Grotesk', system-ui, sans-serif;
-  --font-headline-md: 'Hanken Grotesk', system-ui, sans-serif;
-  --font-body-md: 'Hanken Grotesk', system-ui, sans-serif;
-  --font-body-lg: 'Hanken Grotesk', system-ui, sans-serif;
-  --font-label-md: 'Hanken Grotesk', system-ui, sans-serif;
-  --font-label-sm: 'Hanken Grotesk', system-ui, sans-serif;
-
 }
 
 :root { color-scheme: light; }
@@ -104,6 +84,73 @@ a:focus-visible, button:focus-visible, input:focus-visible { outline: 2px solid 
     animation-duration: 0.001ms !important;
   }
 }
+/* ---------------------------------------------------------------------------
+ * The admin design system, SCOPED.
+ *
+ * The student UI (a47c9f7) redefined the shared surface/primary/secondary
+ * tokens to a light cream palette, which silently flipped the admin console
+ * from its dark design to light-on-light. Rather than letting the two
+ * designs fight over the same token names, the student palette above is the
+ * global default and the admin's original dark values live under this
+ * wrapper: AdminDashboard and the admin auth screens carry `admin-scope` on
+ * their root element and inherit these instead.
+ * ------------------------------------------------------------------------- */
+
+.admin-scope {
+  --color-surface: #121414;
+  --color-surface-dim: #121414;
+  --color-surface-bright: #38393a;
+  --color-surface-variant: #1e2020;
+  --color-surface-container-lowest: #0c0f0f;
+  --color-surface-container-low: #1a1c1c;
+  --color-surface-container: #1e2020;
+  --color-surface-container-high: #282a2b;
+  --color-surface-container-highest: #333535;
+  --color-on-surface: #e2e2e2;
+  --color-on-surface-variant: #c3c7ca;
+  --color-outline: #8d9194;
+  --color-outline-variant: #43474a;
+  --color-primary: #bbc9d1;
+  --color-on-primary: #253239;
+  --color-primary-container: #243138;
+  --color-on-primary-container: #8b99a1;
+  --color-secondary: #b0c9e9;
+  --color-on-secondary: #18324c;
+  --color-secondary-container: #304863;
+  --color-on-secondary-container: #9fb7d7;
+  --color-tertiary: #9dd75b;
+  --color-on-tertiary: #1e3700;
+  --color-tertiary-container: #1e3600;
+  --color-on-tertiary-container: #70a62f;
+  --color-error: #ffb4ab;
+  --color-on-error: #690005;
+  --color-background: #121414;
+  --color-on-background: #e2e2e2;
+
+  --font-sans: 'Hanken Grotesk', system-ui, sans-serif;
+  --font-serif: 'Newsreader', serif;
+  --font-headline-sm: 'Hanken Grotesk', system-ui, sans-serif;
+  --font-headline-md: 'Hanken Grotesk', system-ui, sans-serif;
+  --font-body-md: 'Hanken Grotesk', system-ui, sans-serif;
+  --font-body-lg: 'Hanken Grotesk', system-ui, sans-serif;
+  --font-label-md: 'Hanken Grotesk', system-ui, sans-serif;
+  --font-label-sm: 'Hanken Grotesk', system-ui, sans-serif;
+
+  --spacing-unit: 8px;
+  --spacing-card-inner-padding: 24px;
+  --spacing-container-padding: 32px;
+  --spacing-section-gap: 48px;
+  --spacing-gutter: 24px;
+
+  /* Type sizes where the two scales genuinely differ. */
+  --text-display-lg: 48px;
+  --text-display-lg--line-height: 56px;
+  --text-label-md: 14px;
+  --text-label-md--line-height: 20px;
+  --text-label-sm: 12px;
+  --text-label-sm--line-height: 16px;
+}
+
 /* ---------------------------------------------------------------------------
  * Design-system classes for the admin surface.
  *

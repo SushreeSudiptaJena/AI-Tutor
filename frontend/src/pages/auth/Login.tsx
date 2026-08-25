@@ -43,7 +43,7 @@ export default function Login() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-100 text-gray-900 relative overflow-y-auto">
+    <div className="admin-scope min-h-screen bg-gray-100 text-gray-900 relative overflow-y-auto">
 
       {/* Background */}
       <div className="fixed inset-0 z-0 pointer-events-none">
