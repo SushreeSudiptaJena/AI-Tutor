@@ -1,0 +1,62 @@
+admin-008 -- Admin profile, settings, and course management UI
+Verified live 2026-08-25T17:35:29Z against 127.0.0.1:8000
+(recorded: the first tee target directory did not exist; this is the verbatim
+terminal output of the same run, persisted afterwards)
+
+=== 1. profile: GET /auth/me (what ProfileView renders) ===
+{
+    "id": 3,
+    "email": "admin@example.edu",
+    "full_name": "Admin",
+    "role": "admin",
+    "course_id": null,
+    "preferred_language": "en"
+}
+
+=== 2. language: PATCH /auth/me/preferences en->hi, then GET persists ===
+PATCH -> hi
+GET after -> hi
+reset -> en
+
+=== 3. provider chain: GET /meta/provider-status (SettingsView) ===
+{
+    "active": "groq",
+    "fallbacks_available": ["gemini", "groq"],
+    "cache_enabled": true,
+    "chain": ["groq:openai/gpt-oss-120b", "gemini:gemini-3.6-flash", "glm:glm-4.5-flash",
+              "groq:qwen/qwen3.6-27b", "glm-coding:glm-5.3", "mock:mock-1"],
+    "cache": {"entries": 140, "bytes": 85351, "enabled": true}
+}
+
+=== 4. create course: POST /admin/courses (NewCourseForm) ===
+created id=13
+in list after create: True | term_start: None
+
+=== 5. term round-trip: PUT /admin/courses/13/term ===
+semester 4 | batches [2026] | term 2026-09-01 -> 2026-12-15
+
+=== 6. invalid window must 422 with the contract message ===
+{
+    "error": {
+        "code": "validation_error",
+        "message": "Some fields are invalid.",
+        "detail": {"body": "Value error, term_end cannot be earlier than term_start"}
+    }
+}
+
+=== 7. audit trail shows the course creation ===
+- course.set_term | admin@example.edu set the term details for course ZZTST
+- course.create  | admin@example.edu created the course course ZZTST
+- material.archive | admin@example.edu archived "to be archived" (since removed) (version 1)
+
+=== 8. logout invalidates server-side; old token refused ===
+POST /auth/logout -> 204
+GET /auth/me with dead token -> 401 (expect 401)
+
+=== 9. cleanup: remove the ZZTST verification course row by hand ===
+(no DELETE /admin/courses by design; audit rows stay -- target is a
+ string and outlives the thing it names, same as material.delete rows)
+deleted course ZZTST (id=13) from the shared DB
+=== 10. baseline still green ===
+pytest exit=0
+337 passed (exit 0)

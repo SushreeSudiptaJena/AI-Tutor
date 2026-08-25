@@ -946,6 +946,32 @@
       ],
       "evidence": "evidence/auth-003/role-guards.txt",
       "notes": "PASSING 2026-08-25. Raised by the owner: test_auth.py had no 403 anywhere. The guards WERE tested, but only by source inspection -- test_admin.py asserted each route mentions admin_only and test_teacher.py the same for three routes. That catches a route written without a guard; it cannot catch a guard that does not refuse, because it never sends a request. These do, over HTTP, with current_user overridden and no database touched. WRITING THEM FOUND TWO THINGS. (1) The first sweep enumerated app.routes and silently found ZERO admin routes -- this FastAPI version keeps included routers nested behind an opaque _IncludedRouter, so every 403 assertion would have passed vacuously over an empty list. The canary test (>= 5 routes per prefix) is what caught it; the sweep now reads app.openapi(). Any test that loops over a discovered set needs that canary. (2) Sweeping the POSITIVE case over HTTP ran the real handlers, and the handlers hit Neon -- the suite went from 9s to 184s for a fact the guard itself can answer. Positive cases now call require_role's dependency directly; refusals stay over HTTP because a 403 short-circuits before the database. 328 tests (was 319)."
+    },
+    {
+      "id": "admin-008",
+      "priority": 45,
+      "area": "admin",
+      "title": "Admin profile, settings, and course management UI",
+      "user_visible_behavior": "The admin's avatar opens their profile; Settings opens a page (language preference, provider status, logout); Course Structure can create a new course and edit a course's semester, admission batches and term window inline.",
+      "status": "passing",
+      "depends_on": [
+        "admin-002",
+        "admin-005",
+        "auth-001"
+      ],
+      "demo_mode": "live",
+      "verification": [
+        "Clicking the name/avatar in the admin TopBar opens the profile showing the signed-in admin's real email, name and role from GET /auth/me.",
+        "Changing preferred language on Settings persists: PATCH /auth/me/preferences returns 200 and a reload still shows the new value.",
+        "Logout clears the session server-side and lands on /login; the old token is refused afterwards (GET /auth/me 401).",
+        "Settings shows the live provider chain (active provider + fallbacks) from GET /meta/provider-status.",
+        "A new course can be created from the UI form (code, title, department) and appears in the course list without a reload.",
+        "Editing a course's term window via the UI round-trips: PUT /admin/courses/{id}/term returns the Course with the new dates, and the list shows them.",
+        "An invalid window (term_end before term_start) shows the backend's 422 message in the form, not a crash.",
+        "npm --prefix frontend run build passes and python -m pytest backend/tests -q still passes."
+      ],
+      "evidence": "evidence/admin-008/verification.txt",
+      "notes": "Raised by the owner 2026-08-25 after clicking the dashboard: the avatar and Settings were dead links from person 4's mockup, and course structure was read-only even though POST /admin/courses and PUT /admin/courses/{id}/term have been live since admin-002/admin-005. Entirely frontend -- no backend change. Verification must not leave test courses in the shared DB: create, verify, then remove the row by hand (there is deliberately no DELETE /admin/courses). Do not PUT term on real courses during verification -- the window is load-bearing for admin-006's delete guard. PASSING 2026-08-25. All ten verification steps run live: profile facts from /auth/me; language PATCH persisted (and was reset); logout 204 then dead token 401; provider chain live (groq active, 5 fallbacks, 140 cache entries); ZZTST course created and listed; term PUT round-tripped (semester 4, batch 2026, 2026-09-01 -> 2026-12-15); inverted window refused with the contract's 422; course.create + course.set_term audit rows written; the ZZTST row then removed by hand (no DELETE /admin/courses by design) with its audit rows deliberately left -- target is a string and outlives what it names, same precedent as material.delete. Build green (44 modules), pytest exit 0. Frontend-only feature; no backend change."
     }
   ]
 }

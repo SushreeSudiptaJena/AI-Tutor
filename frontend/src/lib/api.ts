@@ -277,3 +277,37 @@ export const listAuditLog = (opts: {
   if (opts.includeSystem) q.set("include_system", "true");
   return api<{ items: AuditRow[]; total: number }>(`/admin/audit-log?${q}`);
 };
+
+// --- admin: course management (admin-008 UI over admin-002/admin-005) ---
+
+/** POST /admin/courses -- prerequisite_course_ids is required by the contract,
+ *  send [] for a standalone course. */
+export const createCourse = (input: {
+  code: string;
+  title: string;
+  department_id: number | null;
+  prerequisite_course_ids?: number[];
+}) =>
+  api<Course>("/admin/courses", {
+    method: "POST",
+    body: { prerequisite_course_ids: [], ...input },
+  });
+
+export const createDepartment = (name: string) =>
+  api<Department>("/admin/departments", { method: "POST", body: { name } });
+
+/**
+ * PUT /admin/courses/{id}/term (admin-005). Send ONLY the fields being
+ * changed; to clear one, send it explicitly as null (or [] for batches).
+ * The window is load-bearing: admin-006's delete guard reads it, which is
+ * why the UI states it plainly rather than burying it in an "advanced" tab.
+ */
+export const updateCourseTerm = (
+  courseId: number,
+  input: {
+    semester?: number | null;
+    admission_batches?: number[] | null;
+    term_start?: string | null;
+    term_end?: string | null;
+  },
+) => api<Course>(`/admin/courses/${courseId}/term`, { method: "PUT", body: input });
