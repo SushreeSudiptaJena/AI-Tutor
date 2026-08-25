@@ -920,6 +920,29 @@
       ],
       "evidence": "evidence/admin-007/verification.txt",
       "notes": "PASSING 2026-08-25. Contract change, so docs/api-contract.md was edited FIRST. 'reference' is quotable -- it is in retrieval.LESSON_KINDS beside syllabus/textbook/notes, which is exactly what separates it from 'assignment' (searchable, never quoted). LINKS ARE DELIBERATELY NOT MATERIALS: a URL has no pages and a Citation is (doc_id, page_no, char_span), so a link could never be cited the way a book is; external links go to sourced_content (teacher-007), which already has a URL, a title, an excerpt and a teacher gate. Ingestion now takes .txt/.md/.docx alongside .pdf/.epub/.mobi/.fb2. .docx needs python-docx (added to requirements.txt) because a .docx is a zip of XML PyMuPDF cannot open; paragraphs AND table cells are extracted, because assignment questions are usually in a table. All reflowed sources are laid out at A4/11pt so page numbers are reproducible -- and they are OURS, not a publisher's, the same caveat the manifest already carries for EPUB. TWO REAL DISAGREEMENTS FOUND BY BUILDING IT: (1) the upload endpoint already accepted .txt/.md while ingest.to_pdf REFUSED them, so such a file was stored, marked pending and silently never ingestable -- both now read ingest.supported_suffixes(). (2) The kinds list existed in FOUR places (models, admin router, ingest service, CLI); adding 'reference' to the model left the CLI rejecting it with 'invalid choice'. INGESTABLE_KINDS now derives from MATERIAL_KINDS and a test asserts all three agree. Verified live: a .docx reference ingested into DLD and came back as the TOP retrieval hit at 0.806 similarity with a page number, while assignments stayed excluded from lesson retrieval. 319 tests (was 310)."
+    },
+    {
+      "id": "auth-003",
+      "priority": 44,
+      "area": "auth",
+      "title": "The role guards are exercised, not just inspected",
+      "user_visible_behavior": "A student who reaches an admin or teacher URL is refused, and that refusal is now proven by a request rather than by reading the source.",
+      "status": "passing",
+      "depends_on": [
+        "auth-001"
+      ],
+      "demo_mode": "live",
+      "verification": [
+        "A student gets 403 forbidden from all 7 GET routes under /admin and all 7 under /teacher.",
+        "A teacher gets 403 from every /admin route -- teacher_only admits teachers, nothing under /admin does.",
+        "An admin is NOT refused by teacher_only, which is require_role('teacher','admin').",
+        "Each guard admits exactly its own roles and an unknown role is admitted by nothing.",
+        "An anonymous caller gets 401, not 403 -- 403 would confirm the route exists to someone who never identified themselves.",
+        "A canary test fails if the route sweep finds nothing, so the sweeps cannot pass vacuously.",
+        "python -m pytest backend/tests -q passes and ./init.sh still passes."
+      ],
+      "evidence": "evidence/auth-003/role-guards.txt",
+      "notes": "PASSING 2026-08-25. Raised by the owner: test_auth.py had no 403 anywhere. The guards WERE tested, but only by source inspection -- test_admin.py asserted each route mentions admin_only and test_teacher.py the same for three routes. That catches a route written without a guard; it cannot catch a guard that does not refuse, because it never sends a request. These do, over HTTP, with current_user overridden and no database touched. WRITING THEM FOUND TWO THINGS. (1) The first sweep enumerated app.routes and silently found ZERO admin routes -- this FastAPI version keeps included routers nested behind an opaque _IncludedRouter, so every 403 assertion would have passed vacuously over an empty list. The canary test (>= 5 routes per prefix) is what caught it; the sweep now reads app.openapi(). Any test that loops over a discovered set needs that canary. (2) Sweeping the POSITIVE case over HTTP ran the real handlers, and the handlers hit Neon -- the suite went from 9s to 184s for a fact the guard itself can answer. Positive cases now call require_role's dependency directly; refusals stay over HTTP because a 403 short-circuits before the database. 328 tests (was 319)."
     }
   ]
 }

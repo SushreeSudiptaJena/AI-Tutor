@@ -1,0 +1,17 @@
+
+/admin: 7 GET routes swept by the role-guard tests
+   /admin/audit-log
+   /admin/courses
+   /admin/courses/1
+   /admin/courses/1/materials
+   /admin/departments
+   /admin/materials/1
+   /admin/materials/1/versions
+/teacher: 7 GET routes swept by the role-guard tests
+   /teacher/gap-map
+   /teacher/misconceptions/1/before-after
+   /teacher/misconceptions/heatmap
+   /teacher/problems/1/reasoning-paths
+   /teacher/reteach
+   /teacher/uncertainty-flags
+   /teacher/verification-queue

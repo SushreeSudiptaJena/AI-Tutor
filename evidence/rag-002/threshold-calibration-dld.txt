@@ -1,0 +1,86 @@
+ALIGNMENT_REFUSAL_THRESHOLD re-calibration after the DLD ingest
+2026-08-25. Corpus grew by 2,076 chunks (Roth & Kinney + 4 assignments + 1 reference).
+
+CONCLUSION: LEAVE IT AT 0.70. Do not take the calibrator's suggestion.
+
+
+=============================================================================
+1. WHAT THE CALIBRATOR SUGGESTS, PER COURSE
+=============================================================================
+
+  backend/scripts/calibrate_threshold.py --course CSW2 --questions .../csw2.json
+    lowest covered    0.7441   ("How does template inheritance work?")
+    highest off-topic 0.6905   ("React's useEffect dependency array")
+    margin            +0.0536
+    SUGGESTED         0.72
+
+  backend/scripts/calibrate_threshold.py --course DLD  --questions .../dld.json
+    lowest covered    0.7622   ("multiplexer vs decoder")
+    highest off-topic 0.7368   ("latch-up in CMOS fabrication")
+    margin            +0.0254
+    SUGGESTED         0.75
+
+CSW2 is unchanged from the previous run, as expected: retrieval is
+course-scoped, so ingesting DLD cannot move CSW2's numbers.
+
+
+=============================================================================
+2. THE TWO SUGGESTIONS CANNOT BOTH BE SATISFIED
+=============================================================================
+
+The threshold is GLOBAL -- one number in .env for every course.
+
+  DLD wants   > 0.7368   so that CMOS latch-up refuses
+  CSW2 needs  < 0.7220   so that `url-routing` still answers
+
+0.7220 < 0.7368, so there is no value that satisfies both. Taking DLD's
+suggested 0.75 would refuse two genuinely covered CSW2 questions. Taking
+0.72 would refuse `url-routing`, which is a live diagnostic concept -- it
+measured 0.7220 here, LOWER than the 0.7274 recorded previously, so 0.72 has
+gone from thin headroom to none at all.
+
+This is not a bug in the calibrator. It is what the calibrator's own docstring
+warns about: similarity has a high floor and a near-domain off-topic question
+scores like a covered one.
+
+
+=============================================================================
+3. WHY 0.70 IS STILL RIGHT -- MEASURED, NOT ASSUMED
+=============================================================================
+
+Similarity is only the FIRST gate. `evidence.assess()` also runs an entailment
+check, and CLAUDE.md says that half is load-bearing. Tested through the real
+code path at threshold 0.70:
+
+  DLD  off-topic  REFUSE  top-sim=0.7368  align=40%  reason=material_does_not_answer
+                          "What causes latch-up in CMOS fabrication...?"
+  DLD  off-topic  REFUSE  top-sim=0.6923  align=40%  reason=no_matching_material
+                          "How does branch prediction work in a superscalar CPU pipeline?"
+  DLD  covered    ANSWER  top-sim=0.7622  align=64%
+                          "What is the difference between a multiplexer and a decoder?"
+  CSW2 covered    ANSWER  top-sim=0.7441  align=66%
+                          "How does template inheritance work?"
+  CSW2 covered    ANSWER  top-sim=0.7220  align=79%
+                          "Explain url routing"
+
+The CMOS question is the whole argument. Its similarity is 0.7368 -- ABOVE the
+threshold, so the similarity gate lets it through -- and it is refused anyway,
+by entailment, with `material_does_not_answer`.
+
+So raising the threshold to catch it would buy nothing that is not already
+caught, and would cost two correct CSW2 answers.
+
+
+=============================================================================
+4. WHAT WOULD CHANGE THIS
+=============================================================================
+
+Re-run all three sets after any further ingest:
+
+    --course CSW2 --questions backend/data/calibration/csw2.json
+    --course CS-C --questions backend/data/calibration/cs-c.json
+    --course DLD  --questions backend/data/calibration/dld.json
+
+Act only if a COVERED question starts refusing, or an off-topic one starts
+answering, through `evidence.assess()` -- not on the suggested number alone.
+The suggestion looks only at similarity, and half the decision is not there.

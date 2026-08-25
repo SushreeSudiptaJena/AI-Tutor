@@ -1,0 +1,47 @@
+{
+  "_readme": [
+    "Calibration set for DLD (Digital Logic Design), measured against",
+    "'Fundamentals of Logic Design' (Roth & Kinney) plus the four assignment PDFs",
+    "and the Karnaugh map quick reference.",
+    "",
+    "    .venv/Scripts/python.exe backend/scripts/calibrate_threshold.py \\",
+    "        --course DLD --questions backend/data/calibration/dld.json",
+    "",
+    "'covered' questions are drawn from what the Roth book actually teaches, in",
+    "the words a third-semester student would use -- not in the book's own",
+    "phrasing, because a student who could phrase it the book's way would not",
+    "need to ask.",
+    "",
+    "'off_topic' leans deliberately NEAR-domain. Analog electronics, computer",
+    "architecture and VLSI fabrication all sit one course away from digital logic",
+    "and share its vocabulary, so they score far higher than a random subject",
+    "would. Those are the questions that decide whether the threshold is honest:",
+    "a set of off-topic questions about cookery would let almost any threshold",
+    "look correct.",
+    "",
+    "ALIGNMENT_REFUSAL_THRESHOLD is GLOBAL, not per-course. A value that works",
+    "here must also still work for CSW2 and CS-C -- re-run all three after any",
+    "ingest and take the value that separates covered from off-topic in every",
+    "one of them."
+  ],
+  "covered": [
+    "How do I simplify a Boolean expression using a Karnaugh map?",
+    "What is the difference between a full adder and a half adder?",
+    "How does a D flip-flop differ from an SR latch?",
+    "What are minterms and maxterms, and how do I write a sum-of-products form?",
+    "How do I convert a number from binary to hexadecimal?",
+    "What is a state table and how do I use it to design a sequential circuit?",
+    "How do De Morgan's laws let me rewrite a NAND gate as an OR gate?",
+    "What is the difference between a multiplexer and a decoder?"
+  ],
+  "off_topic": [
+    "How do I bias a common-emitter BJT amplifier for maximum swing?",
+    "What is the difference between a Mealy machine and a Turing machine's tape?",
+    "How does branch prediction work in a superscalar CPU pipeline?",
+    "What causes latch-up in CMOS fabrication and how is it prevented?",
+    "How do I write a Django model field and choose its type?",
+    "What does the operational amplifier virtual short concept mean?",
+    "How is a Fourier transform used to analyse an analog signal's spectrum?",
+    "How do I calculate the resonant frequency of an RLC circuit?"
+  ]
+}
