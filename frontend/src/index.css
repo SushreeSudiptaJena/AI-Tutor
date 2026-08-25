@@ -1,6 +1,9 @@
 @import "tailwindcss";
 
 @theme {
+  /* =========================
+     Surface colors
+     ========================= */
   --color-surface: #121414;
   --color-surface-dim: #121414;
   --color-surface-bright: #38393a;
@@ -9,61 +12,139 @@
   --color-surface-container: #1e2020;
   --color-surface-container-high: #282a2b;
   --color-surface-container-highest: #333535;
+
+  /* =========================
+     Text / outline colors
+     ========================= */
   --color-on-surface: #e2e2e2;
   --color-on-surface-variant: #c3c7ca;
   --color-outline: #8d9194;
   --color-outline-variant: #43474a;
 
+  /* =========================
+     Primary
+     ========================= */
   --color-primary: #bbc9d1;
   --color-on-primary: #253239;
   --color-primary-container: #243138;
   --color-on-primary-container: #8b99a1;
 
+  /* =========================
+     Secondary
+     ========================= */
   --color-secondary: #b0c9e9;
   --color-on-secondary: #18324c;
   --color-secondary-container: #304863;
   --color-on-secondary-container: #9fb7d7;
 
+  /* =========================
+     Tertiary
+     ========================= */
   --color-tertiary: #9dd75b;
   --color-on-tertiary: #1e3700;
   --color-tertiary-container: #1e3600;
   --color-on-tertiary-container: #70a62f;
 
+  /* =========================
+     Error
+     ========================= */
   --color-error: #ffb4ab;
   --color-on-error: #690005;
 
+  /* =========================
+     Background
+     ========================= */
   --color-background: #121414;
   --color-on-background: #e2e2e2;
 
+  /* =========================
+     Brand colors
+     From original onboarding HTML
+     ========================= */
+  --color-brand-teal: #0f766e;
+  --color-brand-orange: #c2410c;
+  --color-brand-burgundy: #9f1239;
+  --color-brand-lavender: #fbcfe8;
+
+  /* =========================
+     Fonts
+     ========================= */
   --font-sans: 'Hanken Grotesk', system-ui, sans-serif;
   --font-serif: 'Newsreader', serif;
 
+  --font-headline-sm: 'Hanken Grotesk', system-ui, sans-serif;
+  --font-body-md: 'Hanken Grotesk', system-ui, sans-serif;
+  --font-label-sm: 'Hanken Grotesk', system-ui, sans-serif;
+  --font-label-md: 'Hanken Grotesk', system-ui, sans-serif;
+  --font-body-lg: 'Hanken Grotesk', system-ui, sans-serif;
+  --font-headline-md: 'Hanken Grotesk', system-ui, sans-serif;
+  --font-headline-lg: 'Hanken Grotesk', system-ui, sans-serif;
+  --font-display-lg: 'Hanken Grotesk', system-ui, sans-serif;
+
+  /* =========================
+     Spacing
+     ========================= */
+  --spacing-unit: 8px;
+  --spacing-card-inner-padding: 24px;
+  --spacing-container-padding: 32px;
+  --spacing-section-gap: 48px;
+  --spacing-gutter: 24px;
+
+  /* =========================
+     Typography
+     ========================= */
   --text-display-lg: 48px;
   --text-display-lg--line-height: 56px;
+
   --text-headline-lg: 32px;
   --text-headline-lg--line-height: 40px;
+
   --text-headline-md: 24px;
   --text-headline-md--line-height: 32px;
+
   --text-headline-sm: 20px;
   --text-headline-sm--line-height: 28px;
+
   --text-body-lg: 18px;
   --text-body-lg--line-height: 28px;
+
   --text-body-md: 16px;
   --text-body-md--line-height: 24px;
+
   --text-label-md: 14px;
   --text-label-md--line-height: 20px;
+
   --text-label-sm: 12px;
   --text-label-sm--line-height: 16px;
 }
+
+/* =========================
+   Root
+   ========================= */
 
 :root {
   color-scheme: light dark;
 }
 
-/* a11y-001 hooks: the toggles set these classes on <html>. */
-html.text-lg-mode { font-size: 18px; }
-html.text-xl-mode { font-size: 21px; }
-html.high-contrast { filter: contrast(1.35); }
+/* =========================
+   Accessibility
+   ========================= */
+
+html.text-lg-mode {
+  font-size: 18px;
+}
+
+html.text-xl-mode {
+  font-size: 21px;
+}
+
+html.high-contrast {
+  filter: contrast(1.35);
+}
+
+/* =========================
+   Body
+   ========================= */
 
 body {
   background: var(--color-background);
@@ -71,17 +152,24 @@ body {
   font-family: var(--font-sans);
 }
 
+/* =========================
+   Glass cards
+   ========================= */
+
 .glass-card {
-  background: rgba(255, 255, 255, 0.03);
+  background: rgba(30, 32, 32, 0.6);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   border: 1px solid rgba(255, 255, 255, 0.08);
   transition: all 0.3s ease;
 }
+
 .glass-card:hover {
-  background: rgba(255, 255, 255, 0.06);
+  background: rgba(30, 32, 32, 0.7);
   border-color: rgba(255, 255, 255, 0.15);
 }
+
+/* Selected card */
 .glass-card.selected,
 .glass-card[aria-pressed="true"] {
   background: rgba(184, 244, 115, 0.08);
@@ -89,15 +177,35 @@ body {
   box-shadow: 0 0 30px rgba(184, 244, 115, 0.15);
 }
 
+/* =========================
+   Onboarding active card glow
+   ========================= */
+
+.glow-active {
+  box-shadow: 0 0 30px rgba(251, 207, 232, 0.2);
+  border-color: rgba(251, 207, 232, 0.5) !important;
+}
+
+/* =========================
+   Primary button
+   ========================= */
+
 .btn-primary-glow {
-  background: linear-gradient(135deg, var(--color-tertiary) 0%, var(--color-on-tertiary-container) 100%);
+  background: linear-gradient(
+    135deg,
+    var(--color-tertiary) 0%,
+    var(--color-on-tertiary-container) 100%
+  );
+
   box-shadow: 0 4px 20px rgba(184, 244, 115, 0.3);
   transition: all 0.3s ease;
 }
+
 .btn-primary-glow:hover {
   box-shadow: 0 6px 25px rgba(184, 244, 115, 0.5);
   transform: translateY(-1px);
 }
+
 .btn-primary-glow:disabled {
   opacity: 0.5;
   box-shadow: none;
@@ -105,12 +213,34 @@ body {
   cursor: not-allowed;
 }
 
+/* =========================
+   Onboarding button glow
+   ========================= */
+
+.btn-glow {
+  box-shadow: 0 4px 20px rgba(251, 207, 232, 0.3);
+  transition: all 0.3s ease;
+}
+
+.btn-glow:hover {
+  box-shadow: 0 6px 25px rgba(251, 207, 232, 0.5);
+  transform: translateY(-1px);
+}
+
+/* =========================
+   Focus states
+   ========================= */
+
 a:focus-visible,
 button:focus-visible,
 input:focus-visible {
   outline: 2px solid var(--color-tertiary);
   outline-offset: 2px;
 }
+
+/* =========================
+   Reduced motion
+   ========================= */
 
 @media (prefers-reduced-motion: reduce) {
   * {
