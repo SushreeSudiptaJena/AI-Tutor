@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Onboarding - Who are you?</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700&amp;family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;0,6..72,700;1,6..72,400&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "outline-variant": "#43474a",
+                        "inverse-surface": "#e2e2e2",
+                        "tertiary-fixed": "#b8f473",
+                        "surface-dim": "#121414",
+                        "on-primary-fixed": "#101d24",
+                        "on-tertiary": "#1e3700",
+                        "on-error": "#690005",
+                        "on-secondary-fixed-variant": "#304863",
+                        "on-background": "#e2e2e2",
+                        "tertiary-fixed-dim": "#9dd75b",
+                        "error-container": "#93000a",
+                        "on-secondary": "#18324c",
+                        "background": "#121414",
+                        "tertiary": "#9dd75b",
+                        "surface": "#121414",
+                        "on-secondary-fixed": "#001d35",
+                        "on-surface": "#e2e2e2",
+                        "surface-container": "#1e2020",
+                        "secondary-fixed-dim": "#b0c9e9",
+                        "primary-container": "#243138",
+                        "on-tertiary-container": "#70a62f",
+                        "on-secondary-container": "#9fb7d7",
+                        "secondary": "#b0c9e9",
+                        "secondary-container": "#304863",
+                        "surface-bright": "#38393a",
+                        "error": "#ffb4ab",
+                        "on-tertiary-fixed": "#0f2000",
+                        "on-primary-container": "#8b99a1",
+                        "on-primary": "#253239",
+                        "secondary-fixed": "#d1e4ff",
+                        "on-primary-fixed-variant": "#3b4950",
+                        "surface-tint": "#bbc9d1",
+                        "primary-fixed-dim": "#bbc9d1",
+                        "inverse-primary": "#536068",
+                        "surface-container-high": "#282a2b",
+                        "outline": "#8d9194",
+                        "surface-container-low": "#1a1c1c",
+                        "inverse-on-surface": "#2f3131",
+                        "surface-container-highest": "#333535",
+                        "on-tertiary-fixed-variant": "#2e4f00",
+                        "tertiary-container": "#1e3600",
+                        "on-surface-variant": "#c3c7ca",
+                        "surface-container-lowest": "#0c0f0f",
+                        "primary-fixed": "#d6e5ee",
+                        "on-error-container": "#ffdad6",
+                        "surface-variant": "#333535",
+                        "primary": "#bbc9d1",
+                        "brand-teal": "#0f766e",
+                        "brand-orange": "#c2410c",
+                        "brand-burgundy": "#9f1239",
+                        "brand-lavender": "#fbcfe8"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "unit": "8px",
+                        "card-inner-padding": "24px",
+                        "container-padding": "32px",
+                        "section-gap": "48px",
+                        "gutter": "24px"
+                    },
+                    "fontFamily": {
+                        "headline-sm": ["Hanken Grotesk"],
+                        "body-md": ["Hanken Grotesk"],
+                        "headline-lg": ["Hanken Grotesk"],
+                        "label-sm": ["Hanken Grotesk"],
+                        "label-md": ["Hanken Grotesk"],
+                        "body-lg": ["Hanken Grotesk"],
+                        "display-lg": ["Hanken Grotesk"],
+                        "headline-md": ["Hanken Grotesk"],
+                        "headline-lg-mobile": ["Hanken Grotesk"],
+                        "serif": ["Newsreader", "serif"]
+                    },
+                    "fontSize": {
+                        "headline-sm": ["20px", {"lineHeight": "28px", "fontWeight": "500"}],
+                        "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                        "headline-lg": ["32px", {"lineHeight": "40px", "fontWeight": "600"}],
+                        "label-sm": ["12px", {"lineHeight": "16px", "letterSpacing": "0.04em", "fontWeight": "500"}],
+                        "label-md": ["14px", {"lineHeight": "20px", "letterSpacing": "0.01em", "fontWeight": "600"}],
+                        "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],
+                        "display-lg": ["48px", {"lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                        "headline-md": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+                        "headline-lg-mobile": ["28px", {"lineHeight": "36px", "fontWeight": "600"}]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .glass-card {
+            background: rgba(30, 32, 32, 0.6);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+        }
+        .glow-active {
+            box-shadow: 0 0 30px rgba(251, 207, 232, 0.2);
+            border-color: rgba(251, 207, 232, 0.5) !important;
+        }
+        .btn-glow {
+            box-shadow: 0 4px 20px rgba(251, 207, 232, 0.3);
+            transition: all 0.3s ease;
+        }
+        .btn-glow:hover {
+            box-shadow: 0 6px 25px rgba(251, 207, 232, 0.5);
+            transform: translateY(-1px);
+        }
+    </style>
+</head>
+<body class="bg-background text-on-background min-h-screen flex flex-col font-body-md antialiased selection:bg-tertiary selection:text-on-tertiary">
+<!-- Main Content Canvas -->
+<main class="flex-grow flex flex-col items-center justify-center px-container-padding py-section-gap w-full max-w-5xl mx-auto relative z-10">
+<!-- Header -->
+<header class="text-center mb-section-gap w-full">
+<p class="text-label-md font-label-md text-on-surface-variant uppercase tracking-widest mb-4">Step 1 of 2</p>
+<h1 class="text-display-lg md:text-[56px] font-serif text-on-surface leading-tight tracking-tight">Who are you?</h1>
+<p class="text-body-lg font-body-lg text-on-surface-variant mt-4 max-w-lg mx-auto">Select the role that best describes you to tailor your Nocturnal Scholar experience.</p>
+</header>
+<!-- Selection Grid -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6 w-full max-w-4xl">
+<!-- Card 1: Student (Active) -->
+<button class="glass-card rounded-[24px] p-card-inner-padding text-left flex flex-col items-start gap-4 border border-brand-teal glow-active transition-all duration-300 group hover:-translate-y-1 focus:outline-none focus:ring-2 focus:ring-brand-lavender/50">
+<div class="w-12 h-12 rounded-full bg-brand-teal/20 flex items-center justify-center text-brand-lavender">
+<span class="material-symbols-outlined text-3xl" data-icon="school" data-weight="fill" style="font-variation-settings: 'FILL' 1;">school</span>
+</div>
+<div>
+<h3 class="text-headline-sm font-headline-sm text-on-surface mb-2">Student</h3>
+<p class="text-body-md font-body-md text-on-surface-variant leading-relaxed">I'm here to learn and track my progress through guided materials.</p>
+</div>
+<div class="mt-auto pt-4 w-full flex justify-end opacity-100 transition-opacity">
+<span class="material-symbols-outlined text-brand-lavender">check_circle</span>
+</div>
+</button>
+<!-- Card 2: Teacher -->
+<button class="glass-card rounded-[24px] p-card-inner-padding text-left flex flex-col items-start gap-4 border border-outline-variant hover:border-brand-orange/50 transition-all duration-300 group hover:-translate-y-1 focus:outline-none focus:ring-2 focus:ring-brand-orange/30">
+<div class="w-12 h-12 rounded-full bg-brand-orange/10 flex items-center justify-center text-brand-orange/80 group-hover:text-brand-orange transition-colors">
+<span class="material-symbols-outlined text-3xl" data-icon="supervisor_account">supervisor_account</span>
+</div>
+<div>
+<h3 class="text-headline-sm font-headline-sm text-on-surface mb-2">Teacher</h3>
+<p class="text-body-md font-body-md text-on-surface-variant leading-relaxed">I want to guide, create curriculum, and monitor learners' academic journeys.</p>
+</div>
+<div class="mt-auto pt-4 w-full flex justify-end opacity-0 group-hover:opacity-100 transition-opacity">
+<span class="material-symbols-outlined text-on-surface-variant">arrow_forward</span>
+</div>
+</button>
+<!-- Card 3: Other -->
+<button class="glass-card rounded-[24px] p-card-inner-padding text-left flex flex-col items-start gap-4 border border-outline-variant hover:border-brand-burgundy/50 transition-all duration-300 group hover:-translate-y-1 focus:outline-none focus:ring-2 focus:ring-brand-burgundy/30">
+<div class="w-12 h-12 rounded-full bg-brand-burgundy/10 flex items-center justify-center text-brand-burgundy/80 group-hover:text-brand-burgundy transition-colors">
+<span class="material-symbols-outlined text-3xl" data-icon="local_library">local_library</span>
+</div>
+<div>
+<h3 class="text-headline-sm font-headline-sm text-on-surface mb-2">Other / Self-learner</h3>
+<p class="text-body-md font-body-md text-on-surface-variant leading-relaxed">I'm here for personal growth, independent research, and curiosity.</p>
+</div>
+<div class="mt-auto pt-4 w-full flex justify-end opacity-0 group-hover:opacity-100 transition-opacity">
+<span class="material-symbols-outlined text-on-surface-variant">arrow_forward</span>
+</div>
+</button>
+</div>
+</main>
+<!-- Footer / Bottom Nav Shell (Transactional) -->
+<footer class="fixed bottom-0 w-full flex flex-col items-center justify-center pb-8 gap-4 px-container-padding bg-gradient-to-t from-background to-transparent pt-12 z-20">
+<button class="bg-surface-container border border-outline-variant/30 text-on-surface px-8 py-3 rounded-full text-label-md font-label-md tracking-wide btn-glow flex items-center gap-2">
+            Continue
+            <span class="material-symbols-outlined text-sm">arrow_forward</span>
+</button>
+<a class="text-label-sm font-label-sm text-on-surface-variant hover:text-on-surface transition-colors underline underline-offset-4 decoration-on-surface-variant/50 hover:decoration-on-surface" href="#">Skip for now</a>
+<p class="text-label-sm font-label-sm text-on-surface-variant/50 mt-2">© 2024 Nocturnal Scholar.</p>
+</footer>
+<!-- Decorative Background Elements -->
+<div class="fixed inset-0 pointer-events-none z-0 overflow-hidden">
+<div class="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] rounded-full bg-brand-teal/5 blur-[120px]"></div>
+<div class="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] rounded-full bg-brand-lavender/5 blur-[150px]"></div>
+</div>
+</body></html>
