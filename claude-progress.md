@@ -62,6 +62,18 @@ Every session **reads this first** and **writes to it last**.
 
 *Newest entry at the top. One entry per session.*
 
+### Session 017 — 2026-08-25 — admin-008: the admin dashboard becomes an app
+
+| | |
+|---|---|
+| **Goal** | The owner clicked the dashboard and found the holes: avatar did nothing, Settings went nowhere, Course Structure was read-only. Asked for profile, settings, new-course creation and term editing, logged properly in `feature_list.json`. |
+| **Completed** | `admin-008` (passing). Plus, earlier in the session: the route-shadowing fix — **the static mockups in `frontend/` were being served for `/login`**, so every click on "Log In" hit a bare `<form>` with no handler; mockups moved to `docs/design/static-mockups/`. Real `/signup` (POST /auth/signup, student/teacher) and `/forgot-password` (auth-002: UI-only, **no network call by contract**) pages built. |
+| **Verification run** | admin-008's ten steps live against 127.0.0.1:8000: profile facts; language PATCH persisted + reset; logout 204 then dead token 401; provider chain (groq active, 6 links, 140 cache entries); ZZTST created + listed; term PUT round-trip; inverted window 422 verbatim; audit rows written; ZZTST removed by hand; build green, pytest exit 0. |
+| **Evidence recorded** | `evidence/admin-008/verification.txt` |
+| **Commits** | `e2867a8` (route shadowing + signup + forgot-password), `3e9a597` (admin-008). |
+| **What verifying found that reading would not have** | **The mockups were shadowing the React routes.** Vite serves `/login` from `login.html` when one sits in `frontend/` — my earlier "200" check verified the wrong page. The user's "clicking does nothing" was a dead static form, not a broken app. **The mockup's hero image was already dead** — `lh3.googleusercontent.com/aida-public/…` returns an HTML error page now; those links expire. The bundled local PNG is the only version that survives demo day. **`course.set_term` is an audit verb** — visible in the log during verification, worth knowing for the demo script. |
+| **Known risks** | The dead "Support" anchor still sits in the admin sidebar (harmless, unfixed, out of scope). Term edits are one-field-at-a-time safe, but there is no confirmation on clearing a whole window — an admin can empty both dates and save, which silently removes admin-006's delete protection; acceptable for now, noted here. Onboarding React pages still reference no remote assets — clean. **Student/teacher pages remain the demo's sharpest gap.** |
+
 ### Session 016 — 2026-08-25 — infra-006 sweep, AI-assistance note, tunnel restart, admin+login wired live
 
 | | |
