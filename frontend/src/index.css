@@ -68,6 +68,13 @@
   --text-label-sm--line-height: 14px;
 }
 
+/* WARNING: the named max-width utilities collide with this theme's
+ * --spacing-xs..xl scale -- in this build `max-w-sm` resolves to
+ * var(--spacing-sm) = 16px, not 24rem, squeezing the element to a sliver
+ * (text wraps one word per line). Never use max-w-xs/sm/md/lg/xl in this
+ * project; write explicit values (max-w-[28rem]) instead.
+ * ------------------------------------------------------------------------- */
+
 :root { color-scheme: light; }
 html.text-lg-mode { font-size: 18px; }
 html.text-xl-mode { font-size: 21px; }

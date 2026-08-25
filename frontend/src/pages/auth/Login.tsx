@@ -122,7 +122,7 @@ export default function Login() {
               Back
             </button>
 
-            <div className="flex-grow flex flex-col justify-center max-w-md mx-auto w-full">
+            <div className="flex-grow flex flex-col justify-center max-w-[28rem] mx-auto w-full">
 
               {/* Small heading */}
               <span className="text-gray-500 uppercase tracking-wider text-xs font-semibold mb-4">

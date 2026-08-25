@@ -15,7 +15,7 @@ export function AuthLayout({ children }: { children: ReactNode }) {
           Nocturnal Scholar
         </span>
 
-        <div className="max-w-sm">
+        <div className="max-w-[24rem]">
           <p className="font-serif text-headline-lg text-on-surface leading-tight">
             Knowledge is the path,
             <br />
@@ -34,7 +34,7 @@ export function AuthLayout({ children }: { children: ReactNode }) {
 
       {/* Form panel */}
       <div className="flex-1 flex items-center justify-center p-6 md:p-12 relative z-10">
-        <div className="glass-card w-full max-w-md rounded-xl p-card-inner-padding md:p-10">
+        <div className="glass-card w-full max-w-[28rem] rounded-xl p-card-inner-padding md:p-10">
           {children}
         </div>
       </div>

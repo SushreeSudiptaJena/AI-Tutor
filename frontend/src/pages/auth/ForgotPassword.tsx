@@ -19,7 +19,7 @@ export default function ForgotPassword() {
 
   return (
     <div className="admin-scope min-h-screen bg-gray-100 text-gray-900 flex items-center justify-center p-4">
-      <div className="bg-white rounded-3xl w-full max-w-md p-8 md:p-12 shadow-2xl">
+      <div className="bg-white rounded-3xl w-full max-w-[28rem] p-8 md:p-12 shadow-2xl">
         <Link
           to="/login"
           className="inline-flex items-center text-gray-500 hover:text-gray-800 transition-colors mb-8"

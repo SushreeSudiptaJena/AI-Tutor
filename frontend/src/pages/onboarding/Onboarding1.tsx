@@ -27,7 +27,7 @@ export default function Onboarding1() {
         <main className="flex-grow flex flex-col items-center justify-center px-container-padding py-section-gap w-full max-w-5xl mx-auto relative z-10 pb-12">
           
           {/* Progress Bar */}
-          <div className="w-full max-w-md mx-auto mb-8 h-1 bg-surface-container-low rounded-full overflow-hidden">
+          <div className="w-full max-w-[28rem] mx-auto mb-8 h-1 bg-surface-container-low rounded-full overflow-hidden">
             <div
               className="h-full bg-[#7AB139] transition-all duration-500"
               style={{ width: "50%" }}

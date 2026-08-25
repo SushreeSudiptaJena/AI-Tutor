@@ -36,7 +36,7 @@ export default function WhoAreYou() {
             Who are you?
           </h1>
 
-          <p className="text-[18px] leading-7 text-[#c3c7ca] mt-4 max-w-lg mx-auto">
+          <p className="text-[18px] leading-7 text-[#c3c7ca] mt-4 max-w-[32rem] mx-auto">
             Select the role that best describes you to tailor your Nocturnal
             Scholar experience.
           </p>

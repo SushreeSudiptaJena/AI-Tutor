@@ -44,7 +44,7 @@ export default function Login() {
     <main className="flex min-h-screen bg-cream text-on-surface">
       <section className="hidden w-1/2 flex-col justify-between bg-forest-green p-xl text-white lg:flex">
         <div className="text-label-md font-bold tracking-[0.3em]">JOURNEY</div>
-        <div className="max-w-md">
+        <div className="max-w-[28rem]">
           <Sparkles className="mb-lg h-8 w-8 text-mustard" />
           <h1 className="font-serif text-6xl leading-tight">Learn with more clarity.</h1>
           <p className="mt-md text-body-lg text-white/70">
@@ -55,7 +55,7 @@ export default function Login() {
       </section>
 
       <section className="flex w-full items-center justify-center p-md sm:p-xl lg:w-1/2">
-        <div className="w-full max-w-md">
+        <div className="w-full max-w-[28rem]">
           <div className="mb-xl lg:hidden">
             <span className="text-label-md font-bold tracking-[0.3em] text-forest-green">JOURNEY</span>
           </div>

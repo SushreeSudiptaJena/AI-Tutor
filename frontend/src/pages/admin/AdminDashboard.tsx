@@ -375,7 +375,7 @@ function CurriculumUploadView({ courses, coursesError }: { courses: Course[]; co
                   <h3 className="font-headline-md text-headline-md text-on-surface mb-2">
                     {file ? file.name : "Choose a document"}
                   </h3>
-                  <p className="font-body-md text-body-md text-on-surface-variant mb-6 max-w-sm">
+                  <p className="font-body-md text-body-md text-on-surface-variant mb-6 max-w-[24rem]">
                     PDF, DOCX, TXT and MD are accepted. The ingester reads what the
                     uploader accepts — nothing can be stored that cannot later be ingested.
                   </p>
