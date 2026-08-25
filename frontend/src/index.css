@@ -1,250 +1,81 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500&family=JetBrains+Mono:wght@500&family=Manrope:wght@600;700&family=Playfair+Display:wght@700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0");
 @import "tailwindcss";
 
 @theme {
-  /* =========================
-     Surface colors
-     ========================= */
-  --color-surface: #121414;
-  --color-surface-dim: #121414;
-  --color-surface-bright: #38393a;
-  --color-surface-container-lowest: #0c0f0f;
-  --color-surface-container-low: #1a1c1c;
-  --color-surface-container: #1e2020;
-  --color-surface-container-high: #282a2b;
-  --color-surface-container-highest: #333535;
-
-  /* =========================
-     Text / outline colors
-     ========================= */
-  --color-on-surface: #e2e2e2;
-  --color-on-surface-variant: #c3c7ca;
-  --color-outline: #8d9194;
-  --color-outline-variant: #43474a;
-
-  /* =========================
-     Primary
-     ========================= */
-  --color-primary: #bbc9d1;
-  --color-on-primary: #253239;
-  --color-primary-container: #243138;
-  --color-on-primary-container: #8b99a1;
-
-  /* =========================
-     Secondary
-     ========================= */
-  --color-secondary: #b0c9e9;
-  --color-on-secondary: #18324c;
-  --color-secondary-container: #304863;
-  --color-on-secondary-container: #9fb7d7;
-
-  /* =========================
-     Tertiary
-     ========================= */
+  --color-forest-green: #1a3d34;
+  --color-forest-light: #234b41;
+  --color-mustard: #e5b045;
+  --color-cream: #faf6ec;
+  --color-sage-light: #e3ede6;
+  --color-primary: #002824;
+  --color-primary-container: #183e3a;
+  --color-secondary: #3b665f;
+  --color-secondary-container: #beece3;
+  --color-background: #fbf9f1;
+  --color-surface: #fbf9f1;
+  --color-surface-container: #f0eee6;
+  --color-surface-container-low: #f6f4ec;
+  --color-surface-container-lowest: #ffffff;
+  --color-surface-container-highest: #e4e3db;
+  --color-surface-variant: #e4e3db;
+  --color-on-surface: #1b1c17;
+  --color-on-surface-variant: #414847;
+  --color-on-background: #1b1c17;
+  --color-on-primary: #ffffff;
+  --color-on-secondary: #ffffff;
+  --color-outline: #717977;
+  --color-outline-variant: #c0c8c6;
+  --color-error: #ba1a1a;
+  --color-error-container: #ffdad6;
+  --color-on-error-container: #93000a;
   --color-tertiary: #9dd75b;
-  --color-on-tertiary: #1e3700;
-  --color-tertiary-container: #1e3600;
   --color-on-tertiary-container: #70a62f;
-
-  /* =========================
-     Error
-     ========================= */
-  --color-error: #ffb4ab;
-  --color-on-error: #690005;
-
-  /* =========================
-     Background
-     ========================= */
-  --color-background: #121414;
-  --color-on-background: #e2e2e2;
-
-  /* =========================
-     Brand colors
-     From original onboarding HTML
-     ========================= */
-  --color-brand-teal: #0f766e;
-  --color-brand-orange: #c2410c;
-  --color-brand-burgundy: #9f1239;
-  --color-brand-lavender: #fbcfe8;
-
-  /* =========================
-     Fonts
-     ========================= */
-  --font-sans: 'Hanken Grotesk', system-ui, sans-serif;
-  --font-serif: 'Newsreader', serif;
-
-  --font-headline-sm: 'Hanken Grotesk', system-ui, sans-serif;
-  --font-body-md: 'Hanken Grotesk', system-ui, sans-serif;
-  --font-label-sm: 'Hanken Grotesk', system-ui, sans-serif;
-  --font-label-md: 'Hanken Grotesk', system-ui, sans-serif;
-  --font-body-lg: 'Hanken Grotesk', system-ui, sans-serif;
-  --font-headline-md: 'Hanken Grotesk', system-ui, sans-serif;
-  --font-headline-lg: 'Hanken Grotesk', system-ui, sans-serif;
-  --font-display-lg: 'Hanken Grotesk', system-ui, sans-serif;
-
-  /* =========================
-     Spacing
-     ========================= */
-  --spacing-unit: 8px;
-  --spacing-card-inner-padding: 24px;
-  --spacing-container-padding: 32px;
-  --spacing-section-gap: 48px;
-  --spacing-gutter: 24px;
-
-  /* =========================
-     Typography
-     ========================= */
-  --text-display-lg: 48px;
-  --text-display-lg--line-height: 56px;
-
+  --font-family-display-lg: "Manrope", sans-serif;
+  --font-family-headline-lg: "Manrope", sans-serif;
+  --font-family-headline-md: "Manrope", sans-serif;
+  --font-family-headline-sm: "Manrope", sans-serif;
+  --font-family-body-md: "Inter", sans-serif;
+  --font-family-body-lg: "Inter", sans-serif;
+  --font-family-body-sm: "Inter", sans-serif;
+  --font-family-label-md: "JetBrains Mono", monospace;
+  --font-family-label-sm: "JetBrains Mono", monospace;
+  --font-family-serif: "Playfair Display", serif;
+  --spacing-xs: 8px;
+  --spacing-sm: 16px;
+  --spacing-md: 24px;
+  --spacing-lg: 32px;
+  --spacing-xl: 48px;
+  --text-display-lg: 40px;
+  --text-display-lg--line-height: 48px;
   --text-headline-lg: 32px;
   --text-headline-lg--line-height: 40px;
-
   --text-headline-md: 24px;
   --text-headline-md--line-height: 32px;
-
   --text-headline-sm: 20px;
   --text-headline-sm--line-height: 28px;
-
   --text-body-lg: 18px;
   --text-body-lg--line-height: 28px;
-
   --text-body-md: 16px;
   --text-body-md--line-height: 24px;
-
-  --text-label-md: 14px;
-  --text-label-md--line-height: 20px;
-
-  --text-label-sm: 12px;
-  --text-label-sm--line-height: 16px;
+  --text-body-sm: 14px;
+  --text-body-sm--line-height: 20px;
+  --text-label-md: 13px;
+  --text-label-md--line-height: 16px;
+  --text-label-sm: 11px;
+  --text-label-sm--line-height: 14px;
 }
 
-/* =========================
-   Root
-   ========================= */
-
-:root {
-  color-scheme: light dark;
-}
-
-/* =========================
-   Accessibility
-   ========================= */
-
-html.text-lg-mode {
-  font-size: 18px;
-}
-
-html.text-xl-mode {
-  font-size: 21px;
-}
-
-html.high-contrast {
-  filter: contrast(1.35);
-}
-
-/* =========================
-   Body
-   ========================= */
-
-body {
-  background: var(--color-background);
-  color: var(--color-on-background);
-  font-family: var(--font-sans);
-}
-
-/* =========================
-   Glass cards
-   ========================= */
-
-.glass-card {
-  background: rgba(30, 32, 32, 0.6);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  transition: all 0.3s ease;
-}
-
-.glass-card:hover {
-  background: rgba(30, 32, 32, 0.7);
-  border-color: rgba(255, 255, 255, 0.15);
-}
-
-/* Selected card */
-.glass-card.selected,
-.glass-card[aria-pressed="true"] {
-  background: rgba(184, 244, 115, 0.08);
-  border-color: var(--color-tertiary);
-  box-shadow: 0 0 30px rgba(184, 244, 115, 0.15);
-}
-
-/* =========================
-   Onboarding active card glow
-   ========================= */
-
-.glow-active {
-  box-shadow: 0 0 30px rgba(251, 207, 232, 0.2);
-  border-color: rgba(251, 207, 232, 0.5) !important;
-}
-
-/* =========================
-   Primary button
-   ========================= */
-
-.btn-primary-glow {
-  background: linear-gradient(
-    135deg,
-    var(--color-tertiary) 0%,
-    var(--color-on-tertiary-container) 100%
-  );
-
-  box-shadow: 0 4px 20px rgba(184, 244, 115, 0.3);
-  transition: all 0.3s ease;
-}
-
-.btn-primary-glow:hover {
-  box-shadow: 0 6px 25px rgba(184, 244, 115, 0.5);
-  transform: translateY(-1px);
-}
-
-.btn-primary-glow:disabled {
-  opacity: 0.5;
-  box-shadow: none;
-  transform: none;
-  cursor: not-allowed;
-}
-
-/* =========================
-   Onboarding button glow
-   ========================= */
-
-.btn-glow {
-  box-shadow: 0 4px 20px rgba(251, 207, 232, 0.3);
-  transition: all 0.3s ease;
-}
-
-.btn-glow:hover {
-  box-shadow: 0 6px 25px rgba(251, 207, 232, 0.5);
-  transform: translateY(-1px);
-}
-
-/* =========================
-   Focus states
-   ========================= */
-
-a:focus-visible,
-button:focus-visible,
-input:focus-visible {
-  outline: 2px solid var(--color-tertiary);
-  outline-offset: 2px;
-}
-
-/* =========================
-   Reduced motion
-   ========================= */
+:root { color-scheme: light; }
+html.text-lg-mode { font-size: 18px; }
+html.text-xl-mode { font-size: 21px; }
+html.high-contrast { filter: contrast(1.35); }
+html, body, #root { min-height: 100%; margin: 0; }
+body { overscroll-behavior: none; }
+button, a, input { font: inherit; }
+a:focus-visible, button:focus-visible, input:focus-visible { outline: 2px solid var(--color-tertiary); outline-offset: 2px; }
+::-webkit-scrollbar { display: none; }
 
 @media (prefers-reduced-motion: reduce) {
-  * {
-    transition-duration: 0.001ms !important;
-    animation-duration: 0.001ms !important;
-  }
+  *, *::before, *::after { transition-duration: 0.001ms !important; animation-duration: 0.001ms !important; }
 }

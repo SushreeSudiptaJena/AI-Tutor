@@ -16,7 +16,6 @@
     // Deliberately loose: 6 people, 36 hours. Types are documentation here,
     // not a proof system. See CLAUDE.md.
     "strict": false,
-    "baseUrl": ".",
     "paths": { "@/*": ["./src/*"] }
   },
   "include": ["src", "vite.config.ts"]
