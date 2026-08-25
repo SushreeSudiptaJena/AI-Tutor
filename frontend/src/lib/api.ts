@@ -141,3 +141,35 @@ export const getProviderStatus = () =>
 
 export const getLanguages = () =>
   api<{ items: { code: string; label: string }[] }>("/languages", { auth: false });
+
+// --- auth endpoints (auth-001) ----------------------------------------
+
+export const login = (email: string, password: string) =>
+  api<{ token: string; user: User }>("/auth/login", {
+    method: "POST",
+    body: { email, password },
+    auth: false,
+  });
+
+export const signup = (input: {
+  email: string;
+  password: string;
+  full_name: string;
+  role: Role;
+  course_id?: number;
+}) =>
+  api<{ token: string; user: User }>("/auth/signup", {
+    method: "POST",
+    body: input,
+    auth: false,
+  });
+
+export const logout = () => api<void>("/auth/logout", { method: "POST" });
+
+export const getMe = () => api<User>("/auth/me");
+
+export const updatePreferences = (preferred_language: string) =>
+  api<User>("/auth/me/preferences", {
+    method: "PATCH",
+    body: { preferred_language },
+  });

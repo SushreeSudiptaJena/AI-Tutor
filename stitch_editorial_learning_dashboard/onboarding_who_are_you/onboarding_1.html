@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 
-<html class="dark" lang="en" style=""><head>
+<html class="dark" lang="en"><head>
 <meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
 <title>Onboarding - Who are you?</title>
@@ -125,42 +125,20 @@
             transform: translateY(-1px);
         }
     </style>
-<script>
-    function selectCard(selectedId) {
-        const cards = document.querySelectorAll('.role-card');
-        cards.forEach(card => {
-            const checkIcon = card.querySelector('.check-icon');
-            if (card.id === selectedId) {
-                card.classList.add('glow-active');
-                card.classList.remove('border-outline-variant');
-                card.classList.add('border-brand-lavender/50');
-                checkIcon.classList.remove('opacity-0');
-                checkIcon.classList.add('opacity-100');
-            } else {
-                card.classList.remove('glow-active');
-                card.classList.remove('border-brand-lavender/50');
-                card.classList.add('border-outline-variant');
-                checkIcon.classList.remove('opacity-100');
-                checkIcon.classList.add('opacity-0');
-            }
-        });
-    }
-</script>
 </head>
 <body class="bg-background text-on-background min-h-screen flex flex-col font-body-md antialiased selection:bg-tertiary selection:text-on-tertiary">
 <!-- Main Content Canvas -->
-<main class="flex-grow flex flex-col items-center justify-center px-container-padding py-section-gap w-full max-w-5xl mx-auto relative z-10 pb-12"><div class="w-full max-w-md mx-auto mb-8 h-1 bg-surface-container-low rounded-full overflow-hidden">
-<div class="h-full bg-[#7AB139] transition-all duration-500" style="width: 50%;"></div>
-</div>
+<main class="flex-grow flex flex-col items-center justify-center px-container-padding py-section-gap w-full max-w-5xl mx-auto relative z-10">
 <!-- Header -->
-<header class="text-center w-full mb-4">
+<header class="text-center mb-section-gap w-full">
 <p class="text-label-md font-label-md text-on-surface-variant uppercase tracking-widest mb-4">Step 1 of 2</p>
 <h1 class="text-display-lg md:text-[56px] font-serif text-on-surface leading-tight tracking-tight">Who are you?</h1>
+<p class="text-body-lg font-body-lg text-on-surface-variant mt-4 max-w-lg mx-auto">Select the role that best describes you to tailor your Nocturnal Scholar experience.</p>
 </header>
 <!-- Selection Grid -->
-<div class="grid grid-cols-1 md:grid-cols-3 gap-6 w-full max-w-5xl justify-center">
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6 w-full max-w-4xl">
 <!-- Card 1: Student (Active) -->
-<button class="role-card glass-card rounded-[24px] p-card-inner-padding text-left flex flex-col items-start gap-4 border border-brand-lavender/50 glow-active transition-all duration-300 group hover:-translate-y-1 focus:outline-none focus:ring-2 focus:ring-brand-lavender/50" id="card-student" onclick="selectCard('card-student')">
+<button class="glass-card rounded-[24px] p-card-inner-padding text-left flex flex-col items-start gap-4 border border-brand-teal glow-active transition-all duration-300 group hover:-translate-y-1 focus:outline-none focus:ring-2 focus:ring-brand-lavender/50">
 <div class="w-12 h-12 rounded-full bg-brand-teal/20 flex items-center justify-center text-brand-lavender">
 <span class="material-symbols-outlined text-3xl" data-icon="school" data-weight="fill" style="font-variation-settings: 'FILL' 1;">school</span>
 </div>
@@ -168,12 +146,12 @@
 <h3 class="text-headline-sm font-headline-sm text-on-surface mb-2">Student</h3>
 <p class="text-body-md font-body-md text-on-surface-variant leading-relaxed">I'm here to learn and track my progress through guided materials.</p>
 </div>
-<div class="mt-auto pt-4 w-full flex justify-end check-icon opacity-100 transition-opacity">
+<div class="mt-auto pt-4 w-full flex justify-end opacity-100 transition-opacity">
 <span class="material-symbols-outlined text-brand-lavender">check_circle</span>
 </div>
 </button>
 <!-- Card 2: Teacher -->
-<button class="role-card glass-card rounded-[24px] p-card-inner-padding text-left flex flex-col items-start gap-4 border border-outline-variant hover:border-brand-lavender/50 transition-all duration-300 group hover:-translate-y-1 focus:outline-none focus:ring-2 focus:ring-brand-lavender/30" id="card-teacher" onclick="selectCard('card-teacher')">
+<button class="glass-card rounded-[24px] p-card-inner-padding text-left flex flex-col items-start gap-4 border border-outline-variant hover:border-brand-orange/50 transition-all duration-300 group hover:-translate-y-1 focus:outline-none focus:ring-2 focus:ring-brand-orange/30">
 <div class="w-12 h-12 rounded-full bg-brand-orange/10 flex items-center justify-center text-brand-orange/80 group-hover:text-brand-orange transition-colors">
 <span class="material-symbols-outlined text-3xl" data-icon="supervisor_account">supervisor_account</span>
 </div>
@@ -181,25 +159,34 @@
 <h3 class="text-headline-sm font-headline-sm text-on-surface mb-2">Teacher</h3>
 <p class="text-body-md font-body-md text-on-surface-variant leading-relaxed">I want to guide, create curriculum, and monitor learners' academic journeys.</p>
 </div>
-<div class="mt-auto pt-4 w-full flex justify-end check-icon opacity-0 transition-opacity">
-<span class="material-symbols-outlined text-brand-lavender">check_circle</span>
+<div class="mt-auto pt-4 w-full flex justify-end opacity-0 group-hover:opacity-100 transition-opacity">
+<span class="material-symbols-outlined text-on-surface-variant">arrow_forward</span>
 </div>
 </button>
-<!-- Card 3: Admin -->
-<button class="role-card glass-card rounded-[24px] p-card-inner-padding text-left flex flex-col items-start gap-4 border border-outline-variant hover:border-brand-lavender/50 transition-all duration-300 group hover:-translate-y-1 focus:outline-none focus:ring-2 focus:ring-brand-lavender/30" id="card-admin" onclick="selectCard('card-admin')">
-<div class="w-12 h-12 rounded-full bg-brand-teal/5 flex items-center justify-center text-brand-teal group-hover:text-brand-teal transition-colors">
-<span class="material-symbols-outlined text-3xl" data-icon="admin_panel_settings">admin_panel_settings</span>
+<!-- Card 3: Other -->
+<button class="glass-card rounded-[24px] p-card-inner-padding text-left flex flex-col items-start gap-4 border border-outline-variant hover:border-brand-burgundy/50 transition-all duration-300 group hover:-translate-y-1 focus:outline-none focus:ring-2 focus:ring-brand-burgundy/30">
+<div class="w-12 h-12 rounded-full bg-brand-burgundy/10 flex items-center justify-center text-brand-burgundy/80 group-hover:text-brand-burgundy transition-colors">
+<span class="material-symbols-outlined text-3xl" data-icon="local_library">local_library</span>
 </div>
 <div>
-<h3 class="text-headline-sm font-headline-sm text-on-surface mb-2">Admin</h3>
-<p class="text-body-md font-body-md text-on-surface-variant leading-relaxed">I manage the platform — uploading source material, updates, and content.</p>
+<h3 class="text-headline-sm font-headline-sm text-on-surface mb-2">Other / Self-learner</h3>
+<p class="text-body-md font-body-md text-on-surface-variant leading-relaxed">I'm here for personal growth, independent research, and curiosity.</p>
 </div>
-<div class="mt-auto pt-4 w-full flex justify-end check-icon opacity-0 transition-opacity">
-<span class="material-symbols-outlined text-brand-lavender">check_circle</span>
+<div class="mt-auto pt-4 w-full flex justify-end opacity-0 group-hover:opacity-100 transition-opacity">
+<span class="material-symbols-outlined text-on-surface-variant">arrow_forward</span>
 </div>
-</button></div><footer class="w-full flex flex-col items-center justify-center pb-8 gap-4 px-container-padding mt-8 z-20"><button class="bg-surface-container border border-outline-variant/30 text-on-surface px-8 py-3 rounded-full text-label-md font-label-md tracking-wide btn-glow flex items-center gap-2">Continue<span class="material-symbols-outlined text-sm">arrow_forward</span></button><a class="text-label-sm font-label-sm text-on-surface-variant hover:text-on-surface transition-colors underline underline-offset-4 decoration-on-surface-variant/50 hover:decoration-on-surface" href="#">Skip for now</a><p class="text-label-sm font-label-sm text-on-surface-variant/50 mt-2">© 2024 Nocturnal Scholar.</p></footer>
+</button>
+</div>
 </main>
 <!-- Footer / Bottom Nav Shell (Transactional) -->
+<footer class="fixed bottom-0 w-full flex flex-col items-center justify-center pb-8 gap-4 px-container-padding bg-gradient-to-t from-background to-transparent pt-12 z-20">
+<button class="bg-surface-container border border-outline-variant/30 text-on-surface px-8 py-3 rounded-full text-label-md font-label-md tracking-wide btn-glow flex items-center gap-2">
+            Continue
+            <span class="material-symbols-outlined text-sm">arrow_forward</span>
+</button>
+<a class="text-label-sm font-label-sm text-on-surface-variant hover:text-on-surface transition-colors underline underline-offset-4 decoration-on-surface-variant/50 hover:decoration-on-surface" href="#">Skip for now</a>
+<p class="text-label-sm font-label-sm text-on-surface-variant/50 mt-2">© 2024 Nocturnal Scholar.</p>
+</footer>
 <!-- Decorative Background Elements -->
 <div class="fixed inset-0 pointer-events-none z-0 overflow-hidden">
 <div class="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] rounded-full bg-brand-teal/5 blur-[120px]"></div>
