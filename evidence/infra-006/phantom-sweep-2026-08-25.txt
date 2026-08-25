@@ -1,0 +1,68 @@
+Seed files describe: CSW2
+Courses in the database: CS-C, CSW1, CSW2, DLD, PH000, PH101
+
+=== CS-C -- Programming with C
+    no seeded content rows (corpus-only course)
+
+=== CSW1 -- Computer Science Workshop 1
+    no seeded content rows (corpus-only course)
+
+=== CSW2 -- Computer Science Workshop 2
+    clean -- every row is defined by a seed file
+
+=== DLD -- Digital Logic Design
+    no seeded content rows (corpus-only course)
+
+=== PH000 -- Class 12 Physics
+    no seeded content rows (corpus-only course)
+
+=== PH101 -- Mechanics
+    OUT-OF-REACH topic                 'foundations'
+                                       -> KEPT -- has 1 concepts, 1 misconceptions
+    OUT-OF-REACH topic                 'newtons-laws'
+                                       -> KEPT -- has 6 concepts, 7 misconceptions
+    OUT-OF-REACH topic                 'vectors-forces'
+                                       -> KEPT -- has 2 concepts, 2 misconceptions
+    OUT-OF-REACH concept               'free-body-diagrams'
+                                       -> KEPT -- has 1 diagnostic
+    OUT-OF-REACH concept               'free-fall'
+                                       -> orphan, a prune would delete it
+    OUT-OF-REACH concept               'friction'
+                                       -> KEPT -- has 1 diagnostic
+    OUT-OF-REACH concept               'mass-and-weight'
+                                       -> KEPT -- has 1 diagnostic
+    OUT-OF-REACH concept               'newtons-first-law'
+                                       -> KEPT -- has 1 diagnostic
+    OUT-OF-REACH concept               'newtons-second-law'
+                                       -> KEPT -- has 1 diagnostic
+    OUT-OF-REACH concept               'newtons-third-law'
+                                       -> KEPT -- has 1 diagnostic
+    OUT-OF-REACH concept               'vector-addition'
+                                       -> KEPT -- has 1 diagnostic
+    OUT-OF-REACH concept               'vector-components'
+                                       -> KEPT -- has 1 diagnostic
+    OUT-OF-REACH misconception         'action-reaction-same-body'
+                                       -> orphan, a prune would delete it
+    OUT-OF-REACH misconception         'force-in-direction-of-motion'
+                                       -> orphan, a prune would delete it
+    OUT-OF-REACH misconception         'friction-depends-on-area'
+                                       -> orphan, a prune would delete it
+    OUT-OF-REACH misconception         'heavier-falls-faster'
+                                       -> orphan, a prune would delete it
+    OUT-OF-REACH misconception         'mass-weight-confusion'
+                                       -> orphan, a prune would delete it
+    OUT-OF-REACH misconception         'normal-equals-weight-always'
+                                       -> orphan, a prune would delete it
+    OUT-OF-REACH misconception         'sin-cos-swap'
+                                       -> orphan, a prune would delete it
+    OUT-OF-REACH misconception         'static-friction-is-fixed'
+                                       -> orphan, a prune would delete it
+    OUT-OF-REACH misconception         'vector-scalar-addition'
+                                       -> orphan, a prune would delete it
+    OUT-OF-REACH misconception         'velocity-implies-force'
+                                       -> orphan, a prune would delete it
+
+=== Unparented (in no course -- invisible to every prune)
+    none
+
+PASS -- no phantom rows in CSW2.
