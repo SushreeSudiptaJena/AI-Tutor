@@ -1,0 +1,62 @@
+frontend-004 — remaining teacher panels wired live (reasoning paths,
+before/after, verification queue) + real overview numbers
+Verified 2026-08-26, headless Edge as ravi@example.edu against :5173/:8000.
+Build green (5.51s). Screenshots in this directory: overview.png,
+reasoning-paths.png, before-after.png, verification.png.
+
+=== 1. Overview (real aggregates, fabricated card removed) ================
+  {"classSize":true,"tiles":true,"noAvgMastery":true,"noSarah":true,
+   "gapsList":true,"flagsList":true}
+Four real tiles (class size 26, open flags, top misconception share, open
+prerequisite gaps) + Top Learning Gaps ("From Computer Science Workshop 1")
++ Latest Uncertainty Flags. The mockup's "Avg. Mastery" card is GONE by
+design: no aggregate mastery score exists anywhere in this system, and a
+dashboard that invented one would undercut the build's own stance.
+
+=== 2. Reasoning paths (teacher-002) ======================================
+  chips: [foreign-key-placement, http-method-choice, filter-vs-get,
+          class-vs-instance-attribute, form-field-name, http-statelessness]
+  {"realAnswer":true,"exampleCount":1,"reasoningShown":true}
+Real problem types from the heatmap as selector chips; the default type's
+card shows a REAL answer a real student gave ("A real student answered"),
+with the misconception's reasoning description. API cross-check:
+GET /teacher/problems/foreign-key-placement/reasoning-paths -> 1 item,
+example present.
+
+=== 3. Before / after (teacher-005) — including the null-vs-zero rule ====
+Before any reteach approval:
+  {"selectorChips":6,"beforeCard":true,"afterNull":true}
+  -> "No reteach approved for this misconception yet" — null, not a fake 0.
+After the reteach unit was approved (unit 44, driven from the UI in the
+prior run):
+  {"afterPresent":true,"notMeasured":true,"zeroVsNullHonest":true}
+  -> both windows render; delta says "Not measured yet" because
+     attempts_in_window is 0 — zero evidence is not zero occurrences, and
+     the panel refuses to claim the reteach worked when nobody has been
+     asked since.
+
+=== 4. Reteach approve (UI-driven, persists) ==============================
+Unit 44 ("Puts the foreign key on the one side of a one-to-many
+relationship") drafted -> "Approve & assign" clicked -> status assigned
+(it now also appears in students' Assignments). Later runs show ASSIGNED.
+
+=== 5. Verification queue (teacher-007) — both verbs driven from the UI ==
+REJECT: typed reason "Not aligned with the CSW2 syllabus scope" ->
+Confirm reject -> DB row 52 status=rejected with exactly that reason
+retained on the row. APPROVE: Approve button clicked -> DB row 51
+status=approved. Final demo state: 51 approved, 52 rejected — a mixed,
+realistic queue.
+
+=== What testing found that reading would not have =======================
+- **Empty-state strings double as loading states.** "No drafts" / "Nothing
+  pending" render while the fetch is still in flight (units === null), so a
+  wait keyed on them resolves against a transient frame and the action runs
+  into a page with no buttons. Waits must target the BUTTON (or a data-only
+  marker), never an empty-state sentence.
+- **`textContent.trim() === "Approve"` never matches** — Material Symbols
+  ligatures put their name inside the button ("check_circleApprove").
+  `includes()` or an aria-label, not exact text equality.
+- **A heredoc still eats Windows backslashes** (screenshot path mangled
+  mid-run); forward slashes in JS paths, always.
+- Remote-DB RTT means every wait needs ~2-4s of headroom over instinct;
+  three "failures" today were fixed sleeps outrunning the data.

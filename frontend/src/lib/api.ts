@@ -575,3 +575,74 @@ export const suggestTopReteach = () =>
     "/teacher/reteach/suggest-top",
     { method: "POST", body: {} },
   );
+
+// --- teacher panels, second pass (frontend-004) ----------------------------
+
+export type ReasoningExample = { given_answer: string; reasoning: string };
+
+export type ReasoningPathItem = {
+  misconception_id: number;
+  label: string;
+  confirmed_count: number;
+  /** Null when no confirmed diagnosis carries a stored answer to show. */
+  example: ReasoningExample | null;
+};
+
+/** teacher-002. The reasoning paths behind ONE kind of problem; the
+ *  problem_type values to offer come from the heatmap's items. */
+export const getReasoningPaths = (problemType: string) =>
+  api<{ problem_type: string; items: ReasoningPathItem[] }>(
+    `/teacher/problems/${encodeURIComponent(problemType)}/reasoning-paths`,
+  ).then((r) => r.items);
+
+export type BeforeAfterWindow = {
+  window: string;
+  confirmed_count: number;
+  share: number;
+  attempts_in_window?: number;
+  measured?: boolean;
+};
+
+export type BeforeAfter = {
+  misconception_id: number;
+  label: string;
+  before: BeforeAfterWindow;
+  /** Null until a reteach was approved -- deliberately not zero. */
+  after: BeforeAfterWindow | null;
+  reteach_at: string | null;
+  /** Null until `after.measured` -- zero evidence is not zero occurrences. */
+  delta_share: number | null;
+  note?: string;
+};
+
+/** teacher-005. The one panel that can say the reteach did not work. */
+export const getBeforeAfter = (misconceptionId: number) =>
+  api<BeforeAfter>(`/teacher/misconceptions/${misconceptionId}/before-after`);
+
+export type VerificationItem = {
+  id: number;
+  source_url: string;
+  title: string;
+  excerpt: string;
+  found_for_gap: string;
+  status: string;
+  reject_reason: string | null;
+  found_at: string | null;
+};
+
+/** teacher-007. Seeded by design -- no live web search in this build. A
+ *  pending item is unreachable from every student endpoint; that is the
+ *  property that makes "curriculum-aligned" mean anything. */
+export const getVerificationQueue = (status = "pending") =>
+  api<{ items: VerificationItem[] }>(`/teacher/verification-queue?status=${status}`).then(
+    (r) => r.items,
+  );
+
+export const approveVerificationItem = (id: number) =>
+  api<VerificationItem>(`/teacher/verification-queue/${id}/approve`, { method: "POST" });
+
+export const rejectVerificationItem = (id: number, reason?: string) =>
+  api<VerificationItem>(`/teacher/verification-queue/${id}/reject`, {
+    method: "POST",
+    body: reason ? { reason } : {},
+  });

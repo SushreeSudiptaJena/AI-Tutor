@@ -1074,6 +1074,29 @@
       ],
       "evidence": "evidence/frontend-003/verification.txt",
       "notes": "Person 3's 111d770 screens were 14 static Stitch mockups (hardcoded geometry class, 'Dr. Sarah Ascent'); the four panels with real endpoints are wired, the ten with no backend surface stay static and out of scope. Tell person 3 their files were edited (TeacherChrome extracted; four screens rewritten). Reasoning Paths / Before-After / Verification have endpoints but await a later pass."
+    },
+    {
+      "id": "frontend-004",
+      "priority": 50,
+      "area": "frontend",
+      "title": "Teacher console, second pass: reasoning paths, before/after, verification queue, real overview",
+      "user_visible_behavior": "The teacher overview shows real class aggregates (and no fabricated average-mastery card); Reasoning Paths breaks a problem type down into confirmed wrong mental models each with a real student's answer; Before/After shows confirmed counts either side of an approved reteach with an honest 'not measured yet' until evidence exists; the Content Verification queue approves and rejects outside material with the reason retained.",
+      "status": "passing",
+      "depends_on": [
+        "teacher-002",
+        "teacher-005",
+        "teacher-007",
+        "frontend-003"
+      ],
+      "demo_mode": "live",
+      "verification": [
+        "Overview: class size / open flags / top misconception share / open gap count all real; no 'Avg. Mastery', no 'Dr. Sarah Ascent'.",
+        "Reasoning Paths: chips are the heatmap's real problem types; a card shows a real given answer and the reasoning behind it.",
+        "Before/After: no reteach -> after is null ('No reteach approved yet'), never zero; after approval -> both windows + 'Not measured yet' until attempts_in_window > 0.",
+        "Verification queue: Approve and Reject (with typed reason) both persist from the UI."
+      ],
+      "evidence": "evidence/frontend-004/verification.txt",
+      "notes": "Person 3's files again (owner-directed; tell them). End state after verification is good demo state: reteach unit 44 assigned, queue 51 approved / 52 rejected. The seven screens with no endpoints (classes, directory, attendance, lesson plans, assignments library, settings) remain static mockups by design — the contract has nothing for them to call."
     }
   ]
 }
