@@ -27,7 +27,11 @@ export default function Login() {
         auth: false,
       });
       setToken(result.token);
-      navigate(result.user.course_id ? "/dashboard" : "/onboarding/course");
+      // Role first, then course: a teacher has a course_id too, so routing on
+      // course_id alone would send them to the student dashboard (and bounce).
+      if (result.user.role === "teacher") navigate("/teacher");
+      else if (result.user.role === "admin") navigate("/admin");
+      else navigate(result.user.course_id ? "/dashboard" : "/onboarding/course");
     } catch (caught) {
       setError(caught instanceof ApiError ? caught.message : "Unable to sign in right now.");
     } finally {

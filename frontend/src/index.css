@@ -1,4 +1,4 @@
-@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500&family=JetBrains+Mono:wght@500&family=Manrope:wght@600;700&family=Playfair+Display:wght@700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500&family=JetBrains+Mono:wght@500&family=Manrope:wght@600;700&family=Montserrat:wght@500;600;700&family=Playfair+Display:wght@700&display=swap");
 @import url("https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0");
 @import "tailwindcss";
 
@@ -48,6 +48,18 @@
   --spacing-md: 24px;
   --spacing-lg: 32px;
   --spacing-xl: 48px;
+
+  /* Teacher-screen layout tokens (111d770). These MUST live in a build-time
+     @theme, not under .teacher-scope below: w-sidebar-width / p-margin-desktop
+     are generated as utilities only from @theme, and a plain-class var does
+     not generate anything -- the sidebar collapsed when they were first
+     scoped. They are new names; nothing else uses them. */
+  --spacing-gutter: 24px;
+  --spacing-margin-mobile: 16px;
+  --spacing-base: 8px;
+  --spacing-card-padding: 24px;
+  --spacing-sidebar-width: 280px;
+  --spacing-margin-desktop: 40px;
   --text-display-lg: 40px;
   --text-display-lg--line-height: 48px;
   --text-headline-lg: 32px;
@@ -310,14 +322,6 @@ a:focus-visible, button:focus-visible, input:focus-visible { outline: 2px solid 
 
   --radius-lg: 0.5rem;
   --radius-xl: 0.75rem;
-
-  /* Layout tokens used by the converted Stitch teacher screens. */
-  --spacing-gutter: 24px;
-  --spacing-margin-mobile: 16px;
-  --spacing-base: 8px;
-  --spacing-card-padding: 24px;
-  --spacing-sidebar-width: 280px;
-  --spacing-margin-desktop: 40px;
 
   --font-headline-md: "Montserrat", sans-serif;
   --font-body-md: "Inter", sans-serif;

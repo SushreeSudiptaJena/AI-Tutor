@@ -1048,6 +1048,32 @@
       ],
       "evidence": "evidence/perf-002/verification.txt",
       "notes": "Owner report 2026-08-26: every view switch re-mounts its view component, which refetches over ~137-320ms-per-round-trip remote-DB links (perf-001 measured this); 3+ sequential round trips = the 3s felt lag. Fix is client-side SWR in api.ts -- a server TTL cache is only worth it for course-summary (per-course static); per-user rows must stay uncached server-side."
+    },
+    {
+      "id": "frontend-003",
+      "priority": 49,
+      "area": "frontend",
+      "title": "Teacher console wired to the live API (golden-path panels)",
+      "user_visible_behavior": "A teacher signs in at /login and lands on their console. The Misconception Heatmap shows the class's real confirmed misconceptions and polls live; Uncertainty Flags lists the real questions the tutor refused and can be resolved; the Gap Map shows real CSW2 gaps attributed to CSW1; Suggested Reteach lists real drafts with approve + the draft-top-3+3 action.",
+      "status": "passing",
+      "depends_on": [
+        "teacher-001",
+        "teacher-003",
+        "teacher-004",
+        "teacher-006",
+        "teacher-008",
+        "rag-003"
+      ],
+      "demo_mode": "live",
+      "verification": [
+        "Sign in as the seeded teacher at /login: routed to /teacher (role-first, not course_id-first).",
+        "Heatmap: real class size, real confirmed rows, real teacher name, zero geometry-mock content; polls every 5s.",
+        "Flags: real open questions with alignment % and a working resolve button.",
+        "Gap map: real concepts each attributed to the prerequisite course.",
+        "Reteach: real drafts, approve wired, Draft top 3 + top 3 present."
+      ],
+      "evidence": "evidence/frontend-003/verification.txt",
+      "notes": "Person 3's 111d770 screens were 14 static Stitch mockups (hardcoded geometry class, 'Dr. Sarah Ascent'); the four panels with real endpoints are wired, the ten with no backend surface stay static and out of scope. Tell person 3 their files were edited (TeacherChrome extracted; four screens rewritten). Reasoning Paths / Before-After / Verification have endpoints but await a later pass."
     }
   ]
 }

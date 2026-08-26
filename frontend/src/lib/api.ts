@@ -493,3 +493,85 @@ export function clearSessionCache() {
   sessionCache.clear();
   inflight.clear();
 }
+
+// --- teacher endpoints (frontend-003) --------------------------------------
+
+export type HeatmapItem = {
+  misconception_id: number;
+  label: string;
+  confirmed_count: number;
+  share: number;
+  problem_type: string;
+};
+
+export type Heatmap = {
+  topic: string;
+  class_size: number;
+  updated_at: string;
+  items: HeatmapItem[];
+};
+
+export type UncertaintyFlagDto = {
+  id: number;
+  question: string;
+  alignment_percent: number;
+  reason: string;
+  topic_id: number | null;
+  occurred_at: string;
+  status: string;
+};
+
+export type GapMapItem = {
+  concept: string;
+  prerequisite_course: string;
+  students_missing: number;
+  share: number;
+};
+
+export type ReteachUnitDto = {
+  id: number;
+  misconception_id: number | null;
+  concept_id: number | null;
+  target: string;
+  label: string;
+  title: string;
+  body: string;
+  status: string;
+  approved_by: number | null;
+};
+
+/** course_id is deliberately not passed: the teacher router scopes to the
+ *  signed-in teacher's own course, exactly like /tutor does for students. */
+export const getHeatmap = () =>
+  api<Heatmap>("/teacher/misconceptions/heatmap").then((r) => r);
+
+export const getUncertaintyFlags = (status = "open") =>
+  api<{ items: UncertaintyFlagDto[] }>(`/teacher/uncertainty-flags?status=${status}`).then(
+    (r) => r.items,
+  );
+
+export const resolveUncertaintyFlag = (id: number, note?: string) =>
+  api<void>(`/teacher/uncertainty-flags/${id}/resolve`, {
+    method: "POST",
+    body: note ? { note } : {},
+  });
+
+export const getGapMap = () =>
+  api<{ items: GapMapItem[] }>("/teacher/gap-map").then((r) => r.items);
+
+export const getReteachUnits = (status?: string) =>
+  api<{ items: ReteachUnitDto[] }>(
+    `/teacher/reteach${status ? `?status=${status}` : ""}`,
+  ).then((r) => r.items);
+
+export const approveReteachUnit = (id: number) =>
+  api<ReteachUnitDto>(`/teacher/reteach/${id}/approve`, { method: "POST" });
+
+/** teacher-008. Drafts the top 3 of each ranking in one press. Idempotent --
+ *  safe to press during a rehearsal. First press on cold cache takes ~a minute
+ *  of model calls; the disk cache makes every later press free. */
+export const suggestTopReteach = () =>
+  api<{ drafted: ReteachUnitDto[]; skipped: { reason: string }[] }>(
+    "/teacher/reteach/suggest-top",
+    { method: "POST", body: {} },
+  );

@@ -1,0 +1,72 @@
+frontend-003 — teacher console wired live (person 3's screens, owner-directed)
+Verified 2026-08-26, headless Edge against localhost:5173 + :8000, signed in
+as the seeded teacher ravi@example.edu. Build green (5.34s); backend suite
+342 (teacher endpoints already covered by teacher-001..008 suites).
+
+BACKGROUND
+111d770 shipped 14 teacher screens converted from the Stitch mockups: every
+one of them STATIC — zero API calls, hardcoded geometry-class data ("Dr.
+Sarah Ascent", "Alg II-B", "division as always shrinking the number"), i.e.
+the same starting point the student Dashboard had before frontend-002. This
+feature wires the four panels that have real endpoints; the ten with no
+backend surface (attendance, lesson plans, classes, directory, …) stay
+static and are OUT OF SCOPE — the contract has no endpoints for them.
+
+=== 1. The teacher door ================================================
+/login as ravi (role teacher) -> /teacher. Previously routed on course_id
+alone, which sent teachers to the student dashboard (RequireAuth role
+bounce). Routing is now role-first. /teacher is behind RequireAuth
+role="teacher" (the rebase had it unguarded).
+
+=== 2. Misconception heatmap (GET /teacher/misconceptions/heatmap) ====
+  {"teacherName":true,"noGeometryMock":true,"rowCount":1,
+   "classSize":"Class size: 26","hasEmptyState":false}
+Real class size, real confirmed-misconception row, Ravi Menon in the
+header, zero trace of the geometry mock or the placeholder persona. Polled
+every 5s per the contract (the run shows two heatmap GETs — initial + poll).
+The decorative tile was a googleusercontent.com URL of the kind that has
+already expired once (session 017); replaced with a gradient.
+
+=== 3. Uncertainty flags (GET .../uncertainty-flags, POST .../resolve) ==
+  {"openCount":"4","hasRealQuestion":4,"emptyOk":false}
+4 open flags, each a real question card with alignment %, humanized reason,
+and a working Mark-resolved button. rag-003 writes these rows; no wiring was
+needed on the backend.
+
+=== 4. Prerequisite gap map (GET /teacher/gap-map) =====================
+  concepts: ["One-to-many relationships","HTTP methods, GET and POST",
+             "Filtering and querying records",
+             "Virtual environments and package isolati","URL paths and routing"]
+  fromCourse: "From Computer Science Workshop 1" x3
+Real CSW2 gaps attributed to CSW1 — the golden path's attribution, on screen.
+
+=== 5. Suggested reteach (GET /teacher/reteach, suggest-top, approve) ===
+  {"drafts":"1","assigned":"0","draftButton":true}
+1 real draft (the post-reset unit), approve wired, and the teacher-008
+"Draft top 3 + top 3" button live with its cold-cache warning.
+
+=== Screenshots ========================================================
+teacher-heatmap.png / teacher-flags.png / teacher-gapmap.png /
+teacher-reteach.png (this directory). Vision pass on the heatmap: sidebar
+expanded, readable, no overlap; "Identified Mental Models" rendering with a
+critical row.
+
+=== Also fixed on the way =============================================
+- .teacher-scope: their second global @theme redefined shared tokens
+  (--color-tertiary lime -> dark brown, Manrope -> Montserrat) and would
+  have re-run the palette bleed; colors/fonts now scoped to the teacher
+  shell like .admin-scope.
+- Layout tokens (--spacing-sidebar-width, --spacing-margin-desktop, …) had
+  to STAY in the build-time @theme — utilities like w-sidebar-width are
+  only generated from @theme, and a plain-class var generates nothing (the
+  sidebar collapsed when first scoped; caught before commit).
+- 4d1b542 ("fix auth login to use current API contract") rewired the OLD
+  frontend/src/pages/admin/Login.tsx, which my line had already moved to
+  auth/Login.tsx with the same contract wiring — resolved in the rebase by
+  keeping the move; the fix is subsumed. Tell animasau.
+
+KNOWN REMAINING
+Ten teacher screens remain static mockups (no endpoints exist for them).
+The static ones still say "Dr. Sarah Ascent" in their headers. Reasoning
+Paths / Before-After / Content Verification have endpoints but were not
+wired this session — they are the natural next pass.
