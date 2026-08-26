@@ -40,6 +40,7 @@ from ..models import (
     Topic,
     UncertaintyFlag,
     User,
+    CourseTeacher,
 )
 from ..providers import AllProvidersFailed
 from ..services import reteach
@@ -48,6 +49,8 @@ from ..schemas import (
     RejectSourcedIn,
     ResolveFlagIn,
     SuggestReteachIn,
+    ActiveSubjectIn,
+    UserOut,
 )
 
 router = APIRouter(prefix="/teacher", tags=["teacher"])
@@ -1032,3 +1035,79 @@ def approve_reteach(
     db.flush()
     return _reteach_out(db, unit)
 
+
+
+# ---------------------------------------------------------------------------
+# teacher-009 -- which subject this console is showing
+# ---------------------------------------------------------------------------
+
+@router.get("/subjects")
+def my_subjects(
+    db: OrmSession = Depends(get_db),
+    user: User = Depends(teacher_only),
+) -> dict:
+    """The subjects this teacher is assigned to, each naming its cohorts.
+
+    Assignment comes from `course_teachers` (admin-009) -- a teacher never
+    picks their own subjects, an admin assigns them.
+    """
+    rows = db.scalars(
+        select(CourseTeacher)
+        .where(CourseTeacher.user_id == user.id)
+        .order_by(CourseTeacher.id)
+    ).all()
+
+    items = []
+    for ct in rows:
+        c = ct.course
+        if c is None:
+            continue
+        items.append({
+            "id": c.id,
+            "code": c.code,
+            "title": c.title,
+            "semester": c.semester,
+            "is_current": c.id == user.course_id,
+            "batches": [
+                {
+                    "id": b.id,
+                    "major": b.major,
+                    "department": b.department.name,
+                    "start_year": b.start_year,
+                    "end_year": b.end_year,
+                }
+                for b in c.batches
+            ],
+        })
+    return {"items": items}
+
+
+@router.patch("/active-subject")
+def set_active_subject(
+    body: ActiveSubjectIn,
+    db: OrmSession = Depends(get_db),
+    user: User = Depends(teacher_only),
+) -> UserOut:
+    """Point the whole console at another of this teacher's subjects.
+
+    Every panel here scopes by the signed-in teacher's course_id, so this one
+    field moves the heatmap, the gap map, the reasoning paths, the flags, the
+    tracking and the reteach queue together. Refused for a subject the
+    teacher is not assigned to: the switcher must not become a way to read a
+    colleague's class.
+    """
+    assigned = db.scalar(
+        select(CourseTeacher).where(
+            CourseTeacher.user_id == user.id,
+            CourseTeacher.course_id == body.course_id,
+        )
+    )
+    if assigned is None:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail={"code": "forbidden",
+                    "message": "You are not assigned to that subject."},
+        )
+    user.course_id = body.course_id
+    db.flush()
+    return UserOut.model_validate(user)

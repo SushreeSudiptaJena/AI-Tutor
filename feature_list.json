@@ -1163,6 +1163,52 @@
       ],
       "evidence": "evidence/admin-010/verification.txt",
       "notes": "Many-to-many on purpose: one subject is commonly taught to several cohorts at once and they share the corpus, diagnostic and misconception history -- a row per cohort would fragment all three. `admission_batches` (a free list of admission YEARS, read by admin-006's delete guard) is deliberately left alone; batch_ids is the real foreign-key link."
+    },
+    {
+      "id": "student-010",
+      "priority": 54,
+      "area": "student",
+      "title": "Student enrolment in a cohort + subject switching",
+      "user_visible_behavior": "A new student signs up, picks the batch they were admitted to, picks a subject to start with, and goes on to the diagnostic. Inside the app they can switch subjects from My Course; gaps, mastery, practice and the tutor all follow, and each subject keeps its own history.",
+      "status": "passing",
+      "depends_on": [
+        "admin-010",
+        "auth-004",
+        "student-001"
+      ],
+      "demo_mode": "live",
+      "verification": [
+        "GET /student/batches lists the cohorts; POST /student/enroll sets batch_id and defaults the active subject to the earliest semester.",
+        "GET /student/subjects lists the cohort's subjects in curriculum order with is_current.",
+        "PATCH /student/active-subject moves a scoped route (course-summary returns the new subject) and leaves the cohort unchanged.",
+        "Switching to a subject outside the cohort is 403 and does not happen.",
+        "A subject with no corpus returns empty lists, never an error.",
+        "In the UI: signup -> pick batch -> pick subject -> diagnostic, and the My Course switcher."
+      ],
+      "evidence": "evidence/student-010/verification.txt",
+      "notes": "batch_id decides what is OFFERED; course_id stays the ACTIVE subject and is what every scoped route already read, so one switcher moves the whole surface with no per-route changes. /onboarding/course used to call course-summary and 400 for anyone without a course_id -- i.e. every new account; it is now where the account gets one. seed.py gained the demo cohort (BTech CSE 2026-2030, CS-C + CSW2) and enrols the seeded students; it deliberately excludes the prerequisite course CSW1, which has no corpus and would otherwise become the default subject for every new student."
+    },
+    {
+      "id": "teacher-009",
+      "priority": 55,
+      "area": "teacher",
+      "title": "Teacher console subject switcher",
+      "user_visible_behavior": "A teacher assigned to several subjects picks which one the console is showing, from the header. The heatmap, reasoning paths, gap map, uncertainty flags, tracking and reteach panels all follow, and each subject names the cohorts that take it.",
+      "status": "passing",
+      "depends_on": [
+        "admin-009",
+        "admin-010",
+        "frontend-003"
+      ],
+      "demo_mode": "live",
+      "verification": [
+        "GET /teacher/subjects returns the assigned subjects, each naming its cohorts, with is_current.",
+        "PATCH /teacher/active-subject switches, and the heatmap answers for the new subject.",
+        "Switching to a subject the teacher is not assigned to is 403.",
+        "In the UI: the header select lists subjects with their cohorts and the decorative search box is gone."
+      ],
+      "evidence": "evidence/student-010/verification.txt",
+      "notes": "Every teacher panel already scoped by the signed-in teacher's course_id, so this is one field and one control rather than a change per panel. Assignment comes from course_teachers (admin-009) -- a teacher never picks their own subjects. Found and fixed on the way: the seeded teacher had a course_id but NO assignment row, so the switcher was empty and unusable; seed.py now creates it."
     }
   ]
 }

@@ -210,6 +210,12 @@ class User(Base):
     # data has somewhere to live when a college supplies a roll list later.
     university: Mapped[str | None] = mapped_column(String(200))
     roll_number: Mapped[str | None] = mapped_column(String(60))
+    # student-010. The cohort a student was admitted to: it decides which
+    # subjects are OFFERED. `course_id` above stays the ACTIVE subject and is
+    # what every scoped route reads -- retrieval, diagnostic, gaps, mastery,
+    # tutor. A teacher has a course_id (the subject their console shows) and
+    # no batch_id: a teacher is not admitted to a cohort.
+    batch_id: Mapped[int | None] = mapped_column(ForeignKey("batches.id"), index=True)
     created_at: Mapped[datetime] = _now()
 
     course: Mapped["Course | None"] = relationship()

@@ -32,6 +32,7 @@ from sqlalchemy.orm import Session as OrmSession
 
 from app.db import get_sessionmaker
 from app.security import hash_password
+from app.config import MAJOR_YEARS
 from app.models import (
     Attempt,
     AuditLog,
@@ -52,6 +53,8 @@ from app.models import (
     UncertaintyFlag,
     User,
     course_prerequisites,
+    CourseTeacher,
+    Batch,
 )
 
 SEED_DIR = Path(__file__).resolve().parents[1] / "data" / "seed"
@@ -233,8 +236,109 @@ def seed_users(db: OrmSession, data: dict, courses: dict[str, Course]) -> dict[s
         row.preferred_language = u.get("preferred_language", "en")
         users[u["email"]] = row
     db.flush()
+
+    # teacher-009: a seeded teacher needs the ASSIGNMENT row too, not just a
+    # course_id. The console lists the subjects a teacher is assigned to
+    # (course_teachers, admin-009), so a teacher with a course_id and no
+    # assignment sees an empty switcher and cannot move between subjects --
+    # which is exactly what the demo teacher did until this was added.
+    for u in data["users"]["users"]:
+        row = users[u["email"]]
+        if row.role != "teacher" or row.course_id is None:
+            continue
+        link = db.scalar(
+            select(CourseTeacher).where(
+                CourseTeacher.course_id == row.course_id,
+                CourseTeacher.user_id == row.id,
+            )
+        )
+        if link is None:
+            db.add(CourseTeacher(course_id=row.course_id, user_id=row.id))
+    db.flush()
+
     log(f"  users            {len(users)}")
     return users
+
+
+def seed_batch(db: OrmSession, primary: Course, courses: dict[str, Course],
+               users: dict[str, User]) -> Batch:
+    """The demo cohort (admin-009/student-010), so the flow is walkable.
+
+    Without one, a fresh signup reaches onboarding and finds no batch to join,
+    and the teacher console shows a subject belonging to no cohort. The year
+    is fixed rather than derived from today's date: a seed that produces a
+    different cohort each year is a seed whose screenshots stop matching.
+    """
+    dept_id = primary.department_id
+    start = 2026
+    batch = db.scalar(
+        select(Batch).where(
+            Batch.major == "btech",
+            Batch.department_id == dept_id,
+            Batch.start_year == start,
+        )
+    )
+    if batch is None:
+        batch = Batch(major="btech", department_id=dept_id,
+                      start_year=start, end_year=start + MAJOR_YEARS["btech"])
+        db.add(batch)
+        db.flush()
+
+    # The subjects this cohort takes: the demo course, plus any other course
+    # in the same department that has a real corpus behind it.
+    #
+    # "has a corpus" is the filter that matters, and it excludes the
+    # PREREQUISITE course (CSW1) on purpose. A prerequisite is what the
+    # cohort should have learned BEFORE -- it is already modelled by
+    # course_prerequisites and is what gap attribution names. Listing it as
+    # a subject they are currently taking would put an empty dashboard one
+    # click away, and would make the default subject for a new student the
+    # one with nothing in it.
+    with_corpus = {
+        cid for (cid,) in db.execute(
+            select(Material.course_id)
+            .where(Material.ingest_status == "complete", Material.status == "active")
+            .distinct()
+        ).all()
+    }
+    # Candidates come from the DATABASE, not from the seed file's course map:
+    # courses ingested by an earlier run (CS-C) are real subjects of this
+    # department and belong in the cohort, but they never appear in this
+    # seed's data files.
+    candidates = db.scalars(
+        select(Course).where(Course.department_id == dept_id).order_by(Course.code)
+    ).all()
+    wanted = [primary] + [
+        c for c in candidates
+        if c.id != primary.id and c.id in with_corpus
+    ]
+    have = {c.id for c in batch.courses}
+    for c in wanted:
+        if c.id not in have:
+            batch.courses.append(c)
+
+    # Converge rather than accumulate: a subject already linked but carrying
+    # no corpus is dropped, so re-running the seed after a rule change fixes
+    # the cohort instead of leaving yesterday's links behind. Only empty
+    # subjects are pruned -- an admin's deliberate link to a subject that has
+    # material is left alone, because the seed does not own that decision.
+    keep_ids = {c.id for c in wanted}
+    dropped = [c for c in batch.courses
+               if c.id not in keep_ids and c.id not in with_corpus]
+    for c in dropped:
+        batch.courses.remove(c)
+    if dropped:
+        log(f"  batch pruned     {[c.code for c in dropped]} (no corpus)")
+
+    # Seeded students belong to the cohort; their course_id (the ACTIVE
+    # subject) is left exactly as the user seed set it.
+    for u in users.values():
+        if u.role == "student":
+            u.batch_id = batch.id
+    db.flush()
+    log(f"  demo batch       {batch.major} {batch.start_year}-{batch.end_year}, "
+        f"{len(batch.courses)} subjects")
+    return batch
 
 
 def seed_items(db: OrmSession, data: dict, primary: Course, concepts, topics):
@@ -573,6 +677,7 @@ def main() -> None:
         primary = courses[data["course"]["primary_course"]]
         topics, concepts = seed_map(db, data, courses, primary)
         users = seed_users(db, data, courses)
+        seed_batch(db, primary, courses, users)
         misc, practice = seed_items(db, data, primary, concepts, topics)
 
         admin = next(u for u in users.values() if u.role == "admin")

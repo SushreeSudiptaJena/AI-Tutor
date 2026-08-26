@@ -1,0 +1,108 @@
+student-010 + teacher-009 — cohort-awareness reaches the student and teacher
+surfaces
+Verified 2026-08-27 live (localhost:5173 + :8000). Backend suite exit 0 (15
+new tests in test_enrollment.py); frontend build 5.73s. Contract edited first
+(changelog row; person 6 owns docs/api-contract.md).
+
+The shape: **batch_id decides what is OFFERED, course_id is the ACTIVE
+subject**, and course_id is what every scoped route already read — retrieval,
+diagnostic, gaps, mastery, tutor, and every teacher panel. So one switcher
+moves an entire surface, with no per-panel changes.
+
+=== 1. API, driven end to end over HTTP ===================================
+  cohort 6: CSW2 (sem None) + DLD (sem 3)
+  fresh student: course_id None batch_id None
+  cohorts offered to the student: [(6, 2)]
+  after enroll: batch_id 6 | active subject 9 (default = earliest semester)
+  subjects: [('DLD', 3, True), ('CSW2', None, False)]
+  batch label: btech 2028 - 2032
+  course-summary followed the switch: DLD -> CSW2 | cohort unchanged: True
+  switch to a subject outside the cohort (CS-C) -> 403
+  teacher subjects: [('CSW2', False, ['btech 2028']), ('DLD', False, ['btech 2028'])]
+  teacher switched to: CSW2 | course_id now 5
+  heatmap followed the switch: class_size 27 items 6
+  teacher switch to an unassigned subject (CS-C) -> 403
+
+The two lines that matter are the ones proving the switch *moves* something:
+`/student/course-summary` returned a different subject after the student
+switched, and `/teacher/misconceptions/heatmap` answered for the newly
+selected subject after the teacher switched. Both refusals are 403, not a
+silent no-op — an unchecked switcher would be a way to read another cohort's
+material (or a colleague's class) by editing a number.
+
+=== 2. A subject with no corpus degrades, never errors ===================
+  switch to CSW1 -> 200
+  course-summary for a subject with no corpus -> 200 | books: 0
+  gaps -> 200 | items: 0
+  diagnostic -> 200 | items: 0
+"No materials uploaded yet" is a real state, and it renders as empty lists
+rather than an error page.
+
+=== 3. UI ================================================================
+  onboarding step 1: {"heading":"Find your batch",
+    "cohorts":["BTech · Computer Science & Engineering 2026–2030 · 4 years · 2 subjects"]}
+  onboarding step 2: {"heading":"Pick your first subject",
+    "cohortChip":"BTech · Computer Science & Engineering · 2026–2030",
+    "subjects":["CS-C Programming with C","CSW2 Computer Science Workshop 2"]}
+  continued to: /onboarding/diagnostic
+  student switcher: {"cohortLine":"BTECH · Computer Science & Engineering · 2026–2030",
+                     "chips":["CS-C","CSW2"]}
+  after switch: page reloaded and the dashboard is live again
+  teacher switcher: {"options":["CSW2 — Computer Science Workshop 2 (BTECH 2026)"],
+                     "searchBoxGone":true}
+A brand-new signup now walks: signup -> pick cohort -> pick subject ->
+diagnostic. Before this, /onboarding/course simply called course-summary and
+400'd for anyone without a course_id — i.e. for every new account. The
+student's switcher lives at the top of My Course and hides itself when the
+cohort offers only one subject. The teacher's sits in the console header,
+replacing a decorative search box that never had an endpoint behind it, and
+names the cohorts each subject serves.
+
+=== 4. Seed fixes this exposed ===========================================
+* **The seeded teacher had a course_id but no assignment row.** The console
+  lists what `course_teachers` says (admin-009), so Ravi saw an empty
+  switcher and could not move at all. seed.py now creates the assignment for
+  any seeded teacher with a course.
+* **There was no cohort to enrol in.** A fresh student reached onboarding and
+  found an empty list. seed.py now creates the demo cohort (BTech CSE
+  2026–2030) and enrols the seeded students in it.
+* **The cohort must not contain the prerequisite course.** CSW1 has no corpus
+  by design — it is what gap attribution NAMES, not a subject the class is
+  taking. Left in, it sorted first and became the default subject for every
+  new student: an empty dashboard one click from signup. The seed now takes
+  only subjects with a real corpus, and **prunes** ones that no longer
+  qualify so a rule change converges instead of leaving yesterday's links.
+* **Candidates come from the database, not the seed file.** CS-C was ingested
+  by an earlier run and never appears in this seed's data files, so a
+  seed-map-only rule silently produced a one-subject cohort. Final state:
+  BTech CSE 2026–2030 with CS-C and CSW2, both carrying real corpora.
+
+=== 5. Tests added (backend/tests/test_enrollment.py, 15) ================
+  enrolling sets the cohort and defaults to the earliest-semester subject
+  enrolling honours an explicit subject
+  a batch with no subjects is refused, and nothing is written on that path
+  a subject from another cohort cannot be chosen at enrolment
+  the enrol path touches no Gap / Mastery / PracticeSet / Attempt row
+  subjects list in curriculum order with the active one flagged
+  a student who has not enrolled gets an empty list, not an error
+  switching within the cohort moves the surface and keeps the cohort
+  switching outside the cohort is 403 and does not happen
+  a student with no cohort cannot switch at all
+  a teacher sees assigned subjects with the cohorts that take them
+  a teacher switches only to a subject they are assigned to
+  a teacher cannot switch to a colleague's subject
+  both teacher routes are teacher-only
+  UserOut carries batch_id
+
+=== Cleanup ==============================================================
+All zz.* test accounts removed; the demo database holds the seeded cohort,
+the seeded users and nothing else from this session.
+
+=== What verifying found that reading would not have =====================
+- **Deleting a batch hit users.batch_id's foreign key**, so a "clean re-seed"
+  silently kept the old links and my new filter — which only ADDED — never
+  removed CSW1. That is why seed_batch now prunes: a seed that only appends
+  cannot fix a rule it got wrong.
+- **A default that lands on an empty subject looks like a broken build.**
+  Ordering was correct (semester, then code); the data was wrong. Only trying
+  the flow as a new user showed it.

@@ -1,5 +1,12 @@
 import { ReactNode, useEffect, useState } from "react";
-import { cached, getMe } from "@/lib/api";
+import {
+  cached,
+  clearSessionCache,
+  getMe,
+  getTeacherSubjects,
+  setTeacherActiveSubject,
+  type TeacherSubject,
+} from "@/lib/api";
 
 /**
  * The sidebar + header shared by the teacher screens (111d770's Stitch
@@ -45,16 +52,38 @@ export default function TeacherChrome({
   children: ReactNode;
 }) {
   const [name, setName] = useState<string>("…");
+  // teacher-009: every panel scopes by the signed-in teacher's active
+  // subject, so this one control moves the entire console.
+  const [subjects, setSubjects] = useState<TeacherSubject[]>([]);
+  const [switching, setSwitching] = useState(false);
 
   useEffect(() => {
     let alive = true;
     cached("me", getMe)
       .then((me) => alive && setName(me.full_name))
       .catch(() => alive && setName("Teacher"));
+    cached("teacher-subjects", getTeacherSubjects)
+      .then((r) => alive && setSubjects(r))
+      .catch(() => alive && setSubjects([]));
     return () => {
       alive = false;
     };
   }, []);
+
+  async function switchTo(courseId: number) {
+    setSwitching(true);
+    try {
+      await setTeacherActiveSubject(courseId);
+      // Nothing cached belongs to the new subject; reload rather than trying
+      // to invalidate each panel's key by hand.
+      clearSessionCache();
+      window.location.reload();
+    } catch {
+      setSwitching(false);
+    }
+  }
+
+  const current = subjects.find((s) => s.is_current);
 
   const link = ([path, icon, label]: [string, string, string]) => (
     <a
@@ -100,13 +129,41 @@ export default function TeacherChrome({
       </aside>
       <div className="pl-sidebar-width min-h-screen bg-inverse-surface">
         <header className="fixed top-0 left-sidebar-width right-0 h-20 bg-inverse-surface/90 backdrop-blur-md z-40 px-margin-desktop flex items-center justify-between shadow-sm">
-          <div className="flex-1 max-w-xl bg-[#FFFFFF]/10 rounded-full px-6 py-2 flex items-center gap-3 border border-[#FFFFFF]/20 focus-within:border-secondary transition-colors">
-            <span className="material-symbols-outlined text-[#FFFFFF]">search</span>
-            <input
-              className="bg-transparent border-none outline-none text-[#FFFFFF] w-full font-body-md placeholder-[#FFFFFF]"
-              placeholder="Search the mountain path..."
-              type="text"
-            />
+          {/* teacher-009: the subject this console is showing. Replaces a
+              decorative search box that had no endpoint behind it. */}
+          <div className="flex-1 max-w-xl flex items-center gap-3">
+            {subjects.length === 0 ? (
+              <span className="font-label-sm text-label-sm text-[#FFFFFF]/70">
+                No subjects assigned yet — your admin assigns them.
+              </span>
+            ) : (
+              <>
+                <span className="material-symbols-outlined text-[#FFFFFF]">menu_book</span>
+                <select
+                  value={current?.id ?? ""}
+                  disabled={switching}
+                  onChange={(e) => switchTo(Number(e.target.value))}
+                  aria-label="Subject this console is showing"
+                  className="bg-[#FFFFFF]/10 border border-[#FFFFFF]/20 rounded-full px-4 py-2 text-[#FFFFFF] font-body-md outline-none focus:border-secondary disabled:opacity-50"
+                >
+                  {subjects.map((s) => (
+                    <option key={s.id} value={s.id} className="text-[#1A1A1A]">
+                      {s.code} — {s.title}
+                      {s.batches.length
+                        ? ` (${s.batches
+                            .map((b) => `${b.major.toUpperCase()} ${b.start_year}`)
+                            .join(", ")})`
+                        : ""}
+                    </option>
+                  ))}
+                </select>
+                {current?.batches?.length ? (
+                  <span className="font-label-sm text-label-sm text-[#FFFFFF]/70 hidden lg:inline">
+                    {current.batches.length} cohort{current.batches.length === 1 ? "" : "s"}
+                  </span>
+                ) : null}
+              </>
+            )}
           </div>
           <div className="flex items-center gap-6">
             <button className="relative text-[#FFFFFF] hover:text-[#F5F5F5] transition-colors">

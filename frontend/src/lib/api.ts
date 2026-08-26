@@ -132,7 +132,11 @@ export type User = {
   email: string;
   full_name: string;
   role: Role;
+  /** The ACTIVE subject: every scoped route reads this. */
   course_id?: number;
+  /** student-010: the cohort a student was admitted to -- it decides which
+   *  subjects are offered. Teachers have none. */
+  batch_id?: number | null;
   preferred_language: string;
   university?: string | null;
   roll_number?: string | null;
@@ -747,3 +751,45 @@ export const addBatchCourse = (
 
 export const removeBatchCourse = (batchId: number, courseId: number) =>
   api<void>(`/admin/batches/${batchId}/courses/${courseId}`, { method: "DELETE" });
+
+// --- enrolment + subject switching (student-010, teacher-009) --------------
+
+export type MySubject = {
+  id: number;
+  code: string;
+  title: string;
+  semester: number | null;
+  is_current: boolean;
+};
+
+export type TeacherSubject = MySubject & {
+  batches: {
+    id: number;
+    major: string;
+    department: string;
+    start_year: number;
+    end_year: number;
+  }[];
+};
+
+/** The cohorts a student may join. No roll-list check by decision (auth-004). */
+export const getEnrollableBatches = () =>
+  api<{ items: BatchDto[] }>("/student/batches").then((r) => r.items);
+
+/** Join a cohort. Without a course_id the earliest-semester subject is used. */
+export const enroll = (batch_id: number, course_id?: number) =>
+  api<User>("/student/enroll", { method: "POST", body: { batch_id, course_id } });
+
+export const getMySubjects = () =>
+  api<{ batch: BatchDto | null; items: MySubject[] }>("/student/subjects");
+
+/** Moves the WHOLE student surface: gaps, mastery, practice, tutor. */
+export const setActiveSubject = (course_id: number) =>
+  api<User>("/student/active-subject", { method: "PATCH", body: { course_id } });
+
+export const getTeacherSubjects = () =>
+  api<{ items: TeacherSubject[] }>("/teacher/subjects").then((r) => r.items);
+
+/** Moves every teacher panel at once -- they all scope by this one field. */
+export const setTeacherActiveSubject = (course_id: number) =>
+  api<User>("/teacher/active-subject", { method: "PATCH", body: { course_id } });

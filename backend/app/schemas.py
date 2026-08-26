@@ -89,6 +89,7 @@ class UserOut(_ORM):
     full_name: str
     role: Role
     course_id: int | None = None
+    batch_id: int | None = None
     preferred_language: str
     university: str | None = None
     roll_number: str | None = None
@@ -122,6 +123,17 @@ class BatchCourseIn(BaseModel):
         if (self.course_id is None) == (not creating):
             raise ValueError("send course_id, or code and title -- not both, not neither")
         return self
+
+
+class EnrollIn(BaseModel):
+    """student-010. Cohort first; the active subject may be left to us."""
+
+    batch_id: int
+    course_id: int | None = None
+
+
+class ActiveSubjectIn(BaseModel):
+    course_id: int
 
 
 class CurriculumReuseIn(BaseModel):

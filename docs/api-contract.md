@@ -54,9 +54,19 @@ Referenced throughout. Defined once here.
   "full_name": "Asha R",
   "role": "student",
   "course_id": 3,
-  "preferred_language": "en"
+  "batch_id": 7,
+  "preferred_language": "en",
+  "university": "Siksha 'O' Anusandhan",
+  "roll_number": "21CSE1042"
 }
 ```
+> **`batch_id` vs `course_id` (`student-010`).** `batch_id` is the cohort a
+> student was admitted to — it decides which subjects are *offered* to them.
+> `course_id` is the **active subject**, and it is what every existing route
+> scopes by: retrieval, the diagnostic, gaps, mastery, the tutor. Switching
+> the active subject changes what those return; it never changes the cohort.
+> A teacher has a `course_id` too — the subject their console is currently
+> showing — and no `batch_id`, because a teacher is not admitted to a cohort.
 
 ### `Citation` — `rag-001`, `student-004`
 Produced by retrieval (`rag-001`) and attached to anything the tutor generates. **Never empty on an answered response** — that is the whole point of the build.
@@ -516,6 +526,24 @@ still there for anyone who wants it.
 
 ## Student
 
+### Enrolment and subject switching — `student-010`
+
+A student picks their cohort once (at onboarding) and then works one subject
+at a time. Everything else in this section is scoped by the **active
+subject**, so the switcher below is what moves the whole student surface.
+
+| Method | Path | Notes |
+|---|---|---|
+| `GET` | `/student/batches` | `{ items: [Batch] }` — the cohorts a student can enrol in, newest first. Signed-in students only; there is no roll-list check, by decision (`auth-004`). |
+| `POST` | `/student/enroll` | `{ batch_id, course_id? }` → `200 User`. Sets the cohort and the active subject; with no `course_id` the earliest-semester subject of that batch is chosen. **422** if the batch has no subjects yet, or if `course_id` is not one of them. |
+| `GET` | `/student/subjects` | `{ batch, items: [{ id, code, title, semester, is_current }] }` — the offered subjects, by semester then code. `batch` is `null` for a student who has not enrolled. |
+| `PATCH` | `/student/active-subject` | `{ course_id }` → `200 User`. **403** if that subject is not in the student's cohort — the switcher must never become a way to read another cohort's material. |
+
+> **Enrolling does not wipe anything.** Gaps, mastery and practice history are
+> per-subject rows that stay where they are; switching back to a subject shows
+> the same state it had. Changing cohort is not a reset either — it changes
+> what is offered, not what happened.
+
 ### Course scope — `student-001`
 `GET /student/course-summary`
 ```json
@@ -722,6 +750,18 @@ SSE frames, if built: `event: token` with `data: {"text":"…"}`, then a final `
 ## Teacher
 
 > Every teacher response is **anonymized**: no `student_id`, no name, no email, in any field. Verify this in the API payload, not just the rendered UI.
+
+### Which subject the console shows — `teacher-009`
+
+Every teacher panel below scopes by the signed-in teacher's **active
+subject**. A teacher assigned to several subjects switches between them here,
+and the heatmap, gap map, reasoning paths, flags, tracking and reteach panels
+all follow — they read the same field.
+
+| Method | Path | Notes |
+|---|---|---|
+| `GET` | `/teacher/subjects` | `{ items: [{ id, code, title, semester, is_current, batches: [{ id, major, department, start_year, end_year }] }] }` — the subjects this teacher is assigned to (`admin-009`), each naming the cohorts that take it. |
+| `PATCH` | `/teacher/active-subject` | `{ course_id }` → `200 User`. **403** if the teacher is not assigned to that subject. |
 
 ### Misconception heatmap — `teacher-001`
 `GET /teacher/misconceptions/heatmap?course_id=3&topic_id=12`
@@ -960,6 +1000,7 @@ Every shape above is final enough to mock. Suggested order, matching `feature_li
 | 2026-08-24 | Golden path complete. `POST /student/practice/generate` (needs `gap_id`; also returns `concept` and `source: generated\|seeded`), `POST /student/practice/{id}/answer`, `POST /student/misconception-diagnosis/{id}/confirm`, `GET /teacher/misconceptions/heatmap`, `GET /teacher/uncertainty-flags` and its `/resolve`. `student-004` Show Source needs no endpoint — it is the `Citation` object. |
 | 2026-08-24 | **`TutorResponse` gains `speech_text`** (`a11y-001`, backend half). Read-aloud must use it instead of `body`: `body` is markdown, and `[4]` is spoken as "four" mid-sentence. Present on every outcome, including refusals. |
 | 2026-08-24 | `i18n-001` built and verified live: Hindi in, Hindi out, identical citations and an identical alignment score. Response `language` now reports what was produced. Both routes fall back to `User.preferred_language` instead of defaulting to `en`. |
+| 2026-08-26 | **`student-010` + `teacher-009`** (owner-directed; Sushree editing person 6's file). Cohort-awareness reaches the student and teacher surfaces. `User` gains `batch_id`. New: `GET /student/batches`, `POST /student/enroll`, `GET /student/subjects`, `PATCH /student/active-subject`, `GET /teacher/subjects`, `PATCH /teacher/active-subject`. No existing route changed shape — they all still scope by `course_id`, which is now called the *active subject*. |
 | 2026-08-26 | **`admin-010`** (owner-directed; Sushree editing person 6's file). Subjects are now linked to cohorts: `GET/POST /admin/batches/{id}/courses`, `DELETE /admin/batches/{id}/courses/{course_id}`, optional `batch_id` on `POST /admin/courses`, `batch_ids` on the `Course` object, `courses_without_batch` on `/admin/overview`. Many-to-many by design. `admission_batches` is untouched and still means admission *years*. |
 | 2026-08-26 | **`admin-009` + `auth-004`** (owner-directed restructure; Sushree editing, normally person 6's file). **Auth:** signup is now **student-only** (`university?`, `roll_number?` added, `role` removed) — teachers are admin-issued. **Admin, new "Batches" surface:** `GET/POST /admin/batches`, `POST /admin/batches/{id}/curriculum` (pdf/docx), `POST /admin/batches/{id}/curriculum/reuse`, `GET /admin/overview` (dashboard metrics). **Teacher assignment per subject:** `GET/POST /admin/courses/{id}/teachers`, `DELETE /admin/courses/{id}/teachers/{user_id}`. `User` gains nullable `university` and `roll_number`. No existing endpoint changed shape. |
 | 2026-08-26 | **`tutor-002`** (owner-directed; Sushree edited this file, normally person 6's): `insufficient_evidence` may now carry an optional `beyond_syllabus` block — see the note at `TutorResponse`. New endpoint **`GET /tutor/history`** returning the signed-in student's own transcript; `POST /tutor/ask` writes it. Neither changes any existing field or outcome name. |

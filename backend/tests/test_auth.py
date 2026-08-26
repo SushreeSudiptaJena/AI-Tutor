@@ -108,8 +108,10 @@ def test_me_returns_the_user(as_student):
     assert r.json() == {
         "id": 7, "email": "asha@example.edu", "full_name": "Asha R",
         "role": "student", "course_id": 3, "preferred_language": "en",
-        # auth-004: enrolment fields exist on every User now, null when unset
-        "university": None, "roll_number": None,
+        # auth-004 / student-010: enrolment fields exist on every User now,
+        # null when unset. batch_id is the COHORT; course_id above is the
+        # active subject.
+        "university": None, "roll_number": None, "batch_id": None,
     }
 
 

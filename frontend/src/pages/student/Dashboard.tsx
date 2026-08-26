@@ -23,6 +23,7 @@ import {
   answerPractice,
   askTutor,
   cached,
+  clearSessionCache,
   clearToken,
   confirmMisconception,
   generatePractice,
@@ -35,8 +36,10 @@ import {
   getLanguages,
   getMe,
   getMastery,
+  getMySubjects,
   getPracticeSet,
   getTutorHistory,
+  setActiveSubject,
   logout,
   submitDiagnostic,
   updatePreferences,
@@ -44,6 +47,8 @@ import {
 import type {
   AnswerResult,
   Assignment,
+  BatchDto,
+  MySubject,
   CourseSummary,
   DiagnosticDto,
   Gap,
@@ -555,6 +560,70 @@ function StatCard({
 /* ---------------------------------------------------------------------------
  * My Course
  * ------------------------------------------------------------------------- */
+/**
+ * student-010. The cohort's subjects, with the active one marked. Switching
+ * moves the WHOLE student surface -- gaps, mastery, practice and the tutor
+ * all scope by the active subject -- so the whole session cache is dropped
+ * rather than a few keys: nothing on screen belongs to the new subject.
+ */
+function SubjectSwitcher() {
+  const [batch, setBatch] = useState<BatchDto | null>(null);
+  const [items, setItems] = useState<MySubject[]>([]);
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    cached("my-subjects", getMySubjects)
+      .then((r) => {
+        setBatch(r.batch);
+        setItems(r.items);
+      })
+      .catch(() => setItems([]));
+  }, []);
+
+  async function pick(id: number) {
+    setBusy(true);
+    try {
+      await setActiveSubject(id);
+      clearSessionCache();
+      window.location.reload();
+    } catch {
+      setBusy(false);
+    }
+  }
+
+  if (!batch || items.length <= 1) return null;
+
+  return (
+    <section className="mb-lg rounded-xl border border-outline-variant bg-surface-container-lowest p-md">
+      <p className="mb-sm text-label-sm font-bold uppercase tracking-wider text-on-surface-variant">
+        {batch.major.toUpperCase()} · {batch.department.name} · {batch.start_year}–{batch.end_year}
+      </p>
+      <div className="flex flex-wrap gap-xs">
+        {items.map((s) => (
+          <button
+            key={s.id}
+            onClick={() => !s.is_current && pick(s.id)}
+            disabled={busy}
+            className={`rounded-full px-sm py-xs text-label-md transition-colors disabled:opacity-50 ${
+              s.is_current
+                ? "bg-forest-green text-white"
+                : "border border-outline-variant text-on-surface hover:border-forest-green"
+            }`}
+            title={s.title}
+          >
+            {s.code}
+            {s.semester !== null && (
+              <span className={s.is_current ? "text-white/70" : "text-on-surface-variant"}>
+                {" "}· sem {s.semester}
+              </span>
+            )}
+          </button>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 function MyCourseView() {
   const [summary, setSummary] = useState<CourseSummary | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -568,6 +637,7 @@ function MyCourseView() {
   return (
     <div className="p-lg">
       <h1 className="mb-md text-headline-lg font-bold text-on-background">My Course</h1>
+      <SubjectSwitcher />
       <States loading={!summary && !error} error={error} empty={!summary?.course} emptyText="No course assigned yet.">
         {summary && (
           <div className="grid grid-cols-1 gap-lg lg:grid-cols-2">

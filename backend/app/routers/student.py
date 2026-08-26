@@ -48,12 +48,16 @@ from ..models import (
     ReteachUnit,
     Topic,
     User,
+    Batch,
 )
 from ..schemas import (
     ConfirmDiagnosisIn,
     DiagnosticSubmitIn,
     PracticeAnswerIn,
     PracticeGenerateIn,
+    ActiveSubjectIn,
+    EnrollIn,
+    UserOut,
 )
 from ..providers import AllProvidersFailed
 from ..services import practice, retrieval, syllabus, tutor
@@ -1014,3 +1018,137 @@ def confirm_diagnosis(
 
     diagnosis.confirmed = body.confirmed
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+# ---------------------------------------------------------------------------
+# student-010 -- enrolment and subject switching
+# ---------------------------------------------------------------------------
+
+def _batch_brief(b: Batch) -> dict:
+    return {
+        "id": b.id,
+        "major": b.major,
+        "department": {"id": b.department_id, "name": b.department.name},
+        "start_year": b.start_year,
+        "end_year": b.end_year,
+        "course_count": len(b.courses),
+    }
+
+
+def _offered(batch: Batch) -> list[Course]:
+    """A cohort's subjects in curriculum order: semester, then code.
+
+    An unset semester sorts LAST rather than pretending to be semester 0 --
+    the same rule the admin list uses, so a student and an admin looking at
+    the same cohort see the same order.
+    """
+    return sorted(batch.courses, key=lambda c: (c.semester is None, c.semester or 0, c.code))
+
+
+@router.get("/batches")
+def list_enrollable_batches(
+    db: OrmSession = Depends(get_db),
+    user: User = Depends(current_user),
+) -> dict:
+    """The cohorts a student can join.
+
+    Every cohort is offered: there is no roll-list check in this build, by
+    decision (auth-004) -- all are welcome.
+    """
+    rows = db.scalars(
+        select(Batch).order_by(Batch.start_year.desc(), Batch.id.desc())
+    ).all()
+    return {"items": [_batch_brief(b) for b in rows]}
+
+
+@router.post("/enroll")
+def enroll(
+    body: EnrollIn,
+    db: OrmSession = Depends(get_db),
+    user: User = Depends(current_user),
+) -> UserOut:
+    """Join a cohort and pick the subject to start with.
+
+    Enrolling does not wipe anything: gaps, mastery and practice history are
+    per-subject rows and stay exactly where they are. Changing cohort changes
+    what is OFFERED, not what happened.
+    """
+    batch = db.get(Batch, body.batch_id)
+    if batch is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={"code": "not_found", "message": "No such batch."},
+        )
+    offered = _offered(batch)
+    if not offered:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail={"code": "validation_error",
+                    "message": "That batch has no subjects yet. Ask your admin to add them."},
+        )
+
+    if body.course_id is None:
+        course = offered[0]
+    else:
+        course = next((c for c in offered if c.id == body.course_id), None)
+        if course is None:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail={"code": "validation_error",
+                        "message": "That subject is not offered by this batch."},
+            )
+
+    user.batch_id = batch.id
+    user.course_id = course.id
+    db.flush()
+    return UserOut.model_validate(user)
+
+
+@router.get("/subjects")
+def list_my_subjects(
+    db: OrmSession = Depends(get_db),
+    user: User = Depends(current_user),
+) -> dict:
+    """What this student's cohort offers, and which one is active."""
+    if user.batch_id is None:
+        return {"batch": None, "items": []}
+    batch = db.get(Batch, user.batch_id)
+    if batch is None:
+        return {"batch": None, "items": []}
+    return {
+        "batch": _batch_brief(batch),
+        "items": [
+            {
+                "id": c.id,
+                "code": c.code,
+                "title": c.title,
+                "semester": c.semester,
+                "is_current": c.id == user.course_id,
+            }
+            for c in _offered(batch)
+        ],
+    }
+
+
+@router.patch("/active-subject")
+def set_active_subject(
+    body: ActiveSubjectIn,
+    db: OrmSession = Depends(get_db),
+    user: User = Depends(current_user),
+) -> UserOut:
+    """Switch which subject the whole student surface is about.
+
+    Refuses anything outside the student's own cohort. Every route here
+    scopes by course_id, so an unchecked switcher would be a way to read
+    another cohort's material by editing a number.
+    """
+    batch = db.get(Batch, user.batch_id) if user.batch_id is not None else None
+    if batch is None or not any(c.id == body.course_id for c in batch.courses):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail={"code": "forbidden",
+                    "message": "That subject is not offered by your batch."},
+        )
+    user.course_id = body.course_id
+    db.flush()
+    return UserOut.model_validate(user)
