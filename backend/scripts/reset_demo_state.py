@@ -49,6 +49,7 @@ from app.models import (
     MisconceptionDiagnosis,
     PracticeItem,
     PracticeSet,
+    TutorMessage,
     UncertaintyFlag,
 )
 
@@ -65,6 +66,9 @@ PLAN = [
     # already selected from the last rehearsal -- which looks like the app
     # answering its own questions, on stage.
     ("diagnostic responses", DiagnosticResponse, None),
+    # tutor-002. Same reason: the demo should open with an empty chat, not
+    # yesterday's rehearsal transcript.
+    ("tutor chat transcript", TutorMessage, None),
 ]
 
 

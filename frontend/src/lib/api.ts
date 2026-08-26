@@ -120,6 +120,9 @@ export type TutorResponse =
       citations: [];
       evidence: EvidenceReport;
       uncertainty_flag_id: number;
+      /** tutor-002: help from general knowledge, clearly labelled. The UI must
+       * render it under its `note` warning — never with an alignment badge. */
+      beyond_syllabus?: { body: string; note: string };
     }
   | {
       outcome: "graded_work_refused";
@@ -411,3 +414,11 @@ export const confirmMisconception = (diagnosisId: number, confirmed: boolean) =>
   });
 export const askTutor = (question: string, language = "en") =>
   api<TutorResponse>("/tutor/ask", { method: "POST", body: { question, language } });
+
+/** tutor-002 — the signed-in student's own transcript, oldest first. */
+export type TutorHistoryItem =
+  | { id: number; role: "student"; text: string; response: null; created_at: string }
+  | { id: number; role: "tutor"; text: null; response: TutorResponse; created_at: string };
+
+export const getTutorHistory = (limit = 100) =>
+  api<{ items: TutorHistoryItem[] }>(`/tutor/history?limit=${limit}`).then((r) => r.items);

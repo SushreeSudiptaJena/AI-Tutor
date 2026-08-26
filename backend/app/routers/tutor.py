@@ -11,12 +11,13 @@ typed text, so a guardrail refusal there could only ever be a false positive.
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+from sqlalchemy import select
 from sqlalchemy.orm import Session as OrmSession
 
 from ..db import get_db
 from ..deps import current_user
-from ..models import User
+from ..models import TutorMessage, User
 from ..schemas import TutorAskIn
 from ..services import tutor
 
@@ -51,4 +52,38 @@ def ask(
         course_id=user.course_id,
         language=body.language or user.preferred_language,
         topic_id=body.topic_id,
+        user_id=user.id,
     )
+
+
+@router.get("/history")
+def history(
+    limit: int = Query(100, ge=1, le=200),
+    db: OrmSession = Depends(get_db),
+    user: User = Depends(current_user),
+) -> dict:
+    """The signed-in student's own Ask Tutor transcript, oldest first.
+
+    Scope comes from the token, never from the query string: one student must
+    not read another's conversation by editing a number. `limit` caps the
+    pair count; the response may hold up to twice that many rows because every
+    ask writes a student turn and a tutor turn.
+    """
+    rows = db.scalars(
+        select(TutorMessage)
+        .where(TutorMessage.user_id == user.id)
+        .order_by(TutorMessage.id.desc())
+        .limit(limit * 2)
+    ).all()
+
+    items = [
+        {
+            "id": m.id,
+            "role": m.role,
+            "text": m.text,
+            "response": m.response,
+            "created_at": m.created_at.isoformat() if m.created_at else None,
+        }
+        for m in reversed(rows)
+    ]
+    return {"items": items}

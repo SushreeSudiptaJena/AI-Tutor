@@ -1,0 +1,86 @@
+tutor-002 — persistent transcript + beyond-syllabus fallback
+Verified live 2026-08-26 against 127.0.0.1:8000 (backend restarted onto the new
+code), signed in as the seeded student asha@example.edu. 342 backend tests
+pass (337 + 5 new); frontend build green (4.11s).
+
+=== 1. The owner's complaint class: implicit/example coverage (live) ========
+POST /tutor/ask {"question": "What does include() do in a Django URLconf?"}
+  outcome: answered
+  align%: 85 | reason: None
+  citations: 5
+  flag_id: None
+  body[:120]: `include()` tells Django to pull in another URL configuration
+              instead of listing every pattern directly.  When you writ
+  top_similarity: 0.7825, threshold: 0.7  -> strict pass. The retry path
+  itself is covered by the unit test below (strict 0.55 -> retry -> answered).
+
+=== 2. Off-course question: refusal + flag + labelled fallback (live) =======
+POST /tutor/ask {"question": "Who won the 2018 FIFA world cup?"}
+  outcome: insufficient_evidence
+  align%: 29 | reason: no_matching_material
+  citations: 0
+  flag_id: 103
+  beyond_syllabus: YES  note="Not checked against your course material —
+                            general knowledge. Verify with your teacher."
+  beyond body[:140]: This question is outside the scope of the tutoring help
+                     I provide; please ask about your course material here.
+
+=== 3. Academic but absent from the book: real general-knowledge help (live)
+POST /tutor/ask {"question": "How does HTTPS encryption work?"}
+  outcome: insufficient_evidence
+  align%: 48 | reason: material_does_not_answer   (entailment refused it on
+                                                      BOTH passes — a
+                                                      near-domain miss is
+                                                      correctly NOT rescued)
+  citations: 0 | flag: 104
+  beyond: YES
+  beyond body[:300]: Your course books don't cover this, so this is from my
+    general knowledge:  HTTPS secures a web connection by layering TLS
+    (Transport Layer Security) over HTTP. When a browser contacts a site, the
+    TLS handshake begins. First, the server sends its digital certificate
+    containing a public key, wh...
+
+=== 4. Transcript persists and is scoped to the student (live) =============
+GET /tutor/history?limit=50  (same token)
+  rows: 8   [student/tutor pairs, oldest first]
+    student: What does include() do in a Django URLconf?
+    tutor:   answered | beyond: no | cites: 5
+    student: Who won the 2018 FIFA world cup?
+    tutor:   insufficient_evidence | beyond: yes | cites: 0
+    student: What does include() do in a Django URLconf?   (cached re-ask)
+    tutor:   answered | beyond: no | cites: 5
+    student: How does HTTPS encryption work?
+    tutor:   insufficient_evidence | beyond: yes | cites: 0
+
+=== 5. Browser: reload keeps the chat; warning card has no badge ===========
+headless-Edge flow (login -> Ask Tutor -> reload -> Ask Tutor):
+  before reload: {"userBubbles":4,"notInBooks":2,"warningNotes":true}
+  after  reload: {"userBubbles":4,"mdBodies":6,"noBadgeOnWarning":true}
+  Screenshots: %TEMP%/shots/50-chat-history.png, 51-chat-after-reload.png
+  (51: vision pass confirms the answered card renders with the 85% badge and
+   "Show sources (5)"; the two warning cards sit below the fold and are
+   DOM-verified by `notInBooks: 2` + `noBadgeOnWarning: true`.)
+
+=== 6. reset_demo_state.py treats the transcript as transactional ==========
+--dry-run:  "  8  tutor chat transcript"
+real run:   "  8  tutor chat transcript" + re-seed
+GET /tutor/history after reset -> rows: 0
+
+=== 7. New unit tests (backend/tests/test_rag.py) ===========================
+  test_wide_retry_rescues_a_question_the_book_shows_as_an_example
+      strict window 0.55 < 0.70 refuses -> wide window entailed 0.9 ->
+      answered, citations, NO uncertainty flag
+  test_wide_retry_without_entailment_still_refuses
+      relaxed drops the similarity gate ONLY
+  test_the_guardrail_never_gains_the_fallback
+      graded_work_refused never carries beyond_syllabus
+  test_ask_with_user_id_writes_the_transcript_pair
+  test_ask_without_user_id_stays_stateless
+Suite: 342 collected, 0 failed (3 pre-existing rag-003 tests updated to pin
+entailment low for the off-syllabus case — the fake's default 0.9 entailment
+would have let the relaxed retry rescue a question the material truly does
+not answer).
+
+Guardrail check (assignment-match) was NOT re-run live here: no assignment
+question was asked in this run, and the unit test plus rag-004's existing
+suite cover it.

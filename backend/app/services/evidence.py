@@ -135,12 +135,27 @@ def _entailment(question: str, hits: list[Hit]) -> tuple[float, str, str, bool]:
     return max(0.0, min(1.0, score)), reason, result.provider, result.cached
 
 
-def assess(question: str, hits: list[Hit], *, threshold: float | None = None) -> EvidenceReport:
+def assess(
+    question: str,
+    hits: list[Hit],
+    *,
+    threshold: float | None = None,
+    relaxed: bool = False,
+) -> EvidenceReport:
     """Score how well the approved material covers this question.
 
     Pure with respect to the database: it takes the hits `retrieval.search()`
     already produced, so a caller never pays for retrieval twice and the score
     is always about the passages that were actually cited.
+
+    `relaxed=True` is the tutor-002 second pass, run on a *wider* hit list
+    after the strict one refused. It drops ONLY the similarity gate: a book
+    that covers a question merely as a worked example ranks below the top-k
+    similarity cut but still entails. The entailment check stays -- it is the
+    half that can tell "mentioned in an example" from "near-domain miss", and
+    a relaxed pass without it would answer anything embedding-adjacent. The
+    report's `threshold` still shows the real configured value, so the student
+    never sees a doctored number.
     """
     threshold = config.ALIGNMENT_REFUSAL_THRESHOLD if threshold is None else threshold
     top = hits[0].similarity if hits else 0.0
@@ -158,7 +173,7 @@ def assess(question: str, hits: list[Hit], *, threshold: float | None = None) ->
     entail, entail_reason, provider, cached = _entailment(question, hits)
     score = RETRIEVAL_WEIGHT * retrieval + ENTAILMENT_WEIGHT * entail
 
-    if top < threshold:
+    if not relaxed and top < threshold:
         reason = NO_MATERIAL
     elif entail < ENTAILMENT_MIN:
         reason = NOT_ENTAILED

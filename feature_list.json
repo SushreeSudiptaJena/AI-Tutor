@@ -1006,6 +1006,48 @@
       ],
       "evidence": "evidence/frontend-002/verification.txt",
       "notes": "Raised by the owner 2026-08-25: teammate's student-UI push (a47c9f7) shipped a 633-line static Dashboard with hardcoded 'Good morning, Alex!', 'Circular Motion' and a HARDCODED 82% alignment badge -- the one number the rubric scores. Login and both onboarding screens in that push were already real and are kept as-is (the student login is preserved as StudentLogin.tsx; the unified login moved to /admin/login). The Dashboard rewrite keeps that push's design shell and replaces the data layer. The alignment badge and the misconception confirm flow are the golden path; hardcoded versions of either are worse than none. PASSING 2026-08-25. Full golden path run live as asha: real greeting (Asha R / CSW2); diagnostic resumed from your_answer; ONE rehearsed wrong answer (demo-script.md's GET answer) -> 'Found 1 prerequisite gap: HTTP methods, GET and POST, from CSW1'; lesson answered at a REAL 66% alignment with Django-book pages 1010/445/447; practice set 19, wrong GET -> correct:False/POST + diagnosis 724 'Chooses GET for a request that changes server state'; confirm 204; teacher heatmap (as ravi) shows the same misconception at confirmed_count 8. Tutor: answered at 88% with 3 citations AND insufficient_evidence (flag 93) -- both 200. Stat feeds: mastery 7 solid/1 shaky/7 untested; assignments 0 (empty state renders, not an error). An earlier accidental all-correct submit produced 'No prerequisite gaps found' -- the no-score stance holds client-side too: the UI computes no totals anywhere. reset_demo_state.py run after. Build green, pytest exit 0."
+    },
+    {
+      "id": "tutor-002",
+      "priority": 47,
+      "area": "rag",
+      "title": "Persistent tutor transcript + beyond-syllabus fallback answer",
+      "user_visible_behavior": "The Ask Tutor chat survives a page reload (per-student history on the server), and a question the course books do not explicitly cover is no longer stonewalled: the tutor retries retrieval across ALL course material with the entailment check alone, and if that still fails it answers from general knowledge under a visible 'not from your course books' warning -- while still flagging the teacher dashboard. The graded-work guardrail still refuses outright, with no fallback.",
+      "status": "passing",
+      "depends_on": [
+        "rag-003",
+        "rag-004",
+        "student-009"
+      ],
+      "demo_mode": "live",
+      "verification": [
+        "Ask a covered question, reload the page, reopen Ask Tutor: the earlier question and its answered card are still there (GET /tutor/history).",
+        "Ask a question the book only shows implicitly (as a code example, not taught): the first-pass refusal triggers the wide retry; if the entailment check passes on the wider hits the question is ANSWERED with real page citations and an alignment badge.",
+        "Ask a genuinely off-course question: outcome is still insufficient_evidence with citations [], the uncertainty flag row still appears on the teacher dashboard, and the response now carries a beyond_syllabus block whose body is a real general-knowledge answer shown under a warning.",
+        "Ask a 'solve this assignment question' question: graded_work_refused exactly as before -- the guardrail outcome never gains a beyond_syllabus block.",
+        "reset_demo_state.py deletes the tutor transcript (it is transactional demo state)."
+      ],
+      "evidence": "evidence/tutor-002/verification.txt",
+      "notes": "Owner-directed 2026-08-26, contract edited first (person 6 owns docs/api-contract.md -- TELL THEM). The refusal itself is unchanged: outcome name, the flag write, and 'no fabricated citations' all hold. What changes is what the student sees after the refusal: help, clearly labelled as outside the syllabus, instead of a dead end. The relaxed retry drops only the similarity gate -- the entailment half stays load-bearing (CLAUDE.md rag rule)."
+    },
+    {
+      "id": "perf-002",
+      "priority": 48,
+      "area": "perf",
+      "title": "Student dashboard view-switch cache (client stale-while-revalidate)",
+      "user_visible_behavior": "Switching between Dashboard / My Course / My Gaps / Practice is instant on the second visit in a session: data is served from an in-session client cache and refreshed in the background; mutating actions (diagnostic submit, practice answer, confirm) invalidate exactly the affected keys.",
+      "status": "not_started",
+      "depends_on": [
+        "frontend-002"
+      ],
+      "demo_mode": "live",
+      "verification": [
+        "Load each student view once, then switch between them: second loads render without a loading state and without a visible network wait.",
+        "After submitting a diagnostic answer, the gaps/mastery views refetch (cache invalidated), not the pre-submit snapshot.",
+        "pytest + frontend build still green."
+      ],
+      "evidence": null,
+      "notes": "Owner report 2026-08-26: every view switch re-mounts its view component, which refetches over ~137-320ms-per-round-trip remote-DB links (perf-001 measured this); 3+ sequential round trips = the 3s felt lag. Fix is client-side SWR in api.ts -- a server TTL cache is only worth it for course-summary (per-course static); per-user rows must stay uncached server-side."
     }
   ]
 }

@@ -412,6 +412,32 @@ class MisconceptionDiagnosis(Base):
     misconception: Mapped["Misconception"] = relationship()
 
 
+class TutorMessage(Base):
+    """One turn of a student's Ask Tutor chat -- tutor-002.
+
+    The transcript exists so a page reload does not wipe a conversation, and
+    for nothing else. It is keyed to the student, readable only through
+    GET /tutor/history as the signed-in user, and deliberately carries no
+    analysis columns -- no time-on-task, no sentiment, nothing a teacher
+    dashboard could aggregate into surveillance (see the rules at the top of
+    this file). Refused turns are stored too: a refusal is part of the
+    conversation, and the general-knowledge fallback answer lives inside the
+    stored response dict rather than out here where it might look quotable.
+    """
+
+    __tablename__ = "tutor_messages"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    course_id: Mapped[int | None] = mapped_column(ForeignKey("courses.id"), index=True)
+    # "student" = what they typed, in the language they typed it.
+    # "tutor"   = the full TutorResponse dict, verbatim, in `response`.
+    role: Mapped[str] = mapped_column(String(10))
+    text: Mapped[str | None] = mapped_column(Text)        # student turns only
+    response: Mapped[dict | None] = mapped_column(JSON)   # tutor turns only
+    created_at: Mapped[datetime] = _now()
+
+
 # ---------------------------------------------------------------------------
 # Teacher-facing  (teacher-004, teacher-006, teacher-007, admin-003)
 # ---------------------------------------------------------------------------

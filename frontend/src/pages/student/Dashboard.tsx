@@ -34,6 +34,7 @@ import {
   getMe,
   getMastery,
   getPracticeSet,
+  getTutorHistory,
   logout,
   submitDiagnostic,
   updatePreferences,
@@ -171,11 +172,23 @@ function TutorCard({ response }: { response: TutorResponse }) {
 
   if (response.outcome === "insufficient_evidence") {
     return (
-      <div className="rounded-xl border border-outline-variant bg-surface-container-lowest p-md">
-        <p className="mb-sm text-label-md font-bold tracking-wider text-error uppercase">
+      <div className="rounded-xl border border-mustard/50 bg-mustard/5 p-md">
+        <p className="mb-sm text-label-md font-bold tracking-wider text-forest-green uppercase">
           Not in your course books
         </p>
         <Md>{response.body}</Md>
+        {response.beyond_syllabus && (
+          <div className="mt-md rounded-lg border border-mustard/40 bg-white p-md">
+            <p className="mb-xs flex items-center gap-xs text-label-sm font-bold text-forest-green uppercase tracking-wider">
+              <AlertTriangle className="h-4 w-4" aria-hidden />
+              {response.beyond_syllabus.note}
+            </p>
+            {/* General knowledge — deliberately NO alignment badge and NO
+                citations here: showing either would claim evidence that was
+                never checked. */}
+            <Md>{response.beyond_syllabus.body}</Md>
+          </div>
+        )}
         <p className="mt-sm text-label-sm text-on-surface-variant">
           Your teacher has been notified — if enough students hit the same wall, it becomes a
           reteach topic.
@@ -1115,9 +1128,10 @@ function PracticeView({ initialGap }: { initialGap: Gap | null }) {
  * Ask Tutor -- free questions, all three outcomes rendered by TutorCard.
  * ------------------------------------------------------------------------- */
 function TutorView() {
-  // /tutor/ask is stateless; the transcript is client-side history. Each
-  // turn renders as a full TutorCard -- alignment badge, citations, and
-  // refusals included, since a refusal is an answer here.
+  // tutor-002: the transcript lives on the server now. The chat seeds from
+  // GET /tutor/history on mount and new turns append; a reload no longer
+  // wipes the conversation. Each turn renders as a full TutorCard -- badge,
+  // citations, and refusals included, since a refusal is an answer here.
   type ChatTurn =
     | { role: "user"; text: string }
     | { role: "tutor"; response: TutorResponse }
@@ -1126,6 +1140,28 @@ function TutorView() {
   const [question, setQuestion] = useState("");
   const [busy, setBusy] = useState(false);
   const endRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    let alive = true;
+    getTutorHistory()
+      .then((items) => {
+        if (!alive) return;
+        setMessages(
+          items.map((m) =>
+            m.role === "student"
+              ? { role: "user" as const, text: m.text ?? "" }
+              : { role: "tutor" as const, response: m.response },
+          ),
+        );
+      })
+      .catch(() => {
+        /* A history that won't load must not block asking; the chat just
+           starts empty, as it always did before tutor-002. */
+      });
+    return () => {
+      alive = false;
+    };
+  }, []);
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });

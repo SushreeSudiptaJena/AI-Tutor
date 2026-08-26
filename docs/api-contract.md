@@ -133,9 +133,29 @@ Every tutor-generated response uses this shape. **Frontend must branch on `outco
   "body": "I don't have approved course material covering this. I've flagged it for your teacher.",
   "citations": [],
   "evidence": { "sufficient": false, "alignment_percent": 11, "reason": "no_matching_material" },
-  "uncertainty_flag_id": 55
+  "uncertainty_flag_id": 55,
+  "beyond_syllabus": {
+    "body": "Outside your course books, from the tutor's general knowledge: …",
+    "note": "Not checked against your course material — verify with your teacher."
+  }
 }
 ```
+> **What a refusal does now (`tutor-002`).** The outcome, the empty `citations`,
+> the `evidence` report and the uncertainty flag are all unchanged — the tutor
+> still never *pretends* the books say something they do not. What changed is
+> the second step: before refusing, `/tutor/ask` retries retrieval across the
+> whole course corpus with the similarity gate dropped (the entailment check
+> still has to pass — that half is what stops a near-domain miss), which finds
+> questions the book covers only implicitly, e.g. as a worked example; those are
+> returned as a normal `answered` response with real citations. Only when that
+> also fails does the refusal stand, and it then carries an optional
+> `beyond_syllabus` block: a general-knowledge answer the UI must render under
+> its `note` warning, with no alignment badge and no citations. The teacher's
+> uncertainty flag is written for exactly that case — a question the approved
+> material could not answer. `graded_work_refused` never carries
+> `beyond_syllabus`: the guardrail refuses, it does not help around itself.
+> `beyond_syllabus` appears **only** on `POST /tutor/ask`; gap lessons keep the
+> plain refusal.
 > **Where the guardrail runs.** `graded_work_refused` can only be returned by
 > **`POST /tutor/ask`**. It is never returned by `/student/gaps/{id}/lesson`,
 > `/student/practice/*`, or any other route — those are driven by a concept or a
@@ -610,11 +630,21 @@ The answer response carries the diagnosis when the answer is wrong:
 | Method | Path | Notes |
 |---|---|---|
 | `POST` | `/tutor/ask` | `{ question, language?, topic_id? }` → `TutorResponse` |
+| `GET` | `/tutor/history` | `?limit=100` — the signed-in student's own transcript, oldest first. **`tutor-002`.** |
 | `POST` | `/tutor/ask/stream` | SSE, **polish only — build after everything else** |
 
 Branch on `outcome`: `answered` · `insufficient_evidence` · `graded_work_refused`. All three are `200`, not errors — a refusal is a successful, correct response.
 
 SSE frames, if built: `event: token` with `data: {"text":"…"}`, then a final `event: done` carrying the complete `TutorResponse` (the alignment badge can only render after the stream ends, since the evidence check needs the full answer).
+
+**`GET /tutor/history`** (`tutor-002`) → `{ "items": [...] }`, oldest first, `?limit=` capped at 200. Every `POST /tutor/ask` writes two rows: what the student typed (in the language they typed it) and the full `TutorResponse` that came back — refusals included, because a refusal is part of the conversation. The transcript is the student's own: it is keyed to their account, readable only by them, carries no analysis columns (no time-on-task, no sentiment — see `models.TutorMessage`), and is cleared by `reset_demo_state.py` like every other transactional row.
+
+```json
+{ "items": [
+  { "id": 901, "role": "student", "text": "what does include() do?", "created_at": "2026-08-26T09:14:02Z" },
+  { "id": 902, "role": "tutor", "response": { /* TutorResponse, verbatim */ }, "created_at": "2026-08-26T09:14:09Z" }
+] }
+```
 
 ### Assigned reteach
 `GET /student/assignments` → `{ items: [{ id, title, body, assigned_at, citations }] }`. Only teacher-approved units appear here. **Built `teacher-006`.** `citations[]` is empty: a unit's citations are gathered when it is drafted and there is no column to keep them in, so the student gets the teacher-approved prose without invented sources. `assigned_at` is read from the approval audit row.
@@ -862,6 +892,7 @@ Every shape above is final enough to mock. Suggested order, matching `feature_li
 | 2026-08-24 | Golden path complete. `POST /student/practice/generate` (needs `gap_id`; also returns `concept` and `source: generated\|seeded`), `POST /student/practice/{id}/answer`, `POST /student/misconception-diagnosis/{id}/confirm`, `GET /teacher/misconceptions/heatmap`, `GET /teacher/uncertainty-flags` and its `/resolve`. `student-004` Show Source needs no endpoint — it is the `Citation` object. |
 | 2026-08-24 | **`TutorResponse` gains `speech_text`** (`a11y-001`, backend half). Read-aloud must use it instead of `body`: `body` is markdown, and `[4]` is spoken as "four" mid-sentence. Present on every outcome, including refusals. |
 | 2026-08-24 | `i18n-001` built and verified live: Hindi in, Hindi out, identical citations and an identical alignment score. Response `language` now reports what was produced. Both routes fall back to `User.preferred_language` instead of defaulting to `en`. |
+| 2026-08-26 | **`tutor-002`** (owner-directed; Sushree edited this file, normally person 6's): `insufficient_evidence` may now carry an optional `beyond_syllabus` block — see the note at `TutorResponse`. New endpoint **`GET /tutor/history`** returning the signed-in student's own transcript; `POST /tutor/ask` writes it. Neither changes any existing field or outcome name. |
 | 2026-08-24 | Admin built: `admin-002` departments/courses/prerequisites, `admin-001` material upload with archiving-not-deleting and version history, `admin-003` audit log. The `sourced_content` audit actions are the documented verbs (`.approve`/`.reject`), not the resulting status. The two ingest endpoints are marked NOT BUILT. |
 | 2026-08-24 | Teacher panels built: `teacher-002` reasoning paths, `teacher-003` gap map, `teacher-005` before/after (now with `measured`/`attempts_in_window`; `delta_share` null until tested), `teacher-006` reteach suggest/patch/approve **plus new `GET /teacher/reteach`** and `GET /student/assignments`, `teacher-007` verification queue. |
 | 2026-08-24 | `GET /student/mastery` is **now built** (`student-007`) — exact shape as documented; no aggregate score, no time-on-task, and nothing countable to rebuild one from. |

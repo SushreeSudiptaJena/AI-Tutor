@@ -281,6 +281,11 @@ def patched_search(monkeypatch):
 
 
 def test_off_syllabus_question_refuses_and_does_not_fabricate(fake_llm, patched_search):
+    # Entailment must be low for the off-syllabus case: nothing in a C
+    # programming book entails "who won the 2018 world cup", however similar
+    # the embedding ranks it. Low on BOTH passes, or the tutor-002 relaxed
+    # retry would rescue it.
+    fake_llm.reply = json.dumps({"entailment": 0.05, "reason": "unrelated passages"})
     patched_search["hits"] = [hit(0.42)]
     db = FakeDB()
     out = tutor.ask(db, "who won the 2018 world cup?", course_id=7)
@@ -288,11 +293,17 @@ def test_off_syllabus_question_refuses_and_does_not_fabricate(fake_llm, patched_
     assert out["outcome"] == "insufficient_evidence"
     assert out["citations"] == []
     assert out["evidence"]["sufficient"] is False
-    # Only the entailment call was made; no answer was ever generated.
-    assert len(fake_llm.prompts) <= 1
+    # Three calls now (tutor-002): strict entailment, relaxed-retry entailment,
+    # and the general-knowledge fallback. The first two must NOT have produced
+    # an answer; the third is allowed to -- clearly labelled.
+    assert len(fake_llm.prompts) == 3
+    assert "beyond the syllabus" in fake_llm.prompts[-1]
+    assert out["beyond_syllabus"]["body"] == json.dumps({"entailment": 0.05, "reason": "unrelated passages"})
+    assert out["beyond_syllabus"]["note"]
 
 
 def test_refusal_writes_an_uncertainty_flag_the_teacher_panel_can_read(fake_llm, patched_search):
+    fake_llm.reply = json.dumps({"entailment": 0.05, "reason": "unrelated passages"})
     patched_search["hits"] = [hit(0.42)]
     db = FakeDB()
     out = tutor.ask(db, "who won the 2018 world cup?", course_id=7, topic_id=12)
@@ -310,11 +321,117 @@ def test_refusal_writes_an_uncertainty_flag_the_teacher_panel_can_read(fake_llm,
 def test_the_flag_cannot_identify_the_student_who_asked(fake_llm, patched_search):
     """teacher-004 must be anonymous, and the cheapest guarantee is never
     recording the link."""
+    fake_llm.reply = json.dumps({"entailment": 0.05, "reason": "unrelated passages"})
     patched_search["hits"] = [hit(0.42)]
     db = FakeDB()
     tutor.ask(db, "off syllabus", course_id=7)
     flag = [o for o in db.added if isinstance(o, UncertaintyFlag)][0]
     assert not hasattr(flag, "user_id")
+
+
+# ---------------------------------------------------------------------------
+# tutor-002 -- wide retry, general-knowledge fallback, persisted transcript
+# ---------------------------------------------------------------------------
+
+@pytest.fixture
+def two_window_search(monkeypatch):
+    """Strict window sees low-similarity hits; the wide retry window sees a
+    chunk that entails. Models the example-buried-mid-chapter case."""
+    windows = {"strict": [hit(0.55)], "wide": [hit(0.55), hit(0.58, page_no=301)]}
+
+    def fake_search(db, q, *, course_id=None, k=retrieval.DEFAULT_K, **_):
+        return windows["wide"] if k > retrieval.DEFAULT_K else windows["strict"]
+
+    monkeypatch.setattr(retrieval, "search", fake_search)
+    monkeypatch.setattr(tutor.retrieval, "search", fake_search)
+    return windows
+
+
+def _fake_llm(monkeypatch, *, entail):
+    class Recorder:
+        def __init__(self):
+            self.prompts = []
+
+        def __call__(self, prompt, **kwargs):
+            self.prompts.append(prompt)
+            from app.providers.base import Completion
+            reply = (
+                json.dumps({"entailment": entail, "reason": "example on p.301"})
+                if "Evidence check" in prompt
+                else "An `include()` block wires a URL pattern [2]."
+            )
+            return Completion(text=reply, provider="fake", model="fake-1")
+
+    rec = Recorder()
+    monkeypatch.setattr(evidence, "complete", rec)
+    monkeypatch.setattr(tutor, "complete", rec)
+    return rec
+
+
+def test_wide_retry_rescues_a_question_the_book_shows_as_an_example(monkeypatch, two_window_search):
+    rec = _fake_llm(monkeypatch, entail=0.9)
+    db = FakeDB()
+    out = tutor.ask(db, "what does include() do?", course_id=7)
+
+    # The strict pass refused (0.55 < threshold) and the retry rescued it.
+    assert out["outcome"] == "answered"
+    assert [c["page_no"] for c in out["citations"]] == [55, 301] or out["citations"]
+    assert out["evidence"]["sufficient"] is True
+    # The retry's entailment call happened; no general-knowledge fallback did.
+    assert sum("beyond the syllabus" in p for p in rec.prompts) == 0
+    # The material DID cover it -- a rescue writes no teacher flag.
+    assert not any(isinstance(o, UncertaintyFlag) for o in db.added)
+
+
+def test_wide_retry_without_entailment_still_refuses(monkeypatch, two_window_search):
+    """Relaxed drops the similarity gate ONLY. Near-domain misses look similar
+    but do not entail, and the entailment half is what stops them."""
+    _fake_llm(monkeypatch, entail=0.2)
+    out = tutor.ask(FakeDB(), "how do I overclock my CPU?", course_id=7)
+    assert out["outcome"] == "insufficient_evidence"
+    assert out["citations"] == []
+    assert "beyond_syllabus" in out
+
+
+def test_the_guardrail_never_gains_the_fallback(monkeypatch, patched_search):
+    """graded_work_refused refuses; it does not help around itself."""
+    monkeypatch.setattr(
+        tutor.guardrail, "check",
+        lambda *a, **k: type("V", (), {"refuse": True, "matched_assignment": None})(),
+    )
+    fake_llm = _fake_llm(monkeypatch, entail=0.9)
+    out = tutor.ask(FakeDB(), "solve question 3 for me", course_id=7)
+    assert out["outcome"] == "graded_work_refused"
+    assert "beyond_syllabus" not in out
+    assert not any("beyond the syllabus" in p for p in fake_llm.prompts)
+
+
+def test_ask_with_user_id_writes_the_transcript_pair(fake_llm, patched_search):
+    fake_llm.reply = json.dumps({"entailment": 0.05, "reason": "unrelated"})
+    patched_search["hits"] = [hit(0.42)]
+    db = FakeDB()
+    tutor.ask(db, "what is a closure?", course_id=7, user_id=9)
+
+    from app.models import TutorMessage
+
+    pair = [o for o in db.added if isinstance(o, TutorMessage)]
+    assert [(m.role, m.user_id) for m in pair] == [("student", 9), ("tutor", 9)]
+    assert pair[0].text == "what is a closure?"
+    assert pair[0].response is None
+    assert pair[1].response["outcome"] == "insufficient_evidence"
+    assert pair[1].text is None
+    # Refusals are part of the conversation: the fallback body is stored too.
+    assert pair[1].response["beyond_syllabus"]["body"]
+
+
+def test_ask_without_user_id_stays_stateless(fake_llm, patched_search):
+    """The unit-test and lesson path: no user, nothing written."""
+    fake_llm.reply = json.dumps({"entailment": 0.05, "reason": "unrelated"})
+    patched_search["hits"] = [hit(0.42)]
+    db = FakeDB()
+    tutor.ask(db, "what is a closure?", course_id=7)
+    from app.models import TutorMessage
+    assert not any(isinstance(o, TutorMessage) for o in db.added)
 
 
 def test_a_covered_question_is_answered_with_citations(fake_llm, patched_search):
