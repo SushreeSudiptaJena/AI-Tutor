@@ -45,19 +45,21 @@ export default function Signup() {
   return (
     <div className="admin-scope min-h-screen bg-gray-100 text-gray-900 flex items-center justify-center p-4">
       <div className="bg-white rounded-3xl w-full max-w-[28rem] p-8 md:p-12 shadow-2xl">
-        <Link
-          to="/login"
-          className="inline-flex items-center text-gray-500 hover:text-gray-800 transition-colors mb-8"
-        >
-          <span className="material-symbols-outlined text-[18px] mr-1">
-            arrow_back
-          </span>
-          Back
-        </Link>
+        <div className="flex flex-col">
+          <Link
+            to="/admin/login"
+            className="inline-flex w-fit items-center text-gray-500 hover:text-gray-800 transition-colors -ml-1 mb-6"
+          >
+            <span className="material-symbols-outlined text-[18px] mr-1">
+              arrow_back
+            </span>
+            Back
+          </Link>
 
-        <span className="text-gray-500 uppercase tracking-wider text-xs font-semibold">
-          Create your account
-        </span>
+          <span className="text-gray-500 uppercase tracking-wider text-xs font-semibold">
+            Create your account
+          </span>
+        </div>
         <h1 className="text-[32px] font-bold text-gray-900 mt-2 mb-8 leading-tight">
           Start your learning path.
         </h1>
@@ -138,7 +140,7 @@ export default function Signup() {
 
         <p className="text-center text-gray-500 text-sm mt-8">
           Already have an account?{" "}
-          <Link to="/login" className="text-[#7AB139] hover:underline font-medium">
+          <Link to="/admin/login" className="text-[#7AB139] hover:underline font-medium">
             Log in
           </Link>
         </p>

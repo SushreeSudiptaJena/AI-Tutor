@@ -154,11 +154,9 @@ function Sidebar({ active, onSelect }: { active: TabKey; onSelect: (k: TabKey) =
     <nav className="bg-surface-container-low h-full w-64 fixed left-0 top-0 border-r border-outline-variant/10 shadow-sm flex flex-col py-container-padding z-40">
       <div className="px-gutter mb-8">
         <div className="flex items-center gap-3 mb-2">
-          <div className="w-10 h-10 rounded-full bg-surface-container-highest border border-outline-variant/30 flex items-center justify-center text-tertiary font-bold">
-            NS
-          </div>
+          <div className="w-10 h-10 rounded-full bg-surface-container-highest border border-outline-variant/30 flex items-center justify-center text-tertiary font-bold">J</div>
           <div>
-            <h1 className="font-headline-md text-headline-md font-bold text-on-surface">Nocturnal Scholar</h1>
+            <h1 className="font-headline-md text-headline-md font-bold text-on-surface">Journey</h1>
             <p className="font-label-sm text-label-sm text-on-surface-variant">Admin Console</p>
           </div>
         </div>

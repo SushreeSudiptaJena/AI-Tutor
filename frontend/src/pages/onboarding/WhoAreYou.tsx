@@ -37,8 +37,8 @@ export default function WhoAreYou() {
           </h1>
 
           <p className="text-[18px] leading-7 text-[#c3c7ca] mt-4 max-w-[32rem] mx-auto">
-            Select the role that best describes you to tailor your Nocturnal
-            Scholar experience.
+            Select the role that best describes you to tailor your Journey
+            experience.
           </p>
         </header>
 
@@ -237,7 +237,7 @@ export default function WhoAreYou() {
         </button>
 
         <p className="text-[12px] font-medium text-[#c3c7ca]/50 mt-2">
-          © 2024 Nocturnal Scholar.
+          © 2026 Journey.
         </p>
       </footer>
     </div>

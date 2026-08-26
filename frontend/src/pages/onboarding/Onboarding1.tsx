@@ -201,7 +201,7 @@ export default function Onboarding1() {
             </button>
 
             <p className="text-label-sm font-label-sm text-on-surface-variant/50 mt-2">
-              ©️ 2024 Nocturnal Scholar.
+              ©️ 2026 Journey.
             </p>
           </footer>
         </main>

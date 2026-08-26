@@ -12,7 +12,7 @@ export function AuthLayout({ children }: { children: ReactNode }) {
       {/* Brand / illustration panel */}
       <div className="hidden md:flex md:w-1/2 relative z-10 flex-col justify-between p-12 border-r border-outline-variant/30">
         <span className="text-headline-sm text-on-surface font-semibold tracking-tight">
-          Nocturnal Scholar
+          Journey
         </span>
 
         <div className="max-w-[24rem]">
@@ -28,7 +28,7 @@ export function AuthLayout({ children }: { children: ReactNode }) {
         </div>
 
         <span className="text-label-sm text-on-surface-variant opacity-50">
-          © 2026 Nocturnal Scholar
+          © 2026 Journey
         </span>
       </div>
 

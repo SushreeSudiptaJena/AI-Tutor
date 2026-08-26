@@ -2,7 +2,7 @@ import { useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { login, setToken, ApiError } from "@/lib/api";
 import { USE_MOCK, mockLogin } from "@/lib/mock";
-import screenImage from "@/assets/login-illustration.png";
+import screenImage from "@/assets/admin-login.jpeg";
 
 export default function Login() {
   const navigate = useNavigate();
@@ -57,7 +57,7 @@ export default function Login() {
 
           {/* Logo */}
           <div className="text-white text-2xl font-bold">
-            Nocturnal Scholar
+            Journey
           </div>
 
           {/* Navigation */}
@@ -99,7 +99,7 @@ export default function Login() {
 
               <img
                 src={screenImage}
-                alt="Mountain path illustration"
+                alt="A winding forest path toward distant peaks"
                 className="w-full h-full object-cover"
               />
 
@@ -311,7 +311,7 @@ export default function Login() {
                 </span>
 
                 <span>
-                  Nocturnal Scholar — Where Knowledge Comes Alive
+                  Journey — where knowledge comes alive
                 </span>
 
               </div>

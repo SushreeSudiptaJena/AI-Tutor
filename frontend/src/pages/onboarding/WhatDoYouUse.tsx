@@ -214,7 +214,7 @@ export default function WhatDoYouUse() {
 
         {/* Copyright */}
         <span className="text-[#c3c7ca] text-[12px] mt-4 opacity-50">
-          © 2024 Nocturnal Scholar.
+          © 2026 Journey.
         </span>
       </footer>
     </div>
