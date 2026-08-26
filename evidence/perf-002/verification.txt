@@ -1,0 +1,50 @@
+perf-002 — student dashboard session cache (stale-while-revalidate)
+Verified live 2026-08-26, headless Edge against localhost:5173 + :8000,
+signed in as asha@example.edu. Backend untouched (frontend-only change);
+342 backend tests + frontend build 4.11s green at commit time.
+
+=== The complaint ===========================================================
+Every view switch remounts its view, which refetched 1-4 endpoints over the
+remote-DB link (perf-001 measured ~137ms per bare round trip, ~320ms per
+vector query) -- a switch serially costing ~3s.
+
+=== Design ==================================================================
+api.ts gains a module-level session cache: cached(key, fetcher, ttl=60s)
+resolves from memory when warm; when stale it STILL paints cached data and
+revalidates silently in the background; an in-flight map dedupes React
+StrictMode's double-mount. Correctness rests on invalidation at every
+mutation site, and setToken/clearToken wipe the whole cache so data never
+outlives its token (login, logout, RequireAuth 401 all pass through these).
+
+=== 1. Switch cost: ~3s -> ~10ms (perf.js) ==================================
+after cold home load settled ("Here's your learning progress" visible):
+  cold home GETs: []
+  switch GETs (5 switches): ["/tutor/history?limit=100"]   <- first-ever
+                                                              Ask Tutor visit
+  switch timings ms: {"My Course":19,"My Gaps":9,"Practice":10,
+                      "Ask Tutor":17,"Dashboard":13}
+  no loading states left: true
+(The one GET is the only key Home does not prefetch; My Course / My Gaps /
+Practice / Dashboard were served entirely from the session cache.)
+
+=== 2. Mutations invalidate (inval.js) ======================================
+all-correct diagnostic submit -> switch to My Gaps:
+  gaps refetched after submit (invalidation works): true ["/student/gaps"]
+i.e. the view ran the network again rather than painting the pre-submit
+snapshot. reset_demo_state.py run afterwards (diagnostic responses + tutor
+transcript cleared, class history re-seeded).
+
+Invalidation map, wired in Dashboard.tsx:
+  diagnostic submit  -> "diagnostic", "gaps", "mastery"
+  practice answer    -> `practice:<id>`, "gaps", "mastery"
+  practice generate  -> "gaps" (the gap gains latest_practice_set_id)
+  misconception confirm -> "gaps", "mastery"
+  tutor ask          -> "tutor-history"
+  preferences PATCH  -> "me"
+
+=== Server-side cache: deliberately NOT built ===============================
+Per-user rows (gaps/mastery/diagnostic) cannot be cached in the server
+process without staleness bugs across the team's browsers, and
+/student/course-summary's cost is per-course static data the client cache
+already covers for revisits. The first load of a session is the network and
+stays honest.

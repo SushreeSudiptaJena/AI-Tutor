@@ -1036,7 +1036,7 @@
       "area": "perf",
       "title": "Student dashboard view-switch cache (client stale-while-revalidate)",
       "user_visible_behavior": "Switching between Dashboard / My Course / My Gaps / Practice is instant on the second visit in a session: data is served from an in-session client cache and refreshed in the background; mutating actions (diagnostic submit, practice answer, confirm) invalidate exactly the affected keys.",
-      "status": "not_started",
+      "status": "passing",
       "depends_on": [
         "frontend-002"
       ],
@@ -1046,7 +1046,7 @@
         "After submitting a diagnostic answer, the gaps/mastery views refetch (cache invalidated), not the pre-submit snapshot.",
         "pytest + frontend build still green."
       ],
-      "evidence": null,
+      "evidence": "evidence/perf-002/verification.txt",
       "notes": "Owner report 2026-08-26: every view switch re-mounts its view component, which refetches over ~137-320ms-per-round-trip remote-DB links (perf-001 measured this); 3+ sequential round trips = the 3s felt lag. Fix is client-side SWR in api.ts -- a server TTL cache is only worth it for course-summary (per-course static); per-user rows must stay uncached server-side."
     }
   ]

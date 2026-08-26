@@ -22,9 +22,11 @@ import {
   ApiError,
   answerPractice,
   askTutor,
+  cached,
   clearToken,
   confirmMisconception,
   generatePractice,
+  invalidateCache,
   getAssignments,
   getCourseSummary,
   getDiagnostic,
@@ -267,7 +269,14 @@ function HomeView({
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    Promise.all([getCourseSummary(), getGaps(), getMastery(), getAssignments()])
+    // perf-002: four parallel calls on a cold session; on any later switch
+    // all four resolve from the session cache.
+    Promise.all([
+      cached("summary", getCourseSummary),
+      cached("gaps", getGaps),
+      cached("mastery", getMastery),
+      cached("assignments", getAssignments),
+    ])
       .then(([s, g, m, a]) => {
         setSummary(s);
         setGaps(g.items);
@@ -551,7 +560,7 @@ function MyCourseView() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    getCourseSummary()
+    cached("summary", getCourseSummary)
       .then(setSummary)
       .catch((err) => setError(errorText(err)));
   }, []);
@@ -616,7 +625,7 @@ function DiagnosticView({ goto }: { goto: (s: Section) => void }) {
   const [result, setResult] = useState<{ message: string; count: number } | null>(null);
 
   useEffect(() => {
-    getDiagnostic()
+    cached("diagnostic", getDiagnostic)
       .then((d) => {
         setDiag(d);
         // Resume: pre-select exactly what the student already picked.
@@ -637,6 +646,8 @@ function DiagnosticView({ goto }: { goto: (s: Section) => void }) {
         answer,
       }));
       const r = await submitDiagnostic(diag.diagnostic_id, payload);
+      // perf-002: the submit changes what every read key below returns.
+      invalidateCache("diagnostic", "gaps", "mastery");
       setResult({ message: r.message, count: r.gaps.filter((g) => g.status === "open").length });
     } catch (err) {
       setError(errorText(err));
@@ -743,7 +754,7 @@ function GapsView({ openLesson }: { openLesson: (g: Gap) => void }) {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    getGaps()
+    cached("gaps", getGaps)
       .then((r) => setGaps(r.items))
       .catch((err) => setError(errorText(err)));
   }, []);
@@ -816,7 +827,7 @@ function LessonsView({
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    getGaps()
+    cached("gaps", getGaps)
       .then((r) => setGaps(r.items))
       .catch((err) => setError(errorText(err)));
   }, []);
@@ -901,7 +912,7 @@ function PracticeView({ initialGap }: { initialGap: Gap | null }) {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    getGaps()
+    cached("gaps", getGaps)
       .then((r) => setGaps(r.items.filter((g) => g.status !== "closed")))
       .catch((err) => setError(errorText(err)));
   }, []);
@@ -921,9 +932,13 @@ function PracticeView({ initialGap }: { initialGap: Gap | null }) {
       // Resume a half-finished set rather than generating a new one;
       // null latest_practice_set_id means "offer the button", per contract.
       const s = g.latest_practice_set_id
-        ? await getPracticeSet(g.latest_practice_set_id)
+        ? await cached(`practice:${g.latest_practice_set_id}`, () =>
+            getPracticeSet(g.latest_practice_set_id!),
+          )
         : await generatePractice(g.id);
       setSet(s);
+      if (!g.latest_practice_set_id)
+        invalidateCache("gaps"); // the gap now points at this set; a stale list would regenerate another
       const prior: Record<number, string> = {};
       const priorConfirm: Record<number, boolean> = {};
       for (const it of s.items) {
@@ -943,6 +958,8 @@ function PracticeView({ initialGap }: { initialGap: Gap | null }) {
     setError(null);
     try {
       const r = await answerPractice(set.practice_set_id, item.id, answers[item.id]);
+      // perf-002: the set now carries this answer; gaps/mastery may move too.
+      invalidateCache(`practice:${set.practice_set_id}`, "gaps", "mastery");
       setResults((prev) => ({ ...prev, [item.id]: r }));
     } catch (err) {
       setError(errorText(err));
@@ -957,6 +974,7 @@ function PracticeView({ initialGap }: { initialGap: Gap | null }) {
     setBusy(true);
     try {
       await confirmMisconception(d.id, yes);
+      invalidateCache("gaps", "mastery"); // confirmed diagnoses feed teacher + gap status
       setConfirmState((prev) => ({ ...prev, [item.id]: yes }));
     } catch (err) {
       setError(errorText(err));
@@ -1143,7 +1161,7 @@ function TutorView() {
 
   useEffect(() => {
     let alive = true;
-    getTutorHistory()
+    cached("tutor-history", getTutorHistory)
       .then((items) => {
         if (!alive) return;
         setMessages(
@@ -1176,6 +1194,7 @@ function TutorView() {
     setBusy(true);
     try {
       const response = await askTutor(q);
+      invalidateCache("tutor-history"); // the pair just persisted server-side
       setMessages((m) => [...m, { role: "tutor", response }]);
     } catch (err) {
       setMessages((m) => [...m, { role: "error", text: errorText(err) }]);
@@ -1265,7 +1284,7 @@ function AssignmentsView() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    getAssignments()
+    cached("assignments", getAssignments)
       .then((r) => setItems(r.items))
       .catch((err) => setError(errorText(err)));
   }, []);
@@ -1322,6 +1341,7 @@ function StudentSettingsView({ user, onUserChanged }: { user: User | null; onUse
     setBusy(true);
     try {
       onUserChanged(await updatePreferences(code));
+      invalidateCache("me");
     } catch (err) {
       setLangError(errorText(err));
     } finally {
@@ -1335,7 +1355,7 @@ function StudentSettingsView({ user, onUserChanged }: { user: User | null; onUse
     } catch {
       // token is unusable for anything real; drop it regardless
     } finally {
-      clearToken();
+      clearToken(); // also drops the session cache (perf-002): the next student must not inherit this one's data
       navigate("/login", { replace: true });
     }
   }
@@ -1397,7 +1417,7 @@ function ProfileView({ user, goto }: { user: User | null; goto: (s: Section) => 
     } catch {
       // the token is unusable for anything real; drop it regardless
     } finally {
-      clearToken();
+      clearToken(); // also drops the session cache (perf-002): the next student must not inherit this one's data
       navigate("/login", { replace: true });
     }
   }
@@ -1471,7 +1491,7 @@ export default function Dashboard() {
   };
 
   useEffect(() => {
-    getMe()
+    cached("me", getMe)
       .then(setUser)
       .catch(() => setUser(null));
   }, []);

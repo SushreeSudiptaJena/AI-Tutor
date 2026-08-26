@@ -9,8 +9,16 @@ const BASE = (import.meta.env.VITE_API_BASE ?? "http://localhost:8000").replace(
 const TOKEN_KEY = "ai_tutor_token";
 
 export const getToken = () => localStorage.getItem(TOKEN_KEY);
-export const setToken = (t: string) => localStorage.setItem(TOKEN_KEY, t);
-export const clearToken = () => localStorage.removeItem(TOKEN_KEY);
+// A token change is a user change: every cached read belongs to the previous
+// session, so it never survives the swap (perf-002's one auth-boundary rule).
+export const setToken = (t: string) => {
+  localStorage.setItem(TOKEN_KEY, t);
+  clearSessionCache();
+};
+export const clearToken = () => {
+  localStorage.removeItem(TOKEN_KEY);
+  clearSessionCache();
+};
 
 /** The error envelope from the contract, thrown as a real Error. */
 export class ApiError extends Error {
@@ -422,3 +430,66 @@ export type TutorHistoryItem =
 
 export const getTutorHistory = (limit = 100) =>
   api<{ items: TutorHistoryItem[] }>(`/tutor/history?limit=${limit}`).then((r) => r.items);
+
+// --- session cache (perf-002) ---------------------------------------------
+//
+// Why: the student dashboard refetches on every view switch, and each view is
+// 1-4 sequential calls over a remote-DB link at ~137-320ms a round trip
+// (perf-001 measured this) — the 3s the views felt. The cache below is
+// stale-while-revalidate: a warm key resolves from memory (instant switch),
+// an expired one STILL paints from memory while a refresh runs in the
+// background and re-setStates when it lands. React StrictMode's double-mount
+// is deduped by the in-flight map.
+//
+// Correctness rests on the caller invalidating on mutation — the keys below
+// are paired with their invalidations at every mutation site in the app:
+//   diagnostic submit  -> "diagnostic", "gaps", "mastery"
+//   practice answer    -> `practice:<id>`, "gaps", "mastery"
+//   misconception confirm -> "gaps", "mastery"
+//   tutor ask          -> "tutor-history"
+//   preferences PATCH  -> "me"
+// login and logout clear the whole map: the cache must never outlive the
+// token it was fetched with.
+
+type CacheEntry = { at: number; data: unknown };
+const sessionCache = new Map<string, CacheEntry>();
+const inflight = new Map<string, Promise<unknown>>();
+
+function revalidate<T>(key: string, fetcher: () => Promise<T>): Promise<T> {
+  const existing = inflight.get(key) as Promise<T> | undefined;
+  if (existing) return existing;
+  const p = fetcher()
+    .then((data) => {
+      sessionCache.set(key, { at: Date.now(), data });
+      return data;
+    })
+    .finally(() => {
+      if (inflight.get(key) === p) inflight.delete(key);
+    });
+  inflight.set(key, p);
+  return p;
+}
+
+/** Read-through with stale-while-revalidate. Views call this in place of the
+ *  bare getter inside their existing useEffect — the returned promise
+ *  resolves instantly from memory whenever any data is cached. */
+export async function cached<T>(key: string, fetcher: () => Promise<T>, ttlMs = 60_000): Promise<T> {
+  const hit = sessionCache.get(key);
+  if (hit && Date.now() - hit.at < ttlMs) return hit.data as T;
+  if (hit) {
+    // Stale but paintable: refresh silently; a failure here must not turn a
+    // working screen into an error screen.
+    revalidate(key, fetcher).catch(() => {});
+    return hit.data as T;
+  }
+  return revalidate(key, fetcher);
+}
+
+export function invalidateCache(...keys: string[]) {
+  for (const k of keys) sessionCache.delete(k);
+}
+
+export function clearSessionCache() {
+  sessionCache.clear();
+  inflight.clear();
+}

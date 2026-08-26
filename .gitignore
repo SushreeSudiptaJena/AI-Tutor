@@ -41,3 +41,4 @@ frontend/dist/
 
 # local dev harness -- throwaway test UI, never pushed (see dev-harness/README.md)
 dev-harness/
+backend_run.log
