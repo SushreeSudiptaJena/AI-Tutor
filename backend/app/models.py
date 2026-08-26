@@ -65,6 +65,60 @@ class Department(Base):
     name: Mapped[str] = mapped_column(String(200), unique=True)
 
 
+# admin-009. A batch is a cohort: a major in a department, from a start year
+# to the major's fixed end (btech 4, bca 3, mtech 2, mca 2 -- config, not
+# request). College onboarding is deliberately not built; the standard
+# department list stands in for it.
+MAJORS = ("btech", "bca", "mtech", "mca")
+
+
+class Batch(Base):
+    """One admitted cohort, e.g. "BTech in CSE, 2026-2030" (admin-009)."""
+
+    __tablename__ = "batches"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    major: Mapped[str] = mapped_column(String(10), index=True)
+    department_id: Mapped[int] = mapped_column(ForeignKey("departments.id"), index=True)
+    start_year: Mapped[int] = mapped_column(Integer)
+    # Computed server-side from MAJOR_YEARS at creation; never client-supplied.
+    end_year: Mapped[int] = mapped_column(Integer)
+    # The curriculum document the batch was created with. A stored file, not
+    # an ingestable Material: nothing consumes it in this build, so attaching
+    # it to the courses corpus would be a lie the ingest queue would expose.
+    curriculum_name: Mapped[str | None] = mapped_column(String(300))
+    curriculum_path: Mapped[str | None] = mapped_column(String(500))
+    reused_from_batch_id: Mapped[int | None] = mapped_column(ForeignKey("batches.id"))
+    created_by_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"))
+    created_at: Mapped[datetime] = _now()
+
+    department: Mapped["Department"] = relationship()
+
+    @property
+    def label(self) -> str:
+        return f"{self.major.upper()} {self.department.name} {self.start_year}-{self.end_year}"
+
+
+class CourseTeacher(Base):
+    """A teacher attached to a subject (admin-009).
+
+    No cap: one subject is commonly taught by 10-15 teachers and a limit would
+    only be wrong. The join is the assignment; the account lives in users and
+    outlives it, so unassigning never orphans a person.
+    """
+
+    __tablename__ = "course_teachers"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    course_id: Mapped[int] = mapped_column(ForeignKey("courses.id", ondelete="CASCADE"), index=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    assigned_by_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"))
+    assigned_at: Mapped[datetime] = _now()
+
+    user: Mapped["User"] = relationship(foreign_keys=[user_id])
+    course: Mapped["Course"] = relationship()
+
+
 class Course(Base):
     __tablename__ = "courses"
 
@@ -127,6 +181,11 @@ class User(Base):
     role: Mapped[str] = mapped_column(String(20))
     course_id: Mapped[int | None] = mapped_column(ForeignKey("courses.id"))
     preferred_language: Mapped[str] = mapped_column(String(8), default="en")
+    # auth-004. Enrolment details captured at student signup. Verification is
+    # deliberately not built ("all are welcome"); the columns exist so the
+    # data has somewhere to live when a college supplies a roll list later.
+    university: Mapped[str | None] = mapped_column(String(200))
+    roll_number: Mapped[str | None] = mapped_column(String(60))
     created_at: Mapped[datetime] = _now()
 
     course: Mapped["Course | None"] = relationship()

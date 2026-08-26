@@ -1,0 +1,91 @@
+admin-009 + auth-004 — the restructure: landing → unified auth, batch-first admin,
+admin-issued teachers, student self-enrolment
+Verified 2026-08-26 live (localhost:5173 + :8000). Backend suite green
+(exit 0, 5 new tests in test_admin_batches.py); frontend build 5.39s.
+Contract edited FIRST (docs/api-contract.md changelog row; person 6 owns
+that file — tell them).
+
+=== 1. Landing → two doors =================================================
+  {"studentsAndTeachers":true,"links":["/login","/login","/admin/login"]}
+The student card now reads "Students & teachers" and points at the unified
+door; the admin console keeps its own route. StudentLogin.tsx is deleted —
+/login IS the unified screen (same design as the admin login).
+
+=== 2. Admin: Dashboard is the default view ===============================
+  {"defaultIsDashboard":true,"tiles":true}
+Tiles are live counts from GET /admin/overview: batches / departments,
+subjects / materials, teachers assigned / accounts / unstaffed subjects,
+and ingest completion. Sidebar: Dashboard · Batches · Subjects & Materials
+· Audit Log.
+
+=== 3. The 3-step "Add new batch" modal ===================================
+step 1  {"majors":true,"durationsShown":true,"preview":"runs 2027–2031",
+         "hasDeptSelect":true}
+   Four majors with their fixed durations (BTech 4 / BCA 3 / MTech 2 /
+   MCA 2); the end year is previewed live and computed by the server.
+   Departments come from the standard seeded list (9 rows).
+step 2  {"created":"BTech · Civil Engineering 2027–2031",
+         "uploadOffered":true,"reuseDisabled":true}
+   Upload (pdf/docx) or reuse last year's. **Reuse is disabled exactly when
+   there is no earlier batch of the same major + department carrying a
+   curriculum** — as asked. The API refuses the same case with 422, so the
+   disabled state is honest rather than decorative.
+step 3  {"tellsThemWhereNext":true}
+   "Go to the Batches tab to add the subjects and materials" + a button that
+   takes them there.
+
+=== 4. Batches tab ========================================================
+  {"rows":1,"hasUpload":true,"noCurriculumYet":true}
+Cohort list with Upload / Replace and a Reuse <year> button that appears
+only when a valid source exists. Curriculum upload and reuse were both
+driven live over HTTP earlier in the session:
+  upload -> {"curriculum":{"name":"curr_test.pdf","reused_from_batch_id":null}}
+  reuse  -> {"curriculum":{"name":"curr_test.pdf","reused_from_batch_id":1}}
+
+=== 5. Teachers per subject (no cap), admin-issued ========================
+  {"password":"[12 chars]","listedInAssigned":true,"saysShareNow":true,
+   "hasUnassign":true}
+Added verify.teacher@example.edu to CSW2 from the subject card's "Teachers"
+button; the generated password is displayed ONCE with "share it now", the
+teacher appears in the assigned list, and Unassign is offered. Any number of
+teachers per subject — the join table has no cap.
+
+=== 6. The payoff: that password logs in at the unified door ==============
+  unified door: {"saysBoth":true,"tellsTeachers":true}
+  issued teacher landed on: /teacher
+The admin-issued teacher signed in at /login and reached the teacher console.
+Routing is role-first (a teacher has a course_id too, so course_id-first
+routing bounced them).
+
+=== 7. Student signup: enrolment, no role choice =========================
+  {"hasUniversity":true,"hasRoll":true,"noRoleChoice":true,"allWelcome":true}
+  student signup landed on: /onboarding/course
+DB read-back: role=student, university="Siksha 'O' Anusandhan",
+roll="21CSE9999". Teacher signup is GONE — SignupIn has no `role` field and
+auth.signup hardcodes role="student" (two tests guard both halves).
+Verification of the roll number against a college roll list is deliberately
+NOT built: everyone is welcome, per the brief.
+
+=== 8. API-level checks run earlier the same session =====================
+  POST /admin/batches           -> 201, end_year computed (2026 -> 2030)
+  same cohort again             -> 409
+  POST .../teachers (new email) -> 201 with password; login with it -> 200,
+                                   role teacher
+  POST .../teachers (again)     -> password null, already_assigned true
+  GET  /admin/overview          -> live counts
+All verification data (2 teacher accounts, 1 student, all batches) was
+deleted afterwards; the demo database is back to its seeded state.
+
+=== What building this found ==============================================
+- **CourseTeacher had no `user` relationship** — the unit-test fake supplied
+  one, so the suite passed while the live route 500'd on ct.user. A fake
+  that fills in a missing relationship hides exactly the bug it should
+  catch; the live smoke is what caught it.
+- **create_batch never set batch.department**, only department_id, so
+  _batch_out crashed reading department.name until the relationship was
+  assigned at construction.
+- Windows curl cannot read a git-bash /tmp path (HTTP 000, no server-side
+  trace) — upload tests must use a repo-relative file.
+- Nav labels carry their Material Symbols ligature
+  ("account_treeSubjects & Materials"), so exact-match selectors fail. Same
+  trap as frontend-004's "check_circleApprove".

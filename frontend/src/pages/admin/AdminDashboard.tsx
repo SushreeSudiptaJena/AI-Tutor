@@ -25,6 +25,7 @@ import type {
   MaterialKind,
   User,
 } from "@/lib/api";
+import { AdminTabKey, BatchesView, DashboardView, TeachersDialog } from "./AdminBatches";
 
 /**
  * AdminDashboard.tsx
@@ -51,11 +52,12 @@ import type {
  * from the TopBar avatar and the sidebar's Settings button, and deliberately
  * not part of NAV_ITEMS -- they are about the person, not the curriculum.
  */
-type TabKey = "upload" | "structure" | "audit" | "profile" | "settings";
+type TabKey = AdminTabKey;
 
 const NAV_ITEMS: { key: TabKey; label: string; icon: string }[] = [
-  { key: "upload", label: "Curriculum Upload", icon: "cloud_upload" },
-  { key: "structure", label: "Course Structure", icon: "account_tree" },
+  { key: "dashboard", label: "Dashboard", icon: "space_dashboard" },
+  { key: "batches", label: "Batches", icon: "collections_bookmark" },
+  { key: "structure", label: "Subjects & Materials", icon: "account_tree" },
   { key: "audit", label: "Audit Log", icon: "receipt_long" },
 ];
 
@@ -571,11 +573,13 @@ function CourseCard({
   deptName,
   otherCourses,
   refresh,
+  onTeachers,
 }: {
   course: Course;
   deptName: string;
   otherCourses: Course[];
   refresh: () => void;
+  onTeachers: () => void;
 }) {
   const [editing, setEditing] = useState(false);
   const [semester, setSemester] = useState(course.semester ?? "");
@@ -644,6 +648,13 @@ function CourseCard({
               </span>
             )}
           </p>
+          <button
+            onClick={onTeachers}
+            className="font-label-sm text-label-sm text-on-surface-variant hover:text-tertiary transition-colors shrink-0 flex items-center gap-1"
+          >
+            <Icon name="person_book" className="text-[16px]" />
+            Teachers
+          </button>
           <button
             onClick={() => setEditing((v) => !v)}
             className="font-label-sm text-label-sm text-on-surface-variant hover:text-tertiary transition-colors shrink-0"
@@ -922,6 +933,8 @@ function CourseStructureView({
   refresh: () => void;
 }) {
   const [departments, setDepartments] = useState<Department[]>([]);
+  // admin-009: per-subject teacher assignment dialog
+  const [teachersFor, setTeachersFor] = useState<Course | null>(null);
 
   useEffect(() => {
     listDepartments()
@@ -960,11 +973,16 @@ function CourseStructureView({
                   deptName={deptName(c.department_id)}
                   otherCourses={courses}
                   refresh={refresh}
+                  onTeachers={() => setTeachersFor(c)}
                 />
               ))}
             </div>
           </Panel>
         </section>
+
+        {teachersFor && (
+          <TeachersDialog course={teachersFor} onClose={() => setTeachersFor(null)} />
+        )}
 
         <section className="ns-glass-panel rounded-xl p-card-inner-padding">
           <h2 className="font-headline-sm text-headline-sm text-on-surface mb-6 flex items-center gap-2">
@@ -1281,15 +1299,17 @@ function SettingsView({
 /* ------------------------------------------------------------------------ */
 
 const TITLES: Record<TabKey, string> = {
+  dashboard: "Dashboard",
+  batches: "Batches",
   upload: "Curriculum Upload",
-  structure: "Course Structure",
+  structure: "Subjects & Materials",
   audit: "Audit Log",
   profile: "Profile",
   settings: "Settings",
 };
 
 export default function AdminDashboard() {
-  const [activeTab, setActiveTab] = useState<TabKey>("upload");
+  const [activeTab, setActiveTab] = useState<TabKey>("dashboard");
   const [user, setUser] = useState<User | null>(null);
 
   // The course list is shared by two tabs and refreshed after any edit, so
@@ -1318,6 +1338,8 @@ export default function AdminDashboard() {
       <Sidebar active={activeTab} onSelect={setActiveTab} />
       <div className="ml-64 flex flex-col min-h-screen">
         <TopBar title={TITLES[activeTab]} user={user} onSelect={setActiveTab} />
+        {activeTab === "dashboard" && <DashboardView goToTab={setActiveTab} />}
+        {activeTab === "batches" && <BatchesView goToTab={setActiveTab} />}
         {activeTab === "upload" && (
           <CurriculumUploadView courses={courses} coursesError={coursesError} />
         )}

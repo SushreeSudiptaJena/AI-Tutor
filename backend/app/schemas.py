@@ -31,8 +31,11 @@ class SignupIn(BaseModel):
     email: str
     password: str
     full_name: str
-    role: Role = "student"
-    course_id: int | None = None
+    # auth-004: signup is student-only. Teachers are admin-issued (admin-009);
+    # a self-serve teacher account is not a thing any more. The enrolment
+    # fields are optional and unverified by deliberate decision.
+    university: str | None = None
+    roll_number: str | None = None
 
     @field_validator("email")
     @classmethod
@@ -87,12 +90,39 @@ class UserOut(_ORM):
     role: Role
     course_id: int | None = None
     preferred_language: str
+    university: str | None = None
+    roll_number: str | None = None
     # password_hash is absent on purpose. Do not add it.
 
 
 class TokenOut(BaseModel):
     token: str
     user: UserOut
+
+
+# --- admin batches / teachers (admin-009) -----------------------------------
+
+class BatchIn(BaseModel):
+    major: str
+    department_id: int
+    start_year: int
+
+
+class CurriculumReuseIn(BaseModel):
+    from_batch_id: int
+
+
+class TeacherAddIn(BaseModel):
+    email: str
+    full_name: str | None = None
+
+    @field_validator("email")
+    @classmethod
+    def _email(cls, v: str):
+        v = v.strip().lower()
+        if not EMAIL_RE.match(v):
+            raise ValueError("enter a valid email")
+        return v
 
 
 # --- shared response pieces -------------------------------------------------

@@ -82,6 +82,38 @@ export async function upload<T = unknown>(path: string, form: FormData): Promise
 
 export type Role = "student" | "teacher" | "admin";
 
+/** admin-009. A cohort: a major in a department, start year to the major's
+ *  fixed end. The duration map is mirrored here for the modal's preview —
+ *  the server computes end_year regardless of what the client says. */
+export const MAJOR_YEARS: Record<string, number> = { btech: 4, bca: 3, mtech: 2, mca: 2 };
+
+export type BatchDto = {
+  id: number;
+  major: string;
+  department: { id: number; name: string };
+  start_year: number;
+  end_year: number;
+  curriculum: { name: string; reused_from_batch_id: number | null } | null;
+};
+
+export type OverviewDto = {
+  batches: number;
+  departments: number;
+  materials: number;
+  courses: number;
+  teachers_assigned: number;
+  teacher_accounts: number;
+  courses_without_teachers: number;
+  ingest_summary: Record<string, number>;
+};
+
+export type AssignedTeacher = {
+  user_id: number;
+  email: string;
+  full_name: string;
+  assigned_at: string;
+};
+
 export type User = {
   id: number;
   email: string;
@@ -89,6 +121,8 @@ export type User = {
   role: Role;
   course_id?: number;
   preferred_language: string;
+  university?: string | null;
+  roll_number?: string | null;
 };
 
 export type Citation = {
@@ -166,8 +200,8 @@ export const signup = (input: {
   email: string;
   password: string;
   full_name: string;
-  role: Role;
-  course_id?: number;
+  university?: string;
+  roll_number?: string;
 }) =>
   api<{ token: string; user: User }>("/auth/signup", {
     method: "POST",
@@ -646,3 +680,41 @@ export const rejectVerificationItem = (id: number, reason?: string) =>
     method: "POST",
     body: reason ? { reason } : {},
   });
+
+// --- admin batches / teachers / overview (admin-009) ------------------------
+
+export const getOverview = () =>
+  api<OverviewDto>("/admin/overview");
+
+export const getBatches = () =>
+  api<{ items: BatchDto[] }>("/admin/batches").then((r) => r.items);
+
+export const createBatch = (major: string, department_id: number, start_year: number) =>
+  api<BatchDto>("/admin/batches", { method: "POST", body: { major, department_id, start_year } });
+
+export const uploadBatchCurriculum = (batchId: number, file: File) => {
+  const form = new FormData();
+  form.append("file", file);
+  return upload<BatchDto>(`/admin/batches/${batchId}/curriculum`, form);
+};
+
+export const reuseBatchCurriculum = (batchId: number, fromBatchId: number) =>
+  api<BatchDto>(`/admin/batches/${batchId}/curriculum/reuse`, {
+    method: "POST",
+    body: { from_batch_id: fromBatchId },
+  });
+
+export const getCourseTeachers = (courseId: number) =>
+  api<{ items: AssignedTeacher[] }>(`/admin/courses/${courseId}/teachers`).then(
+    (r) => r.items,
+  );
+
+/** The password is returned ONCE, only when a new account was issued. */
+export const addCourseTeacher = (courseId: number, email: string, fullName?: string) =>
+  api<{ teacher: AssignedTeacher; password: string | null; already_assigned: boolean }>(
+    `/admin/courses/${courseId}/teachers`,
+    { method: "POST", body: { email, full_name: fullName } },
+  );
+
+export const removeCourseTeacher = (courseId: number, userId: number) =>
+  api<void>(`/admin/courses/${courseId}/teachers/${userId}`, { method: "DELETE" });

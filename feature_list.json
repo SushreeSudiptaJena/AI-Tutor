@@ -1097,6 +1097,50 @@
       ],
       "evidence": "evidence/frontend-004/verification.txt",
       "notes": "Person 3's files again (owner-directed; tell them). End state after verification is good demo state: reteach unit 44 assigned, queue 51 approved / 52 rejected. The seven screens with no endpoints (classes, directory, attendance, lesson plans, assignments library, settings) remain static mockups by design — the contract has nothing for them to call."
+    },
+    {
+      "id": "admin-009",
+      "priority": 51,
+      "area": "admin",
+      "title": "Batch-first admin: cohorts, curriculum, per-subject teachers, dashboard metrics",
+      "user_visible_behavior": "The admin console opens on a Dashboard of live institution metrics. 'Add new batch' walks three steps: pick major + department + start year (duration fixed by the major, end year computed), attach the curriculum by upload or by reusing the previous year's (disabled when there is none), then a message pointing at the Batches tab for subjects and materials. Every subject can be assigned any number of teachers by email; a new teacher's password is generated and shown once for the admin to share.",
+      "status": "passing",
+      "depends_on": [
+        "admin-002",
+        "admin-008",
+        "auth-001"
+      ],
+      "demo_mode": "live",
+      "verification": [
+        "Admin console opens on Dashboard with live counts from GET /admin/overview.",
+        "Add-batch modal: four majors with fixed durations, department from the standard list, end year previewed and computed server-side; a duplicate cohort is refused with 409.",
+        "Curriculum: upload (pdf/docx) sets it; reuse copies from an earlier batch of the same major AND department, and is refused (and the button disabled) when there is none.",
+        "Teachers: adding a new email issues an account with a one-time password; that password logs in at the unified door and lands on the teacher console; re-adding returns no password; a student email is refused with 409.",
+        "Batches tab lists cohorts with their curriculum state and Upload/Reuse actions."
+      ],
+      "evidence": "evidence/admin-009/verification.txt",
+      "notes": "Owner-directed restructure 2026-08-26. Majors and durations are config (btech 4, bca 3, mtech 2, mca 2); the 9 default departments stand in for college onboarding, which is deliberately NOT built. The curriculum file is stored, not ingested -- nothing consumes it in this build and queuing it would advertise an ingest that never runs. Contract edited first; person 6 owns docs/api-contract.md."
+    },
+    {
+      "id": "auth-004",
+      "priority": 52,
+      "area": "auth",
+      "title": "Unified student+teacher door; signup is student-only with enrolment details",
+      "user_visible_behavior": "The landing page offers one door for students and teachers (/login) and a separate admin door. Signup creates a student account only -- with university and registration/roll number -- and teachers sign in with the password their department admin issued them.",
+      "status": "passing",
+      "depends_on": [
+        "auth-001",
+        "admin-009"
+      ],
+      "demo_mode": "live",
+      "verification": [
+        "Landing links: student/teacher card -> /login, admin card -> /admin/login.",
+        "/login routes role-first: teacher -> /teacher, admin -> /admin, student -> /dashboard or onboarding.",
+        "Signup has no role choice; the account is always a student and carries university + roll number (read back from the database).",
+        "An admin-issued teacher password signs in successfully at /login."
+      ],
+      "evidence": "evidence/admin-009/verification.txt",
+      "notes": "StudentLogin.tsx deleted -- /login is now the unified screen using the admin login's design. Roll-number verification against a college roll list is deliberately not built ('all are welcome'). SignupIn has no role field and auth.signup hardcodes role='student'; two tests guard that."
     }
   ]
 }

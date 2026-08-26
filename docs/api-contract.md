@@ -241,11 +241,18 @@ never as a fatal error.
 
 | Method | Path | Body | Returns |
 |---|---|---|---|
-| `POST` | `/auth/signup` | `{ email, password, full_name, role, course_id? }` | `201 { token, user }` |
+| `POST` | `/auth/signup` | `{ email, password, full_name, university?, roll_number? }` | `201 { token, user }` |
 | `POST` | `/auth/login` | `{ email, password }` | `200 { token, user }` |
 | `POST` | `/auth/logout` | — | `204` |
 | `GET` | `/auth/me` | — | `200 User` |
 | `PATCH` | `/auth/me/preferences` | `{ preferred_language }` | `200 User` |
+
+> **Signup is student-only (`auth-004`).** Teachers are created by an admin
+> (see `POST /admin/courses/{id}/teachers`) and receive an issued password to
+> share — self-serve teacher signup is gone, so `role` is no longer a signup
+> field and the account is always `role: "student"`. `university` and
+> `roll_number` are optional free-text enrolment details captured during
+> signup; **verification is deliberately not built** — all are welcome.
 
 - `token` is an opaque UUID stored in a `sessions` table. **Not a JWT** — do not attempt to decode it client-side.
 - Wrong password → `401 unauthenticated`. Existing email on signup → `409 conflict`.
@@ -280,6 +287,43 @@ Structure (`admin-002`):
 | Method | Path | Notes |
 |---|---|---|
 | `PUT` | `/admin/courses/{course_id}/term` | `{ semester?, admission_batches?, term_start?, term_end? }` → `Course` |
+
+### Batches & teacher assignment — `admin-009`
+
+A **batch** is a cohort: a major in a department, from a start year to the
+major's fixed end. Majors and durations are fixed by config, not by request:
+`btech` 4 years · `bca` 3 · `mtech` 2 · `mca` 2. Departments come from the
+standard seeded list (CSE, IT, ECE, EEE, ME, CE, Robotics, Computer
+Applications) — college onboarding is deliberately not built; the defaults
+stand in for it.
+
+| Method | Path | Notes |
+|---|---|---|
+| `GET` | `/admin/batches` | `{ items: [Batch] }`, newest first |
+| `POST` | `/admin/batches` | `{ major, department_id, start_year }` → `201 Batch`. `end_year` is computed server-side from the major's duration and cannot be supplied. 422 on an unknown major or a duplicate (same major + department + start_year). |
+| `POST` | `/admin/batches/{id}/curriculum` | `multipart`: `file` — pdf/docx, ≤10 MB. Stores the file, sets `curriculum`. → `200 Batch` |
+| `POST` | `/admin/batches/{id}/curriculum/reuse` | `{ from_batch_id }` — copies the curriculum reference from an earlier batch of the same major + department. → `200 Batch`; **422** if that batch has no curriculum or does not match major + department. |
+| `GET` | `/admin/overview` | Dashboard metrics: `{ batches, departments, materials, courses, teachers_assigned, courses_without_teachers, ingest_summary }` |
+
+```json
+// Batch
+{ "id": 7, "major": "btech", "department": { "id": 3, "name": "Computer Science & Engineering" },
+  "start_year": 2026, "end_year": 2030,
+  "curriculum": { "name": "btech-cse-2026-syllabus.pdf", "uploaded_at": "…", "reused_from_batch_id": null } }
+```
+`curriculum` is `null` until one is uploaded or reused.
+
+**Teachers are assigned per subject and are admin-issued (`admin-009`).** A
+subject may carry any number of teachers (10-15 in practice; there is no cap).
+Adding by email creates the teacher account if it does not exist — with a
+**generated password returned once, in that response only** — or links the
+existing teacher. Teachers never sign themselves up.
+
+| Method | Path | Notes |
+|---|---|---|
+| `GET` | `/admin/courses/{course_id}/teachers` | `{ items: [{ user_id, email, full_name, assigned_at }] }` |
+| `POST` | `/admin/courses/{course_id}/teachers` | `{ email, full_name? }` → `201 { teacher, password? }` — `password` present **only** when the account was created now; share it with the teacher, it is never shown again. Linking an existing teacher returns `password: null`. 409 if the email belongs to a student or admin. |
+| `DELETE` | `/admin/courses/{course_id}/teachers/{user_id}` | `204` — unassigns; the account stays for other subjects. 404 if not assigned. |
 
 All four fields are **nullable and were added late**, so every course that predates
 them keeps working: `semester`, `term_start` and `term_end` come back `null` and
@@ -892,6 +936,7 @@ Every shape above is final enough to mock. Suggested order, matching `feature_li
 | 2026-08-24 | Golden path complete. `POST /student/practice/generate` (needs `gap_id`; also returns `concept` and `source: generated\|seeded`), `POST /student/practice/{id}/answer`, `POST /student/misconception-diagnosis/{id}/confirm`, `GET /teacher/misconceptions/heatmap`, `GET /teacher/uncertainty-flags` and its `/resolve`. `student-004` Show Source needs no endpoint — it is the `Citation` object. |
 | 2026-08-24 | **`TutorResponse` gains `speech_text`** (`a11y-001`, backend half). Read-aloud must use it instead of `body`: `body` is markdown, and `[4]` is spoken as "four" mid-sentence. Present on every outcome, including refusals. |
 | 2026-08-24 | `i18n-001` built and verified live: Hindi in, Hindi out, identical citations and an identical alignment score. Response `language` now reports what was produced. Both routes fall back to `User.preferred_language` instead of defaulting to `en`. |
+| 2026-08-26 | **`admin-009` + `auth-004`** (owner-directed restructure; Sushree editing, normally person 6's file). **Auth:** signup is now **student-only** (`university?`, `roll_number?` added, `role` removed) — teachers are admin-issued. **Admin, new "Batches" surface:** `GET/POST /admin/batches`, `POST /admin/batches/{id}/curriculum` (pdf/docx), `POST /admin/batches/{id}/curriculum/reuse`, `GET /admin/overview` (dashboard metrics). **Teacher assignment per subject:** `GET/POST /admin/courses/{id}/teachers`, `DELETE /admin/courses/{id}/teachers/{user_id}`. `User` gains nullable `university` and `roll_number`. No existing endpoint changed shape. |
 | 2026-08-26 | **`tutor-002`** (owner-directed; Sushree edited this file, normally person 6's): `insufficient_evidence` may now carry an optional `beyond_syllabus` block — see the note at `TutorResponse`. New endpoint **`GET /tutor/history`** returning the signed-in student's own transcript; `POST /tutor/ask` writes it. Neither changes any existing field or outcome name. |
 | 2026-08-24 | Admin built: `admin-002` departments/courses/prerequisites, `admin-001` material upload with archiving-not-deleting and version history, `admin-003` audit log. The `sourced_content` audit actions are the documented verbs (`.approve`/`.reject`), not the resulting status. The two ingest endpoints are marked NOT BUILT. |
 | 2026-08-24 | Teacher panels built: `teacher-002` reasoning paths, `teacher-003` gap map, `teacher-005` before/after (now with `measured`/`attempts_in_window`; `delta_share` null until tested), `teacher-006` reteach suggest/patch/approve **plus new `GET /teacher/reteach`** and `GET /student/assignments`, `teacher-007` verification queue. |

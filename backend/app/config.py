@@ -100,6 +100,22 @@ EMBEDDING_MODEL = _get("EMBEDDING_MODEL", "BAAI/bge-small-en-v1.5")
 # This value is a property of the ingested books. Re-measure after every ingest.
 ALIGNMENT_REFUSAL_THRESHOLD = float(_get("ALIGNMENT_REFUSAL_THRESHOLD", "0.70"))
 
+# admin-009. A batch's length is a property of its major, not a choice.
+MAJOR_YEARS = {"btech": 4, "bca": 3, "mtech": 2, "mca": 2}
+
+# The standard department list that college onboarding would have produced.
+# Onboarding is deliberately not built; these defaults stand in for it.
+DEFAULT_DEPARTMENTS = (
+    "Computer Science & Engineering",
+    "Information Technology",
+    "Electronics & Communication Engineering",
+    "Electrical Engineering",
+    "Mechanical Engineering",
+    "Civil Engineering",
+    "Robotics Engineering",
+    "Computer Applications",
+)
+
 # --- languages (i18n-001) ---------------------------------------------------
 LANGUAGES = [
     {"code": "en", "label": "English"},

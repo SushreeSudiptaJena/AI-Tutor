@@ -46,11 +46,12 @@ export default function Landing() {
           >
             <span className="flex items-center gap-sm text-label-md font-bold tracking-wider text-forest-green uppercase">
               <GraduationCap className="h-5 w-5" />
-              Students
+              Students & teachers
             </span>
             <span className="text-body-sm text-on-surface-variant">
               Take the diagnostic, see your gaps, get lessons grounded in your
-              course books.
+              course books. Teachers: sign in with the password your admin
+              issued.
             </span>
             <span className="mt-auto flex items-center gap-xs pt-sm text-label-md font-bold text-forest-green">
               Enter
@@ -67,7 +68,8 @@ export default function Landing() {
               Admin console
             </span>
             <span className="text-body-sm text-on-surface-variant">
-              Upload curriculum, manage courses and terms, read the audit log.
+              Create batches, upload curriculum and materials, assign teachers,
+              read the audit log.
             </span>
             <span className="mt-auto flex items-center gap-xs pt-sm text-label-md font-bold text-on-surface-variant group-hover:text-on-surface">
               Enter

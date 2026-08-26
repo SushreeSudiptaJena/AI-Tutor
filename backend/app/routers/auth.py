@@ -39,9 +39,14 @@ def signup(body: SignupIn, db: OrmSession = Depends(get_db)) -> TokenOut:
         email=body.email,
         password_hash=hash_password(body.password),
         full_name=body.full_name,
-        role=body.role,
-        course_id=body.course_id,
+        # auth-004: students only. Teacher accounts are issued by an admin
+        # (POST /admin/courses/{id}/teachers) with a shareable password;
+        # there is no self-serve teacher signup any more.
+        role="student",
+        course_id=None,
         preferred_language="en",
+        university=(body.university or "").strip()[:200] or None,
+        roll_number=(body.roll_number or "").strip()[:60] or None,
     )
     db.add(user)
     db.flush()

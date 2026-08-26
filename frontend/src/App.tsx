@@ -1,7 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import RequireAuth from "@/components/RequireAuth";
 import Login from "@/pages/auth/Login";
-import StudentLogin from "@/pages/auth/StudentLogin";
+import UnifiedLogin from "@/pages/auth/UnifiedLogin";
 import Landing from "@/pages/Landing";
 import Signup from "@/pages/auth/Signup";
 import ForgotPassword from "@/pages/auth/ForgotPassword";
@@ -20,10 +20,10 @@ export default function App() {
         {/* The front door: both logins reachable from one place. */}
         <Route path="/" element={<Landing />} />
 
-        {/* Two doors: students enter at /login (Anu's screen, routes by
-            course_id), admins at /admin/login. Both hit the same
-            POST /auth/login through lib/api. */}
-        <Route path="/login" element={<StudentLogin />} />
+        {/* Two doors (auth-004): students AND teachers at /login (the
+            unified door, role-first routing), admins at /admin/login. Both
+            hit the same POST /auth/login through lib/api. */}
+        <Route path="/login" element={<UnifiedLogin />} />
         <Route path="/admin/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
 

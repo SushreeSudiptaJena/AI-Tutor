@@ -3,20 +3,27 @@ import { Link, useNavigate } from "react-router-dom";
 import { signup, setToken, ApiError } from "@/lib/api";
 
 /**
- * Real signup against POST /auth/signup. On success the backend returns a
- * token immediately (no email verification step exists), so we log the user
- * in and route them on. Existing email -> 409 conflict, surfaced verbatim.
- *
- * Role choice is student/teacher only: admin accounts are seeded, and
- * self-serve admin signup is not a thing we want to show a judge.
+ * Student signup (auth-004): teachers are issued passwords by their
+ * department admin and never sign themselves up. Enrolment -- university +
+ * roll number -- is captured here; verification is deliberately not built
+ * ("all are welcome" for this build). Existing email -> 409, surfaced verbatim.
  */
+const UNIVERSITIES = [
+  "Siksha 'O' Anusandhan",
+  "KIIT University",
+  "VSSUT Burla",
+  "IIT Bhubaneswar",
+  "Other",
+];
+
 export default function Signup() {
   const navigate = useNavigate();
 
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [role, setRole] = useState<"student" | "teacher">("student");
+  const [university, setUniversity] = useState(UNIVERSITIES[0]);
+  const [rollNumber, setRollNumber] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -29,10 +36,11 @@ export default function Signup() {
         email,
         password,
         full_name: fullName,
-        role,
+        university,
+        roll_number: rollNumber.trim() || undefined,
       });
       setToken(token);
-      navigate("/onboarding/1");
+      navigate("/onboarding/course");
     } catch (err) {
       setError(
         err instanceof ApiError ? err.message : "Couldn't sign up. Try again.",
@@ -109,18 +117,35 @@ export default function Signup() {
           </div>
 
           <div>
-            <label htmlFor="role" className="block text-sm text-gray-500 mb-1">
-              I am a
+            <label htmlFor="university" className="block text-sm text-gray-500 mb-1">
+              University
             </label>
             <select
-              id="role"
-              value={role}
-              onChange={(e) => setRole(e.target.value as "student" | "teacher")}
+              id="university"
+              value={university}
+              onChange={(e) => setUniversity(e.target.value)}
               className="w-full px-4 py-3 rounded-lg border border-gray-200 bg-white focus:outline-none focus:ring-2 focus:ring-[#7AB139] focus:border-transparent text-gray-900"
             >
-              <option value="student">Student</option>
-              <option value="teacher">Teacher</option>
+              {UNIVERSITIES.map((u) => (
+                <option key={u} value={u}>{u}</option>
+              ))}
             </select>
+          </div>
+
+          <div>
+            <label htmlFor="rollno" className="sr-only">Registration / roll number</label>
+            <input
+              id="rollno"
+              type="text"
+              autoComplete="off"
+              value={rollNumber}
+              onChange={(e) => setRollNumber(e.target.value)}
+              placeholder="Registration / roll number (optional)"
+              className="w-full px-4 py-3 rounded-lg border border-gray-200 bg-white focus:outline-none focus:ring-2 focus:ring-[#7AB139] focus:border-transparent text-gray-900 placeholder-gray-400 transition-shadow"
+            />
+            <p className="text-xs text-gray-400 mt-1">
+              Used to enrol you in your university's courses. Everyone is welcome in this build.
+            </p>
           </div>
 
           {error && (
