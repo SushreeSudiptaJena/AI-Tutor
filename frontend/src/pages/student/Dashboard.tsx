@@ -1,5 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import ReactMarkdown from "react-markdown";
 import {
   AlertTriangle,
   BarChart3,
@@ -75,6 +76,7 @@ type Section =
   | "Practice"
   | "Ask Tutor"
   | "Assignments"
+  | "Profile"
   | "Settings";
 
 const navigation: { label: Section; icon: typeof LayoutDashboard }[] = [
@@ -90,6 +92,17 @@ const navigation: { label: Section; icon: typeof LayoutDashboard }[] = [
 
 function errorText(err: unknown): string {
   return err instanceof ApiError ? err.message : "Something went wrong. Try again.";
+}
+
+/** LLM bodies are markdown. Rendering them as plain text shows literal
+ *  asterisks and hashes -- this wraps ReactMarkdown with the .md-body
+ *  styles from index.css. */
+function Md({ children }: { children: string }) {
+  return (
+    <div className="md-body text-body-md text-on-surface">
+      <ReactMarkdown>{children}</ReactMarkdown>
+    </div>
+  );
 }
 
 /** Loading / error / empty, so no section forgets one of the three states. */
@@ -136,7 +149,7 @@ function TutorCard({ response }: { response: TutorResponse }) {
         <p className="mb-sm text-label-md font-bold tracking-wider text-forest-green uppercase">
           Graded work — guiding, not solving
         </p>
-        <p className="whitespace-pre-wrap text-body-md text-on-surface">{response.body}</p>
+        <Md>{response.body}</Md>
         {response.hints.length > 0 && (
           <div className="mt-sm rounded-lg bg-white p-sm">
             <p className="mb-xs text-label-sm font-bold text-on-surface-variant uppercase">Hints</p>
@@ -162,7 +175,7 @@ function TutorCard({ response }: { response: TutorResponse }) {
         <p className="mb-sm text-label-md font-bold tracking-wider text-error uppercase">
           Not in your course books
         </p>
-        <p className="whitespace-pre-wrap text-body-md text-on-surface">{response.body}</p>
+        <Md>{response.body}</Md>
         <p className="mt-sm text-label-sm text-on-surface-variant">
           Your teacher has been notified — if enough students hit the same wall, it becomes a
           reteach topic.
@@ -189,7 +202,7 @@ function TutorCard({ response }: { response: TutorResponse }) {
         </span>
       </div>
 
-      <p className="whitespace-pre-wrap text-body-md text-on-surface">{response.body}</p>
+      <Md>{response.body}</Md>
 
       {response.citations.length > 0 && (
         <div className="mt-md">
@@ -225,7 +238,15 @@ function TutorCard({ response }: { response: TutorResponse }) {
 /* ---------------------------------------------------------------------------
  * Home
  * ------------------------------------------------------------------------- */
-function HomeView({ user, goto }: { user: User | null; goto: (s: Section) => void }) {
+function HomeView({
+  user,
+  goto,
+  openLesson,
+}: {
+  user: User | null;
+  goto: (s: Section) => void;
+  openLesson: (g: Gap) => void;
+}) {
   const [summary, setSummary] = useState<CourseSummary | null>(null);
   const [gaps, setGaps] = useState<Gap[] | null>(null);
   const [mastery, setMastery] = useState<MasteryTopic[] | null>(null);
@@ -265,27 +286,32 @@ function HomeView({ user, goto }: { user: User | null; goto: (s: Section) => voi
         </p>
       </div>
 
+      {/* Every card is a door into the section it summarises. */}
       <div className="mb-md grid grid-cols-1 gap-sm md:grid-cols-2 lg:grid-cols-4">
         <StatCard
           label="Open Gaps"
           value={gaps === null ? "…" : String(openGaps.length)}
           icon={<AlertTriangle className="h-5 w-5 text-error" />}
+          onClick={() => goto("My Gaps")}
         />
         <StatCard
           label="Solid Concepts"
           value={mastery === null ? "…" : String(solid)}
           icon={<CheckCircle className="h-5 w-5 text-forest-green" />}
+          onClick={() => goto("My Course")}
         />
         <StatCard
           label="Shaky Concepts"
           value={mastery === null ? "…" : String(shaky)}
           icon={<Brain className="h-5 w-5 text-mustard" />}
           highlighted={shaky > 0}
+          onClick={() => goto("Practice")}
         />
         <StatCard
           label="Assigned Reteach"
           value={assignments === null ? "…" : String(assignments.length)}
           icon={<ClipboardList className="h-5 w-5 text-outline" />}
+          onClick={() => goto("Assignments")}
         />
       </div>
 
@@ -311,7 +337,7 @@ function HomeView({ user, goto }: { user: User | null; goto: (s: Section) => voi
                 <div className="mt-sm flex items-center gap-md">
                   <button
                     className="flex items-center gap-xs rounded-lg bg-forest-green px-lg py-sm text-body-md text-white transition-colors hover:bg-forest-light"
-                    onClick={() => goto("Lessons")}
+                    onClick={() => openLesson(next)}
                     type="button"
                   >
                     <Play className="h-5 w-5" />
@@ -383,40 +409,92 @@ function HomeView({ user, goto }: { user: User | null; goto: (s: Section) => voi
         </div>
 
         <div className="flex flex-col gap-lg lg:col-span-4">
-          <section className="rounded-xl border border-outline-variant/20 bg-surface-container-lowest p-md shadow-sm">
-            <h3 className="mb-sm text-headline-sm font-semibold text-on-surface">Mastery</h3>
-            <States
-              loading={mastery === null}
-              error={null}
-              empty={concepts.length === 0}
-              emptyText="Take the diagnostic to start tracking mastery."
-            >
-              <ul className="space-y-sm">
-                {(mastery ?? []).map((t) => {
-                  const s = t.concepts.filter((c) => c.state === "solid").length;
-                  return (
-                    <li key={t.topic_id}>
-                      <div className="mb-xs flex items-center justify-between">
-                        <span className="text-label-md text-on-surface">{t.topic}</span>
-                        <span className="text-label-sm text-on-surface-variant">
-                          {s}/{t.concepts.length} solid
-                        </span>
-                      </div>
-                      <div className="h-2 overflow-hidden rounded-full bg-surface-variant">
-                        <div
-                          className="h-full rounded-full bg-forest-green"
-                          style={{ width: `${t.concepts.length ? (s / t.concepts.length) * 100 : 0}%` }}
-                        />
-                      </div>
-                    </li>
-                  );
-                })}
-              </ul>
-            </States>
-          </section>
+          <MasteryCard mastery={mastery} />
         </div>
       </div>
     </div>
+  );
+}
+
+/** Clickable mastery panel: the bars are the summary, the concepts behind
+ *  them (solid / shaky / untested) are one click deeper. */
+function MasteryCard({ mastery }: { mastery: MasteryTopic[] | null }) {
+  const [open, setOpen] = useState(false);
+  const concepts = (mastery ?? []).flatMap((t) => t.concepts);
+  if (mastery === null) {
+    return (
+      <section className="rounded-xl border border-outline-variant/20 bg-surface-container-lowest p-md shadow-sm">
+        <h3 className="mb-sm text-headline-sm font-semibold text-on-surface">Mastery</h3>
+        <p className="text-body-md text-on-surface-variant">Loading…</p>
+      </section>
+    );
+  }
+  if (concepts.length === 0) {
+    return (
+      <section className="rounded-xl border border-outline-variant/20 bg-surface-container-lowest p-md shadow-sm">
+        <h3 className="mb-sm text-headline-sm font-semibold text-on-surface">Mastery</h3>
+        <p className="text-body-md text-on-surface-variant">
+          Take the diagnostic to start tracking mastery.
+        </p>
+      </section>
+    );
+  }
+  return (
+    <section className="rounded-xl border border-outline-variant/20 bg-surface-container-lowest p-md shadow-sm">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="flex w-full items-center justify-between text-left"
+        aria-expanded={open}
+      >
+        <h3 className="text-headline-sm font-semibold text-on-surface">Mastery</h3>
+        <span className="text-label-sm font-bold text-forest-green">
+          {open ? "Hide concepts" : "Show concepts"}
+        </span>
+      </button>
+
+      <ul className="mt-sm space-y-sm">
+        {mastery.map((t) => {
+          const solid = t.concepts.filter((c) => c.state === "solid").length;
+          return (
+            <li key={t.topic_id}>
+              <div className="mb-xs flex items-center justify-between">
+                <span className="text-label-md text-on-surface">{t.topic}</span>
+                <span className="text-label-sm text-on-surface-variant">
+                  {solid}/{t.concepts.length} solid
+                </span>
+              </div>
+              <div className="h-2 overflow-hidden rounded-full bg-surface-variant">
+                <div
+                  className="h-full rounded-full bg-forest-green"
+                  style={{ width: `${t.concepts.length ? (solid / t.concepts.length) * 100 : 0}%` }}
+                />
+              </div>
+
+              {open && (
+                <ul className="mt-xs flex flex-wrap gap-xs">
+                  {t.concepts.map((c) => (
+                    <li
+                      key={c.id}
+                      title={c.state}
+                      className={`rounded-full px-sm py-xs text-label-sm ${
+                        c.state === "solid"
+                          ? "bg-secondary/25 text-forest-green"
+                          : c.state === "shaky"
+                            ? "bg-mustard/25 text-forest-green"
+                            : "bg-surface-variant/60 text-on-surface-variant"
+                      }`}
+                    >
+                      {c.name}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </li>
+          );
+        })}
+      </ul>
+    </section>
   );
 }
 
@@ -425,15 +503,19 @@ function StatCard({
   value,
   icon,
   highlighted = false,
+  onClick,
 }: {
   label: string;
   value: string;
   icon: React.ReactNode;
   highlighted?: boolean;
+  onClick?: () => void;
 }) {
   return (
-    <div
-      className={`rounded-xl border p-md shadow-sm ${
+    <button
+      type="button"
+      onClick={onClick}
+      className={`w-full rounded-xl border p-md text-left shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md ${
         highlighted ? "border-mustard/50 bg-mustard/5" : "border-outline-variant/20 bg-surface-container-lowest"
       }`}
     >
@@ -444,7 +526,7 @@ function StatCard({
         {icon}
       </div>
       <p className="mt-xs text-headline-lg font-bold text-on-surface">{value}</p>
-    </div>
+    </button>
   );
 }
 
@@ -643,7 +725,7 @@ function DiagnosticView({ goto }: { goto: (s: Section) => void }) {
 /* ---------------------------------------------------------------------------
  * My Gaps
  * ------------------------------------------------------------------------- */
-function GapsView() {
+function GapsView({ openLesson }: { openLesson: (g: Gap) => void }) {
   const [gaps, setGaps] = useState<Gap[] | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -686,6 +768,17 @@ function GapsView() {
                   Try asking: “{g.suggested_prompts[0]}”
                 </p>
               )}
+
+              {/* The gap's lesson, one click away -- this is the path the
+                  diagnostic result is supposed to open onto. */}
+              <button
+                type="button"
+                onClick={() => openLesson(g)}
+                className="mt-sm flex items-center gap-xs rounded-lg bg-forest-green px-md py-xs text-label-md font-bold text-white transition-colors hover:bg-forest-light"
+              >
+                <GraduationCap className="h-4 w-4" />
+                Open lesson
+              </button>
             </li>
           ))}
         </ul>
@@ -697,20 +790,21 @@ function GapsView() {
 /* ---------------------------------------------------------------------------
  * Lessons -- pick a gap, get the TutorResponse with the real alignment badge.
  * ------------------------------------------------------------------------- */
-function LessonsView() {
+function LessonsView({
+  selected,
+  onSelect,
+}: {
+  selected: Gap | null;
+  onSelect: (g: Gap) => void;
+}) {
   const [gaps, setGaps] = useState<Gap[] | null>(null);
-  const [selected, setSelected] = useState<Gap | null>(null);
   const [lesson, setLesson] = useState<TutorResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     getGaps()
-      .then((r) => {
-        setGaps(r.items);
-        const first = r.items.find((g) => g.status === "open") ?? r.items[0];
-        if (first) setSelected(first);
-      })
+      .then((r) => setGaps(r.items))
       .catch((err) => setError(errorText(err)));
   }, []);
 
@@ -745,7 +839,7 @@ function LessonsView() {
                 <li key={g.id}>
                   <button
                     type="button"
-                    onClick={() => setSelected(g)}
+                    onClick={() => onSelect(g)}
                     className={`w-full rounded-lg border p-sm text-left text-body-sm transition-colors ${
                       selected?.id === g.id
                         ? "border-forest-green bg-sage-light text-on-surface"
@@ -783,7 +877,7 @@ function LessonsView() {
  * Practice -- the golden path ends here: answer wrong, see the diagnosis,
  * confirm or deny it. Confirmed is what feeds the teacher heatmap.
  * ------------------------------------------------------------------------- */
-function PracticeView() {
+function PracticeView({ initialGap }: { initialGap: Gap | null }) {
   const [gaps, setGaps] = useState<Gap[] | null>(null);
   const [gap, setGap] = useState<Gap | null>(null);
   const [set, setSet] = useState<PracticeSet | null>(null);
@@ -798,6 +892,11 @@ function PracticeView() {
       .then((r) => setGaps(r.items.filter((g) => g.status !== "closed")))
       .catch((err) => setError(errorText(err)));
   }, []);
+
+  // "Practise" on the home card can hand us a specific gap.
+  useEffect(() => {
+    if (initialGap) setGap(initialGap);
+  }, [initialGap]);
 
   async function loadFor(g: Gap) {
     setGap(g);
@@ -958,7 +1057,9 @@ function PracticeView() {
                         )}
                       </p>
                       {r.explanation && (
-                        <p className="mt-xs whitespace-pre-wrap text-body-sm text-on-surface">{r.explanation}</p>
+                        <div className="mt-xs">
+                          <Md>{r.explanation}</Md>
+                        </div>
                       )}
                     </div>
                   )}
@@ -1014,48 +1115,108 @@ function PracticeView() {
  * Ask Tutor -- free questions, all three outcomes rendered by TutorCard.
  * ------------------------------------------------------------------------- */
 function TutorView() {
+  // /tutor/ask is stateless; the transcript is client-side history. Each
+  // turn renders as a full TutorCard -- alignment badge, citations, and
+  // refusals included, since a refusal is an answer here.
+  type ChatTurn =
+    | { role: "user"; text: string }
+    | { role: "tutor"; response: TutorResponse }
+    | { role: "error"; text: string };
+  const [messages, setMessages] = useState<ChatTurn[]>([]);
   const [question, setQuestion] = useState("");
-  const [response, setResponse] = useState<TutorResponse | null>(null);
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const endRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    endRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+  }, [messages, busy]);
 
   async function ask(e: React.FormEvent) {
     e.preventDefault();
-    if (!question.trim()) return;
+    const q = question.trim();
+    if (!q || busy) return;
+    setQuestion("");
+    setMessages((m) => [...m, { role: "user", text: q }]);
     setBusy(true);
-    setError(null);
-    setResponse(null);
     try {
-      setResponse(await askTutor(question.trim()));
+      const response = await askTutor(q);
+      setMessages((m) => [...m, { role: "tutor", response }]);
     } catch (err) {
-      setError(errorText(err));
+      setMessages((m) => [...m, { role: "error", text: errorText(err) }]);
     } finally {
       setBusy(false);
     }
   }
 
   return (
-    <div className="p-lg">
-      <h1 className="mb-md text-headline-lg font-bold text-on-background">Ask Tutor</h1>
+    <div className="flex h-[calc(100vh-4rem)] flex-col">
+      <div className="flex items-center justify-between px-lg py-md">
+        <h1 className="text-headline-lg font-bold text-on-background">Ask Tutor</h1>
+        <p className="text-label-sm text-on-surface-variant">
+          Answers cite your course books · off-topic questions are refused, not guessed
+        </p>
+      </div>
 
-      <form onSubmit={ask} className="mb-md flex gap-sm">
-        <input
-          value={question}
-          onChange={(e) => setQuestion(e.target.value)}
-          placeholder="Ask anything from your course…"
-          className="flex-1 rounded-full border border-outline-variant bg-white px-md py-sm text-body-md text-on-surface outline-none focus:border-forest-green"
-        />
-        <button
-          type="submit"
-          disabled={busy || !question.trim()}
-          className="rounded-full bg-forest-green px-lg py-sm text-body-md font-bold text-white hover:bg-forest-light disabled:opacity-50"
-        >
-          {busy ? "Thinking…" : "Ask"}
-        </button>
+      {/* Transcript */}
+      <div className="flex-1 overflow-y-auto px-lg pb-sm">
+        {messages.length === 0 && (
+          <div className="mx-auto mt-xl max-w-[32rem] rounded-xl border border-outline-variant/20 bg-surface-container-lowest p-lg text-center shadow-sm">
+            <MessageCircle className="mx-auto mb-sm h-8 w-8 text-mustard" />
+            <p className="text-body-md font-semibold text-on-surface">Ask anything about your course</p>
+            <p className="mt-xs text-body-sm text-on-surface-variant">
+              Every answer carries an evidence check against the approved corpus —
+              the syllabus-alignment badge and page citations come from your own
+              textbooks.
+            </p>
+          </div>
+        )}
+
+        <div className="mx-auto flex max-w-[44rem] flex-col gap-md">
+          {messages.map((m, i) =>
+            m.role === "user" ? (
+              <div key={i} className="flex justify-end">
+                <p className="max-w-[36rem] rounded-xl rounded-br-sm bg-forest-green px-md py-sm text-body-md text-white">
+                  {m.text}
+                </p>
+              </div>
+            ) : m.role === "error" ? (
+              <p key={i} role="alert" className="rounded-xl border border-error/30 bg-error/10 p-md text-body-md text-error">
+                {m.text}
+              </p>
+            ) : (
+              <div key={i}>
+                <TutorCard response={m.response} />
+              </div>
+            ),
+          )}
+          {busy && (
+            <p className="text-body-md text-on-surface-variant">Thinking…</p>
+          )}
+          <div ref={endRef} />
+        </div>
+      </div>
+
+      {/* Composer */}
+      <form
+        onSubmit={ask}
+        className="sticky bottom-0 border-t border-outline-variant bg-surface/90 px-lg py-sm backdrop-blur"
+      >
+        <div className="mx-auto flex max-w-[44rem] gap-sm">
+          <input
+            value={question}
+            onChange={(e) => setQuestion(e.target.value)}
+            placeholder="Ask a follow-up…"
+            className="flex-1 rounded-full border border-outline-variant bg-white px-md py-sm text-body-md text-on-surface outline-none focus:border-forest-green"
+          />
+          <button
+            type="submit"
+            disabled={busy || !question.trim()}
+            className="rounded-full bg-forest-green px-lg py-sm text-body-md font-bold text-white hover:bg-forest-light disabled:opacity-50"
+          >
+            {busy ? "…" : "Ask"}
+          </button>
+        </div>
       </form>
-
-      {error && <p role="alert" className="text-body-md text-error">{error}</p>}
-      {response && <TutorCard response={response} />}
     </div>
   );
 }
@@ -1094,7 +1255,9 @@ function AssignmentsView() {
                   {a.assigned_at ? new Date(a.assigned_at).toLocaleDateString() : ""}
                 </span>
               </div>
-              <p className="mt-xs whitespace-pre-wrap text-body-sm text-on-surface-variant">{a.body}</p>
+              <div className="mt-xs text-on-surface-variant">
+                <Md>{a.body}</Md>
+              </div>
             </li>
           ))}
         </ul>
@@ -1187,11 +1350,89 @@ function StudentSettingsView({ user, onUserChanged }: { user: User | null; onUse
 }
 
 /* ---------------------------------------------------------------------------
+ * Profile -- reached from the top-right avatar, like the admin console.
+ * ------------------------------------------------------------------------- */
+function ProfileView({ user, goto }: { user: User | null; goto: (s: Section) => void }) {
+  const navigate = useNavigate();
+
+  async function doLogout() {
+    try {
+      await logout();
+    } catch {
+      // the token is unusable for anything real; drop it regardless
+    } finally {
+      clearToken();
+      navigate("/login", { replace: true });
+    }
+  }
+
+  return (
+    <div className="p-lg">
+      <h1 className="mb-md text-headline-lg font-bold text-on-background">Profile</h1>
+
+      <section className="rounded-xl border border-outline-variant/20 bg-surface-container-lowest p-md shadow-sm">
+        <div className="mb-md flex items-center gap-md">
+          <div className="flex h-14 w-14 items-center justify-center rounded-full bg-forest-green text-headline-md font-bold text-white">
+            {user ? user.full_name.slice(0, 1).toUpperCase() : "…"}
+          </div>
+          <div>
+            <h2 className="text-headline-md font-bold text-on-surface">
+              {user ? user.full_name : "…"}
+            </h2>
+            <p className="text-label-md text-forest-green capitalize">
+              {user ? user.role : ""}
+            </p>
+          </div>
+        </div>
+
+        <dl className="divide-y divide-outline-variant/10">
+          <div className="flex items-baseline justify-between py-sm">
+            <dt className="text-label-md text-on-surface-variant">Email</dt>
+            <dd className="text-body-md text-on-surface">{user?.email ?? "…"}</dd>
+          </div>
+          <div className="flex items-baseline justify-between py-sm">
+            <dt className="text-label-md text-on-surface-variant">Preferred language</dt>
+            <dd className="text-body-md text-on-surface">
+              {(user?.preferred_language ?? "en").toUpperCase()}
+              <button
+                type="button"
+                onClick={() => goto("Settings")}
+                className="ml-sm text-label-sm font-bold text-forest-green hover:underline"
+              >
+                change
+              </button>
+            </dd>
+          </div>
+        </dl>
+
+        <div className="mt-md flex justify-end">
+          <button
+            type="button"
+            onClick={doLogout}
+            className="rounded-lg border border-error/40 px-md py-xs text-label-md font-bold text-error hover:bg-error/10"
+          >
+            Log out
+          </button>
+        </div>
+      </section>
+    </div>
+  );
+}
+
+/* ---------------------------------------------------------------------------
  * Shell
  * ------------------------------------------------------------------------- */
 export default function Dashboard() {
   const [activeSection, setActiveSection] = useState<Section>("Dashboard");
   const [user, setUser] = useState<User | null>(null);
+
+  // Shared so every "open this gap's lesson" click -- home card, gaps list,
+  // Up Next -- lands in the Lessons section with that gap already selected.
+  const [lessonGap, setLessonGap] = useState<Gap | null>(null);
+  const openLesson = (g: Gap) => {
+    setLessonGap(g);
+    setActiveSection("Lessons");
+  };
 
   useEffect(() => {
     getMe()
@@ -1266,27 +1507,35 @@ export default function Dashboard() {
             />
           </div>
 
-          <div className="flex items-center gap-md">
-            <span className="text-body-sm font-semibold text-on-surface">
+          <button
+            type="button"
+            onClick={() => setActiveSection("Profile")}
+            aria-label="Open profile"
+            className="group flex items-center gap-md"
+          >
+            <span className="text-body-sm font-semibold text-on-surface group-hover:underline">
               {user ? user.full_name : "…"}
             </span>
-            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-forest-green text-label-md font-bold text-white">
+            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-forest-green text-label-md font-bold text-white transition-colors group-hover:bg-forest-light">
               {user ? user.full_name.slice(0, 1).toUpperCase() : "…"}
             </div>
-          </div>
+          </button>
         </header>
 
         <main className="pt-16">
           {activeSection === "Dashboard" && (
-            <HomeView user={user} goto={setActiveSection} />
+            <HomeView user={user} goto={setActiveSection} openLesson={openLesson} />
           )}
           {activeSection === "My Course" && <MyCourseView />}
           {activeSection === "Diagnostic" && <DiagnosticView goto={setActiveSection} />}
-          {activeSection === "My Gaps" && <GapsView />}
-          {activeSection === "Lessons" && <LessonsView />}
-          {activeSection === "Practice" && <PracticeView />}
+          {activeSection === "My Gaps" && <GapsView openLesson={openLesson} />}
+          {activeSection === "Lessons" && (
+            <LessonsView selected={lessonGap} onSelect={setLessonGap} />
+          )}
+          {activeSection === "Practice" && <PracticeView initialGap={lessonGap} />}
           {activeSection === "Ask Tutor" && <TutorView />}
           {activeSection === "Assignments" && <AssignmentsView />}
+          {activeSection === "Profile" && <ProfileView user={user} goto={setActiveSection} />}
           {activeSection === "Settings" && (
             <StudentSettingsView user={user} onUserChanged={setUser} />
           )}

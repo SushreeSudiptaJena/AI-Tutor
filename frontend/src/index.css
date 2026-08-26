@@ -68,6 +68,50 @@
   --text-label-sm--line-height: 14px;
 }
 
+
+/* Markdown bodies -- LLM answers (lessons, tutor, practice explanations)
+ * arrive as markdown and must not render as raw asterisks and hashes. */
+.md-body > :first-child { margin-top: 0; }
+.md-body > :last-child { margin-bottom: 0; }
+.md-body h1, .md-body h2, .md-body h3, .md-body h4 {
+  font-weight: 700;
+  margin: 1em 0 0.4em;
+  line-height: 1.3;
+}
+.md-body h1 { font-size: 1.35em; }
+.md-body h2 { font-size: 1.2em; }
+.md-body h3 { font-size: 1.05em; }
+.md-body p { margin: 0.6em 0; }
+.md-body ul, .md-body ol { margin: 0.6em 0; padding-left: 1.4em; }
+.md-body ul { list-style: disc; }
+.md-body ol { list-style: decimal; }
+.md-body li { margin: 0.25em 0; }
+.md-body strong { font-weight: 700; }
+.md-body em { font-style: italic; }
+.md-body code {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.9em;
+  background: rgba(127, 127, 127, 0.15);
+  padding: 0.1em 0.35em;
+  border-radius: 4px;
+}
+.md-body pre {
+  background: rgba(127, 127, 127, 0.12);
+  border: 1px solid rgba(127, 127, 127, 0.25);
+  border-radius: 8px;
+  padding: 0.75em 1em;
+  overflow-x: auto;
+  margin: 0.75em 0;
+}
+.md-body pre code { background: none; padding: 0; }
+.md-body blockquote {
+  border-left: 3px solid rgba(127, 127, 127, 0.4);
+  margin: 0.75em 0;
+  padding: 0.1em 0 0.1em 0.9em;
+  opacity: 0.9;
+}
+.md-body a { text-decoration: underline; }
+
 /* WARNING: the named max-width utilities collide with this theme's
  * --spacing-xs..xl scale -- in this build `max-w-sm` resolves to
  * var(--spacing-sm) = 16px, not 24rem, squeezing the element to a sliver
