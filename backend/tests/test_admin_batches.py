@@ -16,7 +16,7 @@ from fastapi import HTTPException
 
 from app.models import Batch, Course, Department, User
 from app.routers import admin_batches
-from app.schemas import BatchIn, CurriculumReuseIn, SignupIn, TeacherAddIn, UserOut
+from app.schemas import BatchCourseIn, BatchIn, CurriculumReuseIn, SignupIn, TeacherAddIn, UserOut
 
 
 # ---------------------------------------------------------------------------
@@ -270,3 +270,107 @@ def test_signup_body_declares_the_role_in_code_not_in_the_request():
 def test_user_out_carries_the_enrolment_fields():
     assert "university" in UserOut.model_fields
     assert "roll_number" in UserOut.model_fields
+
+
+# ---------------------------------------------------------------------------
+# admin-010: subjects belong to batches
+# ---------------------------------------------------------------------------
+
+def a_course_row(cid=5, code="CSW2", title="Workshop", semester=3, batches=None):
+    c = Course(code=code, title=title, semester=semester)
+    c.id = cid
+    c.department_id = 3
+    c.batches = list(batches or [])
+    return c
+
+
+def test_linking_an_existing_subject_puts_it_in_the_batch():
+    batch = make_batch(40)
+    course = a_course_row()
+    db = FakeDB(get_map={(Batch, 40): batch, (Course, 5): course})
+    out = admin_batches.add_batch_course(40, BatchCourseIn(course_id=5), db, FakeAdmin())
+    assert out["batch_ids"] == [40]
+    assert course.batches == [batch]
+
+
+def test_creating_a_subject_inherits_the_batch_department():
+    """The admin already picked the cohort; asking for its department again
+    would be a question with exactly one right answer."""
+    batch = make_batch(40, dept_id=3)
+    db = FakeDB(get_map={(Batch, 40): batch})
+    db.scalar = lambda stmt: None  # no code collision
+    out = admin_batches.add_batch_course(
+        40, BatchCourseIn(code="cs301", title="Operating Systems", semester=5),
+        db, FakeAdmin())
+    created = [o for o in db.added if isinstance(o, Course)][0]
+    assert created.department_id == 3
+    assert created.code == "CS301", "codes are normalised upper-case"
+    assert out["semester"] == 5
+
+
+def test_the_same_subject_cannot_be_added_to_one_batch_twice():
+    batch = make_batch(40)
+    course = a_course_row(batches=[batch])
+    db = FakeDB(get_map={(Batch, 40): batch, (Course, 5): course})
+    with pytest.raises(HTTPException) as e:
+        admin_batches.add_batch_course(40, BatchCourseIn(course_id=5), db, FakeAdmin())
+    assert e.value.status_code == 409
+
+
+def test_a_duplicate_course_code_is_refused_rather_than_silently_linked():
+    batch = make_batch(40)
+    db = FakeDB(get_map={(Batch, 40): batch}, scalar_row=a_course_row())
+    with pytest.raises(HTTPException) as e:
+        admin_batches.add_batch_course(
+            40, BatchCourseIn(code="CSW2", title="Workshop"), db, FakeAdmin())
+    assert e.value.status_code == 409
+
+
+def test_one_subject_can_serve_several_cohorts():
+    """Many-to-many is the point: cohorts share the corpus, the diagnostic and
+    the misconception history, so a row per cohort would fragment all three."""
+    b1, b2 = make_batch(40, start=2025), make_batch(41, start=2026)
+    course = a_course_row(batches=[b1])
+    db = FakeDB(get_map={(Batch, 41): b2, (Course, 5): course})
+    out = admin_batches.add_batch_course(41, BatchCourseIn(course_id=5), db, FakeAdmin())
+    assert sorted(out["batch_ids"]) == [40, 41]
+
+
+def test_unlinking_leaves_the_subject_and_the_other_cohorts_alone():
+    b1, b2 = make_batch(40), make_batch(41, start=2027)
+    course = a_course_row(batches=[b1, b2])
+    db = FakeDB(get_map={(Batch, 40): b1, (Course, 5): course})
+    admin_batches.remove_batch_course(40, 5, db, FakeAdmin())
+    assert [b.id for b in course.batches] == [41]
+    assert course not in db.deleted, "unlink must never delete the subject"
+
+
+def test_unlinking_something_not_in_the_batch_is_a_404():
+    b1 = make_batch(40)
+    course = a_course_row(batches=[])
+    db = FakeDB(get_map={(Batch, 40): b1, (Course, 5): course})
+    with pytest.raises(HTTPException) as e:
+        admin_batches.remove_batch_course(40, 5, db, FakeAdmin())
+    assert e.value.status_code == 404
+
+
+def test_the_link_body_demands_exactly_one_form():
+    with pytest.raises(Exception):
+        BatchCourseIn()  # neither
+    with pytest.raises(Exception):
+        BatchCourseIn(course_id=5, code="CS301", title="OS")  # both
+
+
+def test_batch_courses_are_listed_by_semester_then_code():
+    batch = make_batch(40)
+    batch.courses = [
+        a_course_row(1, "CS400", "Later", 6),
+        a_course_row(2, "CS101", "Early", 1),
+        a_course_row(3, "CS999", "Undated", None),
+        a_course_row(4, "CS102", "Also early", 1),
+    ]
+    db = FakeDB(get_map={(Batch, 40): batch})
+    codes = [c["code"] for c in admin_batches.list_batch_courses(40, db, FakeAdmin())["items"]]
+    # semester order, ties by code, and an unset semester sorts LAST rather
+    # than pretending to be semester 0
+    assert codes == ["CS101", "CS102", "CS400", "CS999"]

@@ -12,17 +12,22 @@
 import { useEffect, useRef, useState } from "react";
 import {
   ApiError,
+  addBatchCourse,
   addCourseTeacher,
   createBatch,
+  getBatchCourses,
   getBatches,
   getCourseTeachers,
   getOverview,
   listDepartments,
   MAJOR_YEARS,
+  removeBatchCourse,
   removeCourseTeacher,
   reuseBatchCurriculum,
   uploadBatchCurriculum,
+  listCourses,
   type AssignedTeacher,
+  type BatchCourse,
   type BatchDto,
   type Course,
   type OverviewDto,
@@ -81,7 +86,12 @@ export function DashboardView({ goToTab }: { goToTab: (t: AdminTabKey) => void }
 
   const tiles = [
     { icon: "groups", label: "Batches", value: ov?.batches ?? "…", hint: `${ov?.departments ?? "…"} departments` },
-    { icon: "school", label: "Subjects", value: ov?.courses ?? "…", hint: `${ov?.materials ?? "…"} materials uploaded` },
+    {
+      icon: "school",
+      label: "Subjects",
+      value: ov?.courses ?? "…",
+      hint: `${ov?.materials ?? "…"} materials · ${ov?.courses_without_batch ?? "…"} in no batch`,
+    },
     {
       icon: "person_book",
       label: "Teachers assigned",
@@ -488,6 +498,8 @@ export function BatchesView({ goToTab }: { goToTab: (t: AdminTabKey) => void }) 
   // the subjects tab's key is historical: "structure" predates the rename to
   // "Subjects & Materials"
   const [batches, setBatches] = useState<BatchDto[] | null>(null);
+  // admin-010: which cohort's subject list is open
+  const [openSubjects, setOpenSubjects] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<number | null>(null);
   const fileFor = useRef<HTMLInputElement | null>(null);
@@ -576,16 +588,15 @@ export function BatchesView({ goToTab }: { goToTab: (t: AdminTabKey) => void }) 
                   c.start_year < b.start_year,
               );
               return (
-                <article
-                  key={b.id}
-                  className="ns-glass-panel rounded-xl p-card-inner-padding flex flex-col md:flex-row md:items-center gap-4 md:gap-8"
-                >
+                <article key={b.id} className="ns-glass-panel rounded-xl p-card-inner-padding">
+                  <div className="flex flex-col md:flex-row md:items-center gap-4 md:gap-8">
                   <div className="flex-1 min-w-0">
                     <h3 className="font-headline-sm text-headline-sm text-on-surface">
                       {MAJOR_LABELS[b.major]} · {b.department.name}
                     </h3>
                     <p className="font-label-sm text-label-sm text-on-surface-variant mt-1">
-                      {b.start_year}–{b.end_year}
+                      {b.start_year}–{b.end_year} · {b.course_count} subject
+                      {b.course_count === 1 ? "" : "s"}
                     </p>
                   </div>
 
@@ -609,6 +620,12 @@ export function BatchesView({ goToTab }: { goToTab: (t: AdminTabKey) => void }) 
 
                   <div className="flex flex-wrap items-center gap-2">
                     <button
+                      onClick={() => setOpenSubjects((cur) => (cur === b.id ? null : b.id))}
+                      className="font-label-md text-label-md px-4 py-2 rounded-lg border border-outline-variant hover:border-tertiary text-on-surface"
+                    >
+                      {openSubjects === b.id ? "Hide subjects" : "Subjects"}
+                    </button>
+                    <button
                       onClick={() => {
                         setUploadTarget(b.id);
                         fileFor.current?.click();
@@ -628,7 +645,9 @@ export function BatchesView({ goToTab }: { goToTab: (t: AdminTabKey) => void }) 
                         Reuse {candidates[0].start_year}
                       </button>
                     )}
+                    </div>
                   </div>
+                  {openSubjects === b.id && <BatchSubjects batch={b} onChanged={load} />}
                 </article>
               );
             })}
@@ -642,6 +661,217 @@ export function BatchesView({ goToTab }: { goToTab: (t: AdminTabKey) => void }) 
           Add subjects and materials →
         </button>
       </div>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------------ */
+/* Subjects in a batch (admin-010)                                           */
+/* ------------------------------------------------------------------------ */
+
+function BatchSubjects({ batch, onChanged }: { batch: BatchDto; onChanged: () => void }) {
+  const [items, setItems] = useState<BatchCourse[] | null>(null);
+  const [all, setAll] = useState<Course[]>([]);
+  const [mode, setMode] = useState<"none" | "existing" | "new">("none");
+  const [pick, setPick] = useState<number | "">("");
+  const [code, setCode] = useState("");
+  const [title, setTitle] = useState("");
+  const [semester, setSemester] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const load = () =>
+    getBatchCourses(batch.id)
+      .then((r) => {
+        setItems(r);
+        setError(null);
+      })
+      .catch((err) => setError(errorText(err)));
+
+  useEffect(() => {
+    load();
+    listCourses().then((r) => setAll(r.items)).catch(() => setAll([]));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [batch.id]);
+
+  async function add() {
+    setBusy(true);
+    setError(null);
+    try {
+      if (mode === "existing") {
+        if (pick === "") return;
+        await addBatchCourse(batch.id, { course_id: Number(pick) });
+      } else {
+        if (!code.trim() || !title.trim()) return;
+        await addBatchCourse(batch.id, {
+          code: code.trim(),
+          title: title.trim(),
+          ...(semester ? { semester: Number(semester) } : {}),
+        });
+      }
+      setPick("");
+      setCode("");
+      setTitle("");
+      setSemester("");
+      setMode("none");
+      await load();
+      onChanged();
+    } catch (err) {
+      setError(errorText(err));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function remove(courseId: number) {
+    setBusy(true);
+    try {
+      await removeBatchCourse(batch.id, courseId);
+      await load();
+      onChanged();
+    } catch (err) {
+      setError(errorText(err));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const linked = new Set((items ?? []).map((c) => c.id));
+  const available = all.filter((c) => !linked.has(c.id));
+
+  return (
+    <div className="mt-4 pt-4 border-t border-outline-variant/20 space-y-3">
+      {error && <p role="alert" className="text-error font-body-sm">{error}</p>}
+
+      {!items ? (
+        <p className="font-label-sm text-label-sm text-on-surface-variant">Loading subjects…</p>
+      ) : items.length === 0 ? (
+        <p className="font-label-sm text-label-sm text-on-surface-variant">
+          No subjects in this batch yet.
+        </p>
+      ) : (
+        <ul className="space-y-2">
+          {items.map((c) => (
+            <li
+              key={c.id}
+              className="flex items-center justify-between gap-3 bg-surface-container-low/50 rounded-lg px-4 py-2.5 border border-outline-variant/20"
+            >
+              <span className="min-w-0 font-label-md text-label-md text-on-surface truncate">
+                <span className="text-tertiary">{c.code}</span> · {c.title}
+                {c.semester !== null && (
+                  <span className="text-on-surface-variant"> · sem {c.semester}</span>
+                )}
+                {c.batch_ids.length > 1 && (
+                  <span
+                    className="text-on-surface-variant"
+                    title="This subject is shared with other cohorts; removing it here leaves those untouched."
+                  >
+                    {" "}· shared with {c.batch_ids.length - 1} other cohort
+                    {c.batch_ids.length - 1 === 1 ? "" : "s"}
+                  </span>
+                )}
+              </span>
+              <button
+                onClick={() => remove(c.id)}
+                disabled={busy}
+                title="Unlink from this batch. The subject and its materials are kept."
+                className="font-label-sm text-label-sm text-on-surface-variant hover:text-error shrink-0"
+              >
+                Remove
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {mode === "none" && (
+        <div className="flex gap-3">
+          <button
+            onClick={() => setMode("existing")}
+            className="font-label-sm text-label-sm text-tertiary hover:underline"
+          >
+            + Add existing subject
+          </button>
+          <button
+            onClick={() => setMode("new")}
+            className="font-label-sm text-label-sm text-tertiary hover:underline"
+          >
+            + Create new subject
+          </button>
+        </div>
+      )}
+
+      {mode === "existing" && (
+        <div className="flex flex-wrap gap-2 items-center">
+          <select
+            value={pick}
+            onChange={(e) => setPick(e.target.value === "" ? "" : Number(e.target.value))}
+            className="flex-1 min-w-[14rem] px-3 py-2 rounded-lg bg-surface-container-low border border-outline-variant text-on-surface font-label-md text-label-md"
+          >
+            <option value="">Choose a subject…</option>
+            {available.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.code} — {c.title}
+              </option>
+            ))}
+          </select>
+          <button
+            onClick={add}
+            disabled={busy || pick === ""}
+            className="ns-btn-primary font-label-sm text-label-sm px-4 py-2 rounded-lg disabled:opacity-50"
+          >
+            {busy ? "…" : "Add"}
+          </button>
+          <button
+            onClick={() => setMode("none")}
+            className="font-label-sm text-label-sm text-on-surface-variant hover:text-on-surface"
+          >
+            Cancel
+          </button>
+        </div>
+      )}
+
+      {mode === "new" && (
+        <div className="flex flex-wrap gap-2 items-center">
+          <input
+            value={code}
+            onChange={(e) => setCode(e.target.value)}
+            placeholder="Code (CS301)"
+            className="w-[9rem] px-3 py-2 rounded-lg bg-surface-container-low border border-outline-variant text-on-surface font-label-md text-label-md"
+          />
+          <input
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder="Title"
+            className="flex-1 min-w-[12rem] px-3 py-2 rounded-lg bg-surface-container-low border border-outline-variant text-on-surface font-label-md text-label-md"
+          />
+          <input
+            value={semester}
+            onChange={(e) => setSemester(e.target.value)}
+            placeholder="Sem"
+            type="number"
+            min={1}
+            max={12}
+            className="w-[5rem] px-3 py-2 rounded-lg bg-surface-container-low border border-outline-variant text-on-surface font-label-md text-label-md"
+          />
+          <button
+            onClick={add}
+            disabled={busy || !code.trim() || !title.trim()}
+            className="ns-btn-primary font-label-sm text-label-sm px-4 py-2 rounded-lg disabled:opacity-50"
+          >
+            {busy ? "…" : "Create"}
+          </button>
+          <button
+            onClick={() => setMode("none")}
+            className="font-label-sm text-label-sm text-on-surface-variant hover:text-on-surface"
+          >
+            Cancel
+          </button>
+          <p className="w-full font-label-sm text-label-sm text-on-surface-variant">
+            Created in {batch.department.name} — the batch's own department.
+          </p>
+        </div>
+      )}
     </div>
   );
 }

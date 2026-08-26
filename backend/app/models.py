@@ -58,6 +58,19 @@ course_prerequisites = Table(
 )
 
 
+# admin-010. Which cohorts take which subject. Many-to-many on purpose: one
+# subject is commonly taught to several cohorts at once, and they share the
+# corpus, the diagnostic and the misconception history -- a course row per
+# cohort would fragment all three. Unlinking is not deleting: the row here
+# goes, the subject and everything hanging off it stays.
+batch_courses = Table(
+    "batch_courses",
+    Base.metadata,
+    Column("batch_id", ForeignKey("batches.id", ondelete="CASCADE"), primary_key=True),
+    Column("course_id", ForeignKey("courses.id", ondelete="CASCADE"), primary_key=True),
+)
+
+
 class Department(Base):
     __tablename__ = "departments"
 
@@ -93,6 +106,9 @@ class Batch(Base):
     created_at: Mapped[datetime] = _now()
 
     department: Mapped["Department"] = relationship()
+    courses: Mapped[list["Course"]] = relationship(
+        "Course", secondary=batch_courses, back_populates="batches"
+    )
 
     @property
     def label(self) -> str:
@@ -153,6 +169,14 @@ class Course(Base):
         if self.term_start is None or self.term_end is None:
             return False
         return self.term_start <= on <= self.term_end
+
+    # admin-010. The cohorts that take this subject. NOT the same thing as
+    # `admission_batches` above, which is a free list of admission YEARS that
+    # PUT /term writes and admin-006's delete guard reads; this is the real
+    # foreign-key link and is what "which batches take this" means.
+    batches: Mapped[list["Batch"]] = relationship(
+        "Batch", secondary=batch_courses, back_populates="courses"
+    )
 
     # Which courses must a student have done before this one. This is what lets
     # gap detection name the correct prior course.

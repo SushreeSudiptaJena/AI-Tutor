@@ -1,0 +1,85 @@
+admin-010 — subjects belong to batches (cohort ↔ course link)
+Verified 2026-08-26 live against localhost:8000 / :5173. Backend suite exit 0
+(9 new tests, 28 in test_admin_batches.py); frontend build 6.57s. Contract
+edited first (changelog row; person 6 owns docs/api-contract.md).
+
+"Course" and "subject" are the same thing — the API says course, the UI says
+subject, and admin-010 is the link between a cohort and the subjects it takes.
+
+=== 1. API, driven end to end over HTTP ===================================
+  batch 4: btech 2029-2033, course_count=0
+  linked existing: CSW2 batch_ids: [4]
+  duplicate link -> 409
+  created in batch: ZZ-TST-OS dept: 3 (batch dept: 3) semester: 5
+  batch subjects: [('ZZ-TST-OS', 5), ('CSW2', None)]
+  shared subject batch_ids: [4, 5]
+  GET /admin/courses/{id} batch_ids: [4, 5] | admission_batches untouched: []
+  after unlink batch_ids: [5] | course still exists: CSW2
+  unlink again -> 404
+  overview: batches 2 | courses 7 | courses_without_batch 5
+  batch course_counts: [(5, 1), (4, 1)]
+
+What each line proves:
+* **Creating inside a batch inherits the batch's department** (dept 3 == the
+  batch's), and the code is normalised upper-case. The admin already picked
+  the cohort; asking again for its department would be a question with one
+  right answer.
+* **Ordering is semester then code, with an unset semester LAST** — that is
+  the order a curriculum is read in, and an undated subject must not pretend
+  to be semester 0.
+* **Many-to-many is real**: one subject carried batch_ids [4, 5]. Cohorts
+  share the corpus, the diagnostic and the misconception history, so a course
+  row per cohort would fragment all three.
+* **Unlink is not delete**: after unlinking from batch 4, CSW2 still exists,
+  still belongs to batch 5, and keeps its materials and history. A second
+  unlink is 404 rather than a silent success.
+* **`admission_batches` is untouched** — it stays a free list of admission
+  YEARS that PUT /term writes and admin-006's delete guard reads. `batch_ids`
+  is the real foreign-key link.
+
+=== 2. UI ================================================================
+  dashboard tile: {"unclaimedShown":true,"snippet":"17 materials · 5 in no batch"}
+  batch cards show subject counts: ["2030–2034 · 1 subject","2029–2033 · 1 subject"]
+  subjects panel: {"panelOpen":true,"listedSubject":"CSW2","hasRemove":true}
+  dropdown: picked DLD — Digital Logic Design
+  after add: {"dldInList":true,"counts":["2030–2034 · 2 subjects", ...]}
+  after remove (API truth): batch counts [(5, 1), (4, 1)] — back to 1
+  subject cards: {"inNoBatchShown":true,"cohortChip":"BTECH CS&E 2030",
+                  "admissionYearsRelabelled":true}
+Each batch card has a Subjects toggle listing that cohort's subjects with
+Remove, plus "add existing" (a dropdown of subjects not already linked) and
+"create new" (code / title / semester, filed under the batch's department).
+Subject cards in Subjects & Materials show cohort chips, or "In no batch yet".
+The old "· batches 2024, 2025" line now reads "admission years" so the two
+concepts cannot be confused on screen.
+Screenshots: 1-batches-with-counts.png, 2-subjects-panel.png, 3-after-add.png,
+4-subject-cards.png.
+
+=== 3. Tests added (backend/tests/test_admin_batches.py) =================
+  linking an existing subject puts it in the batch
+  creating a subject inherits the batch department (and upper-cases the code)
+  the same subject cannot be added to one batch twice (409)
+  a duplicate course code is refused rather than silently linked (409)
+  one subject can serve several cohorts
+  unlinking leaves the subject and the other cohorts alone
+  unlinking something not in the batch is a 404, not a silent ok
+  the link body demands exactly one form (course_id XOR code+title)
+  batch courses are listed by semester then code, unset semester last
+
+=== Cleanup ==============================================================
+All test rows removed: 0 batches, ZZ-TST-OS deleted, 6 courses (the seeded
+set) intact.
+
+=== What testing found that reading would not have =======================
+- **`querySelectorAll("button")` matching "Subjects" hit the sidebar's
+  "Subjects & Materials" first.** Scoping to `article button` with an exact
+  trim match fixed it — the third variant of the label-matching trap this
+  build has produced.
+- **A dropdown option counts as page text.** Waiting for "DLD" to appear in
+  `document.body.textContent` passed the moment the SELECT was populated,
+  long before anything was linked; the assertion has to target the list
+  element, not the page.
+- Two readings in the first UI pass were sampled before the refetch landed
+  (a stale "2 subjects" and a missed tile). Both were confirmed correct
+  against the API rather than assumed — the remote DB's latency means every
+  post-mutation assertion needs a data-shaped wait.

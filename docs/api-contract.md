@@ -275,12 +275,17 @@ Structure (`admin-002`):
 | `GET` | `/admin/courses/{course_id}` | single `Course` |
 
 ```json
-// Course
+// Course  ("course" and "subject" are the same thing; the UI says subject)
 { "id": 3, "code": "PH101", "title": "Mechanics", "department_id": 1,
   "prerequisite_courses": [ { "id": 1, "code": "PH000", "title": "Class 12 Physics" } ],
-  "semester": 3, "admission_batches": [2024, 2025],
+  "semester": 3, "admission_batches": [2024, 2025], "batch_ids": [7],
   "term_start": "2025-08-01", "term_end": "2025-12-15" }
 ```
+> **`batch_ids` vs `admission_batches` (`admin-010`).** `batch_ids` are real
+> `Batch` rows — the cohorts this subject is taught to. `admission_batches` is
+> the older free list of admission *years* that `PUT .../term` writes and
+> `admin-006`'s delete guard reads; it is not a foreign key and is left alone.
+> When you want "which cohorts take this subject", read `batch_ids`.
 
 #### When a course runs, and who takes it — `admin-005`
 
@@ -324,6 +329,25 @@ existing teacher. Teachers never sign themselves up.
 | `GET` | `/admin/courses/{course_id}/teachers` | `{ items: [{ user_id, email, full_name, assigned_at }] }` |
 | `POST` | `/admin/courses/{course_id}/teachers` | `{ email, full_name? }` → `201 { teacher, password? }` — `password` present **only** when the account was created now; share it with the teacher, it is never shown again. Linking an existing teacher returns `password: null`. 409 if the email belongs to a student or admin. |
 | `DELETE` | `/admin/courses/{course_id}/teachers/{user_id}` | `204` — unassigns; the account stays for other subjects. 404 if not assigned. |
+
+#### Which subjects a batch takes — `admin-010`
+
+A subject (`Course`) is linked to the cohorts that take it. **Many-to-many on
+purpose**: one subject is commonly taught to several cohorts at once — they
+share the corpus, the diagnostic and the misconception history, and
+duplicating the row per cohort would fragment all three.
+
+| Method | Path | Notes |
+|---|---|---|
+| `GET` | `/admin/batches/{batch_id}/courses` | `{ items: [Course] }` — the subjects this cohort takes, by semester then code |
+| `POST` | `/admin/batches/{batch_id}/courses` | `{ course_id }` links an existing subject, **or** `{ code, title, semester? }` creates one in the batch's department and links it. Exactly one form. → `201 Course`. 409 if already linked or the code is taken. |
+| `DELETE` | `/admin/batches/{batch_id}/courses/{course_id}` | `204` — unlinks only. The subject, its materials and its history survive; it may still be linked to other cohorts. |
+
+`POST /admin/courses` also accepts an optional `batch_id`, which creates the
+subject and links it in one call.
+
+`GET /admin/overview` gains `courses_without_batch` — subjects not yet claimed
+by any cohort, which is the number an admin is actually chasing during setup.
 
 All four fields are **nullable and were added late**, so every course that predates
 them keeps working: `semester`, `term_start` and `term_end` come back `null` and
@@ -936,6 +960,7 @@ Every shape above is final enough to mock. Suggested order, matching `feature_li
 | 2026-08-24 | Golden path complete. `POST /student/practice/generate` (needs `gap_id`; also returns `concept` and `source: generated\|seeded`), `POST /student/practice/{id}/answer`, `POST /student/misconception-diagnosis/{id}/confirm`, `GET /teacher/misconceptions/heatmap`, `GET /teacher/uncertainty-flags` and its `/resolve`. `student-004` Show Source needs no endpoint — it is the `Citation` object. |
 | 2026-08-24 | **`TutorResponse` gains `speech_text`** (`a11y-001`, backend half). Read-aloud must use it instead of `body`: `body` is markdown, and `[4]` is spoken as "four" mid-sentence. Present on every outcome, including refusals. |
 | 2026-08-24 | `i18n-001` built and verified live: Hindi in, Hindi out, identical citations and an identical alignment score. Response `language` now reports what was produced. Both routes fall back to `User.preferred_language` instead of defaulting to `en`. |
+| 2026-08-26 | **`admin-010`** (owner-directed; Sushree editing person 6's file). Subjects are now linked to cohorts: `GET/POST /admin/batches/{id}/courses`, `DELETE /admin/batches/{id}/courses/{course_id}`, optional `batch_id` on `POST /admin/courses`, `batch_ids` on the `Course` object, `courses_without_batch` on `/admin/overview`. Many-to-many by design. `admission_batches` is untouched and still means admission *years*. |
 | 2026-08-26 | **`admin-009` + `auth-004`** (owner-directed restructure; Sushree editing, normally person 6's file). **Auth:** signup is now **student-only** (`university?`, `roll_number?` added, `role` removed) — teachers are admin-issued. **Admin, new "Batches" surface:** `GET/POST /admin/batches`, `POST /admin/batches/{id}/curriculum` (pdf/docx), `POST /admin/batches/{id}/curriculum/reuse`, `GET /admin/overview` (dashboard metrics). **Teacher assignment per subject:** `GET/POST /admin/courses/{id}/teachers`, `DELETE /admin/courses/{id}/teachers/{user_id}`. `User` gains nullable `university` and `roll_number`. No existing endpoint changed shape. |
 | 2026-08-26 | **`tutor-002`** (owner-directed; Sushree edited this file, normally person 6's): `insufficient_evidence` may now carry an optional `beyond_syllabus` block — see the note at `TutorResponse`. New endpoint **`GET /tutor/history`** returning the signed-in student's own transcript; `POST /tutor/ask` writes it. Neither changes any existing field or outcome name. |
 | 2026-08-24 | Admin built: `admin-002` departments/courses/prerequisites, `admin-001` material upload with archiving-not-deleting and version history, `admin-003` audit log. The `sourced_content` audit actions are the documented verbs (`.approve`/`.reject`), not the resulting status. The two ingest endpoints are marked NOT BUILT. |

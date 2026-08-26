@@ -54,7 +54,7 @@ from ..config import REPO_ROOT
 from ..db import get_db
 from ..deps import admin_only
 from ..services import ingest
-from ..models import AuditLog, Chunk, Course, Department, Material, ReteachUnit, User
+from ..models import AuditLog, Batch, Chunk, Course, Department, Material, ReteachUnit, User
 from ..schemas import CourseIn, CourseTermIn, DepartmentIn
 
 router = APIRouter(prefix="/admin", tags=["admin"])
@@ -96,6 +96,9 @@ def _course_out(course: Course) -> dict:
         # "this term runs all year" must not look the same to admin-006.
         "semester": course.semester,
         "admission_batches": list(course.admission_batches or []),
+        # admin-010. The real cohort link, as opposed to admission_batches
+        # above, which is a free list of admission YEARS.
+        "batch_ids": [b.id for b in course.batches],
         "term_start": course.term_start.isoformat() if course.term_start else None,
         "term_end": course.term_end.isoformat() if course.term_end else None,
     }
@@ -174,8 +177,22 @@ def create_course(
             detail={"code": "bad_request", "message": "No such department."},
         )
 
+    # admin-010: an optional cohort to file the new subject under. Resolved
+    # before the insert so a bad id fails loudly rather than leaving an
+    # unlinked course behind.
+    batch = None
+    if body.batch_id is not None:
+        batch = db.get(Batch, body.batch_id)
+        if batch is None:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail={"code": "bad_request", "message": "No such batch."},
+            )
+
     course = Course(code=body.code, title=body.title,
                     department_id=body.department_id)
+    if batch is not None:
+        course.batches.append(batch)
     db.add(course)
     db.flush()
 

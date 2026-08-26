@@ -1141,6 +1141,28 @@
       ],
       "evidence": "evidence/admin-009/verification.txt",
       "notes": "StudentLogin.tsx deleted -- /login is now the unified screen using the admin login's design. Roll-number verification against a college roll list is deliberately not built ('all are welcome'). SignupIn has no role field and auth.signup hardcodes role='student'; two tests guard that."
+    },
+    {
+      "id": "admin-010",
+      "priority": 53,
+      "area": "admin",
+      "title": "Subjects belong to batches (cohort ↔ course link)",
+      "user_visible_behavior": "Each batch card lists the subjects that cohort takes, with an inline way to add one (pick an existing subject or create a new one in the batch's department) and to unlink it. Every subject card shows which cohorts take it, and the dashboard counts subjects no cohort has claimed yet.",
+      "status": "passing",
+      "depends_on": [
+        "admin-009",
+        "admin-002"
+      ],
+      "demo_mode": "live",
+      "verification": [
+        "GET /admin/batches/{id}/courses returns the batch's subjects ordered by semester then code.",
+        "POST with {course_id} links an existing subject; POST with {code,title,semester?} creates one in the batch's department and links it; a second link of the same pair is 409.",
+        "DELETE unlinks only: the course row, its materials and its history survive and other batches keep it.",
+        "Course objects carry batch_ids and /admin/overview reports courses_without_batch.",
+        "In the UI: add and remove a subject on a batch, and see the batch chips on the subject card."
+      ],
+      "evidence": "evidence/admin-010/verification.txt",
+      "notes": "Many-to-many on purpose: one subject is commonly taught to several cohorts at once and they share the corpus, diagnostic and misconception history -- a row per cohort would fragment all three. `admission_batches` (a free list of admission YEARS, read by admin-006's delete guard) is deliberately left alone; batch_ids is the real foreign-key link."
     }
   ]
 }

@@ -36,13 +36,14 @@ from ..deps import admin_only
 from ..models import (
     AuditLog,
     Batch,
+    batch_courses,
     Course,
     CourseTeacher,
     Department,
     Material,
     User,
 )
-from ..schemas import BatchIn, CurriculumReuseIn, TeacherAddIn
+from ..schemas import BatchCourseIn, BatchIn, CurriculumReuseIn, TeacherAddIn
 from ..security import hash_password
 
 router = APIRouter(prefix="/admin", tags=["admin"])
@@ -71,6 +72,7 @@ def _batch_out(b: Batch) -> dict:
         "department": {"id": b.department_id, "name": b.department.name},
         "start_year": b.start_year,
         "end_year": b.end_year,
+        "course_count": len(b.courses),
         "curriculum": (
             {
                 "name": b.curriculum_name,
@@ -249,6 +251,141 @@ def reuse_curriculum(
     return _batch_out(batch)
 
 
+# --- which subjects a batch takes (admin-010) --------------------------------
+
+def _course_brief(c: Course) -> dict:
+    """The subject as a batch view needs it.
+
+    Deliberately not admin._course_out: that carries the prerequisite graph
+    and the term window, which this list does not use and would pay for on
+    every row.
+    """
+    return {
+        "id": c.id,
+        "code": c.code,
+        "title": c.title,
+        "department_id": c.department_id,
+        "semester": c.semester,
+        "batch_ids": [b.id for b in c.batches],
+    }
+
+
+@router.get("/batches/{batch_id}/courses")
+def list_batch_courses(
+    batch_id: int,
+    db: OrmSession = Depends(get_db),
+    user: User = Depends(admin_only),
+) -> dict:
+    batch = db.get(Batch, batch_id)
+    if batch is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={"code": "not_found", "message": "No such batch."},
+        )
+    # Semester order, then code: that is the order a curriculum is read in,
+    # and an unset semester sorts last rather than first.
+    rows = sorted(batch.courses, key=lambda c: (c.semester is None, c.semester or 0, c.code))
+    return {"items": [_course_brief(c) for c in rows]}
+
+
+@router.post("/batches/{batch_id}/courses", status_code=status.HTTP_201_CREATED)
+def add_batch_course(
+    batch_id: int,
+    body: BatchCourseIn,
+    db: OrmSession = Depends(get_db),
+    user: User = Depends(admin_only),
+) -> dict:
+    """Link an existing subject to this cohort, or create one and link it.
+
+    Exactly one form: `course_id` OR (`code` + `title`). A new subject is
+    created in the BATCH's department -- the admin picked the cohort, so
+    asking them to repeat its department would be a question with one right
+    answer.
+    """
+    batch = db.get(Batch, batch_id)
+    if batch is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={"code": "not_found", "message": "No such batch."},
+        )
+
+    if body.course_id is not None:
+        course = db.get(Course, body.course_id)
+        if course is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail={"code": "not_found", "message": "No such subject."},
+            )
+    else:
+        code = (body.code or "").strip().upper()
+        title = (body.title or "").strip()
+        if not code or not title:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail={"code": "validation_error",
+                        "message": "Send course_id, or code and title to create a subject."},
+            )
+        if db.scalar(select(Course).where(Course.code == code)) is not None:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail={"code": "conflict",
+                        "message": f"A subject with code {code} already exists."},
+            )
+        course = Course(
+            code=code,
+            title=title,
+            department_id=batch.department_id,
+            semester=body.semester,
+        )
+        db.add(course)
+        db.flush()
+
+    if any(b.id == batch.id for b in course.batches):
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={"code": "conflict",
+                    "message": "That subject is already in this batch."},
+        )
+
+    course.batches.append(batch)
+    db.flush()
+    _audit(db, user, "batch.course.add", f"batch:{batch.id}",
+           {"course_id": course.id, "code": course.code})
+    return _course_brief(course)
+
+
+@router.delete(
+    "/batches/{batch_id}/courses/{course_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+def remove_batch_course(
+    batch_id: int,
+    course_id: int,
+    db: OrmSession = Depends(get_db),
+    user: User = Depends(admin_only),
+) -> Response:
+    """Unlink, never delete.
+
+    The subject keeps its materials, its chunks and its whole misconception
+    history, and any other cohort taking it is untouched. Deleting a course
+    because one cohort stopped taking it would destroy citations students
+    still hold.
+    """
+    batch = db.get(Batch, batch_id)
+    course = db.get(Course, course_id)
+    if batch is None or course is None or not any(b.id == batch_id for b in course.batches):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={"code": "not_found",
+                    "message": "That subject is not in this batch."},
+        )
+    course.batches = [b for b in course.batches if b.id != batch_id]
+    db.flush()
+    _audit(db, user, "batch.course.remove", f"batch:{batch_id}",
+           {"course_id": course_id, "code": course.code})
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
 # --- teachers per subject ----------------------------------------------------
 
 def _teacher_out(ct: CourseTeacher) -> dict:
@@ -407,6 +544,13 @@ def overview(
             )
         ) or 0
     )
+    courses_without_batch = int(
+        db.scalar(
+            select(func.count())
+            .select_from(Course)
+            .where(~Course.id.in_(select(batch_courses.c.course_id).distinct()))
+        ) or 0
+    )
     by_status = db.execute(
         select(Material.ingest_status, func.count()).group_by(Material.ingest_status)
     ).all()
@@ -418,5 +562,6 @@ def overview(
         "teachers_assigned": teachers_assigned,
         "teacher_accounts": teacher_accounts,
         "courses_without_teachers": courses_without_teachers,
+        "courses_without_batch": courses_without_batch,
         "ingest_summary": {s: n for s, n in by_status},
     }

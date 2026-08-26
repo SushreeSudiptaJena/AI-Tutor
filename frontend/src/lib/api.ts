@@ -93,11 +93,24 @@ export type BatchDto = {
   department: { id: number; name: string };
   start_year: number;
   end_year: number;
+  course_count: number;
   curriculum: { name: string; reused_from_batch_id: number | null } | null;
+};
+
+/** admin-010. A subject as a batch view needs it -- no prerequisite graph,
+ *  no term window; those live on the full Course. */
+export type BatchCourse = {
+  id: number;
+  code: string;
+  title: string;
+  department_id: number | null;
+  semester: number | null;
+  batch_ids: number[];
 };
 
 export type OverviewDto = {
   batches: number;
+  courses_without_batch: number;
   departments: number;
   materials: number;
   courses: number;
@@ -235,6 +248,8 @@ export type Course = {
   prerequisite_courses: { id: number; code: string; title: string }[];
   semester: number | null;
   admission_batches: number[];
+  /** admin-010: the cohorts that take this subject (real Batch ids). */
+  batch_ids: number[];
   term_start: string | null;
   term_end: string | null;
 };
@@ -718,3 +733,17 @@ export const addCourseTeacher = (courseId: number, email: string, fullName?: str
 
 export const removeCourseTeacher = (courseId: number, userId: number) =>
   api<void>(`/admin/courses/${courseId}/teachers/${userId}`, { method: "DELETE" });
+
+// --- subjects in a batch (admin-010) ---------------------------------------
+
+export const getBatchCourses = (batchId: number) =>
+  api<{ items: BatchCourse[] }>(`/admin/batches/${batchId}/courses`).then((r) => r.items);
+
+/** Link an existing subject, or create one in the batch's department. */
+export const addBatchCourse = (
+  batchId: number,
+  body: { course_id: number } | { code: string; title: string; semester?: number },
+) => api<BatchCourse>(`/admin/batches/${batchId}/courses`, { method: "POST", body });
+
+export const removeBatchCourse = (batchId: number, courseId: number) =>
+  api<void>(`/admin/batches/${batchId}/courses/${courseId}`, { method: "DELETE" });

@@ -6,6 +6,7 @@ import {
   clearToken,
   createCourse,
   deleteMaterial,
+  getBatches,
   getLanguages,
   getMe,
   listAuditLog,
@@ -19,6 +20,7 @@ import {
 } from "@/lib/api";
 import type {
   AuditRow,
+  BatchDto,
   Course,
   Department,
   Material,
@@ -574,12 +576,14 @@ function CourseCard({
   otherCourses,
   refresh,
   onTeachers,
+  allBatches,
 }: {
   course: Course;
   deptName: string;
   otherCourses: Course[];
   refresh: () => void;
   onTeachers: () => void;
+  allBatches: BatchDto[];
 }) {
   const [editing, setEditing] = useState(false);
   const [semester, setSemester] = useState(course.semester ?? "");
@@ -629,9 +633,32 @@ function CourseCard({
             {deptName}
             {course.semester !== null && <> · semester {course.semester}</>}
             {course.admission_batches.length > 0 && (
-              <> · batches {course.admission_batches.join(", ")}</>
+              <> · admission years {course.admission_batches.join(", ")}</>
             )}
           </p>
+          {/* admin-010: the real cohorts, as opposed to admission_batches
+              above, which is a free list of YEARS the term editor writes. */}
+          <div className="flex flex-wrap gap-2 mt-2">
+            {course.batch_ids.length === 0 ? (
+              <span className="font-label-sm text-label-sm text-on-surface-variant italic">
+                In no batch yet
+              </span>
+            ) : (
+              course.batch_ids.map((bid) => {
+                const b = allBatches.find((x) => x.id === bid);
+                return (
+                  <span
+                    key={bid}
+                    className="px-3 py-1 rounded-full bg-tertiary/15 border border-tertiary/30 font-label-sm text-label-sm text-tertiary"
+                  >
+                    {b
+                      ? `${b.major.toUpperCase()} ${b.department.name.split(" ").map((w) => w[0]).join("")} ${b.start_year}`
+                      : `Batch #${bid}`}
+                  </span>
+                );
+              })
+            )}
+          </div>
         </div>
 
         <div className="flex items-center gap-4">
@@ -935,11 +962,16 @@ function CourseStructureView({
   const [departments, setDepartments] = useState<Department[]>([]);
   // admin-009: per-subject teacher assignment dialog
   const [teachersFor, setTeachersFor] = useState<Course | null>(null);
+  // admin-010: so a subject card can name the cohorts that take it
+  const [batches, setBatches] = useState<BatchDto[]>([]);
 
   useEffect(() => {
     listDepartments()
       .then((r) => setDepartments(r.items))
       .catch(() => setDepartments([]));
+    getBatches()
+      .then(setBatches)
+      .catch(() => setBatches([]));
   }, []);
 
   const deptName = (id: number | null) =>
@@ -974,6 +1006,7 @@ function CourseStructureView({
                   otherCourses={courses}
                   refresh={refresh}
                   onTeachers={() => setTeachersFor(c)}
+                  allBatches={batches}
                 />
               ))}
             </div>

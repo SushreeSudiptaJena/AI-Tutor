@@ -108,6 +108,22 @@ class BatchIn(BaseModel):
     start_year: int
 
 
+class BatchCourseIn(BaseModel):
+    """Link an existing subject, or create one. Exactly one form (admin-010)."""
+
+    course_id: int | None = None
+    code: str | None = None
+    title: str | None = None
+    semester: int | None = None
+
+    @model_validator(mode="after")
+    def _one_form(self):
+        creating = bool((self.code or "").strip() and (self.title or "").strip())
+        if (self.course_id is None) == (not creating):
+            raise ValueError("send course_id, or code and title -- not both, not neither")
+        return self
+
+
 class CurriculumReuseIn(BaseModel):
     from_batch_id: int
 
@@ -370,6 +386,8 @@ class CourseIn(BaseModel):
     title: str
     department_id: int | None = None
     prerequisite_course_ids: list[int] = []
+    # admin-010: create the subject and link it to a cohort in one call.
+    batch_id: int | None = None
 
     @field_validator("code")
     @classmethod
