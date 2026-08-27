@@ -171,6 +171,10 @@ export type TutorResponse =
       body: string;
       citations: Citation[];
       evidence: EvidenceReport;
+      /** tutor-003: present ONLY when a follow-up was rewritten into a
+       * standalone question. Absent on the common case -- never render an
+       * empty label. */
+      resolved_question?: string;
     }
   | {
       outcome: "insufficient_evidence";
@@ -179,6 +183,10 @@ export type TutorResponse =
       citations: [];
       evidence: EvidenceReport;
       uncertainty_flag_id: number;
+      /** tutor-003: present ONLY when a follow-up was rewritten into a
+       * standalone question. Absent on the common case -- never render an
+       * empty label. */
+      resolved_question?: string;
       /** tutor-002: help from general knowledge, clearly labelled. The UI must
        * render it under its `note` warning — never with an alignment badge. */
       beyond_syllabus?: { body: string; note: string };
@@ -190,6 +198,10 @@ export type TutorResponse =
       hints: string[];
       citations: Citation[];
       matched_assignment: { material_id: number; title: string };
+      /** tutor-003: present ONLY when a follow-up was rewritten into a
+       * standalone question. Absent on the common case -- never render an
+       * empty label. */
+      resolved_question?: string;
     };
 
 // --- baseline endpoints (infra-002) ----------------------------------------

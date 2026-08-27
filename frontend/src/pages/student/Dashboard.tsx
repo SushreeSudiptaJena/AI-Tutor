@@ -1310,6 +1310,16 @@ function TutorView() {
               </p>
             ) : (
               <div key={i}>
+                {/* tutor-003. The student typed "explain that more simply";
+                    this is the standalone question that was actually retrieved
+                    and scored. Shown so a wrong resolution is visible instead
+                    of the tutor silently answering something else. Absent on
+                    a question that needed no rewriting, which is most of them. */}
+                {m.response.resolved_question && (
+                  <p className="mb-xs text-label-sm text-on-surface-variant">
+                    Answering: {m.response.resolved_question}
+                  </p>
+                )}
                 <TutorCard response={m.response} />
               </div>
             ),
