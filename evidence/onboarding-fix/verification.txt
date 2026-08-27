@@ -1,0 +1,50 @@
+Onboarding flow correction — 2026-08-27
+Owner report: "/onboarding/1 shouldn't have an admin option, and the page must
+not be displayed for a teacher — that's part of signup, and teachers log in
+directly. Same for a student who is signing in: only after signup."
+
+VERIFIED (headless Edge, live):
+  teacher forced to /onboarding/1 ends at: /teacher
+  existing student signing in lands at:    /dashboard
+  SIGNUP step 1: {"path":"/onboarding/1","hasAdminOption":false,
+                  "roleCards":["Student"],"teacherNote":true}
+  step 2 continues into: /onboarding/course   (was /login before)
+
+WHAT WAS WRONG
+1. The Admin card. Admin accounts are seeded and there is no admin signup, so
+   the option could never do anything -- and the answer was discarded anyway
+   ("You can later save selectedRole").
+2. The page was reachable by anyone. /onboarding/1 and /2 had NO guard.
+3. **The admin login door sent every non-admin to /onboarding/1.** A teacher
+   or a returning student who used /admin/login was shown "Who are you?"
+   instead of their console. This is the bug behind the report.
+4. Two further bugs found while fixing it, neither reported:
+   * both welcome steps dead-ended at navigate("/login") -- a student who
+     signed up and walked them was returned to the login screen they had just
+     come through, which reads as "your signup failed";
+   * RequireAuth sent a wrong-role user to /login, so a signed-in teacher who
+     typed the URL was asked to log in again.
+
+WHAT CHANGED
+* Onboarding1: Admin card deleted. The Teacher card is now a NOTE, not a
+  choice: "Your department admin creates your account and shares your
+  password — just log in, no signup needed." A card that cannot be acted on
+  is worse than a sentence that explains why.
+* /onboarding/1 and /2 are RequireAuth role="student", and RequireAuth now
+  redirects a wrong-role user to their OWN surface (/admin, /teacher,
+  /dashboard) rather than to a login screen.
+* Signup -> /onboarding/1 -> /onboarding/2 -> /onboarding/course ->
+  diagnostic. The welcome steps are reachable only from signup.
+* Both admin and unified login doors route by role: admin -> /admin,
+  teacher -> /teacher, student -> /dashboard (or /onboarding/course when not
+  yet enrolled). Neither ever routes into the welcome steps.
+
+LANDING PAGE (evidence/onboarding-fix/landing.png)
+Cream page, serif headline "The tutor that knows what you haven't learned
+yet.", a "Log in" pill top-right, and two doors:
+  * STUDENTS & TEACHERS -> /login  ("Take the diagnostic, see your gaps, get
+    lessons grounded in your course books. Teachers: sign in with the
+    password your admin issued.")
+  * ADMIN CONSOLE -> /admin/login  ("Create batches, upload curriculum and
+    materials, assign teachers, read the audit log.")
+Footer: "Every answer is evidence-checked against the approved course corpus."

@@ -26,11 +26,13 @@ export default function Login() {
 
       setToken(token);
 
-      if (user.role === "admin") {
-        navigate("/admin");
-      } else {
-        navigate("/onboarding/1");
-      }
+      // Route by role. This door used to send every non-admin to
+      // /onboarding/1 -- the signup welcome steps -- so a teacher or a
+      // returning student logging in here was shown "Who are you?" instead
+      // of their console.
+      if (user.role === "admin") navigate("/admin");
+      else if (user.role === "teacher") navigate("/teacher");
+      else navigate(user.course_id ? "/dashboard" : "/onboarding/course");
     } catch (err) {
       setError(
         err instanceof ApiError

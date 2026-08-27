@@ -40,7 +40,8 @@ export default function Signup() {
         roll_number: rollNumber.trim() || undefined,
       });
       setToken(token);
-      navigate("/onboarding/course");
+      // the welcome steps are part of SIGNUP, and only of signup
+      navigate("/onboarding/1");
     } catch (err) {
       setError(
         err instanceof ApiError ? err.message : "Couldn't sign up. Try again.",

@@ -64,13 +64,14 @@ export default function Onboarding2() {
     );
   };
 
+  // Both paths go ON into the app. They used to return a freshly signed-up
+  // student to the login screen, which read as "your signup failed".
   const handleContinue = () => {
-    // Later you can save selectedOptions to your backend/context.
-    navigate("/login");
+    navigate("/onboarding/course");
   };
 
   const handleSkip = () => {
-    navigate("/login");
+    navigate("/onboarding/course");
   };
 
   return (

@@ -67,7 +67,19 @@ export default function RequireAuth({
   }
 
   if (role && user?.role !== role) {
-    return <Navigate to="/login" replace state={{ wrongRole: true }} />;
+    // Send them to their OWN surface, not to a login screen: they are signed
+    // in, and asking a logged-in teacher to log in again reads as "your
+    // session broke". A student who types /admin still lands somewhere they
+    // can use.
+    const home =
+      user?.role === "admin"
+        ? "/admin"
+        : user?.role === "teacher"
+          ? "/teacher"
+          : user?.course_id
+            ? "/dashboard"
+            : "/onboarding/course";
+    return <Navigate to={home} replace state={{ wrongRole: true }} />;
   }
 
   return children;

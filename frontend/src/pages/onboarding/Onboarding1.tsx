@@ -1,7 +1,13 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-type Role = "student" | "teacher" | "admin";
+/**
+ * auth-004: signup is student-only. An admin account is seeded and a teacher
+ * account is issued by their department admin (admin-009), so neither can
+ * ever reach this screen -- it is part of the SIGNUP path, and only a
+ * signed-in student gets here (guarded in App.tsx).
+ */
+type Role = "student";
 
 export default function Onboarding1() {
   const navigate = useNavigate();
@@ -12,12 +18,14 @@ export default function Onboarding1() {
   };
 
   const handleContinue = () => {
-    // You can later save selectedRole to your backend/context here.
     navigate("/onboarding/2");
   };
 
+  // Skipping the welcome steps must still land in the app: this used to send
+  // a freshly signed-up student back to the login screen they had just come
+  // through.
   const handleSkip = () => {
-    navigate("/login");
+    navigate("/onboarding/course");
   };
 
   return (
@@ -91,91 +99,32 @@ export default function Onboarding1() {
               </div>
             </button>
 
-            {/* Teacher */}
-            <button
-              type="button"
-              onClick={() => selectRole("teacher")}
-              className={`role-card glass-card rounded-[24px] p-card-inner-padding text-left flex flex-col items-start gap-4 border transition-all duration-300 group hover:-translate-y-1 focus:outline-none ${
-                selectedRole === "teacher"
-                  ? "border-brand-lavender/50 glow-active focus:ring-2 focus:ring-brand-lavender/50"
-                  : "border-outline-variant focus:ring-2 focus:ring-brand-lavender/30"
-              }`}
-            >
-              <div className="w-12 h-12 rounded-full bg-brand-orange/10 flex items-center justify-center text-brand-orange/80 group-hover:text-brand-orange transition-colors">
+            {/* Teachers cannot sign up (auth-004): their department admin
+                issues the account. Saying so here is friendlier than a card
+                that would do nothing if clicked. */}
+            <div className="glass-card rounded-[24px] p-card-inner-padding flex flex-col items-start gap-4 border border-outline-variant/40 opacity-80">
+              <div className="w-12 h-12 rounded-full bg-brand-teal/5 flex items-center justify-center text-brand-teal">
                 <span
                   className="material-symbols-outlined text-3xl"
                   style={{ fontVariationSettings: "'FILL' 1" }}
                 >
-                  supervisor_account
+                  school
                 </span>
               </div>
 
               <div>
                 <h3 className="text-headline-sm font-headline-sm text-on-surface mb-2">
-                  Teacher
+                  Teaching here?
                 </h3>
 
                 <p className="text-body-md font-body-md text-on-surface-variant leading-relaxed">
-                  I want to guide, create curriculum, and monitor learners'
-                  academic journeys.
+                  Your department admin creates your account and shares your
+                  password — just log in, no signup needed.
                 </p>
               </div>
+            </div>
 
-              <div
-                className={`mt-auto pt-4 w-full flex justify-end check-icon transition-opacity ${
-                  selectedRole === "teacher"
-                    ? "opacity-100"
-                    : "opacity-0"
-                }`}
-              >
-                <span className="material-symbols-outlined text-brand-lavender">
-                  check_circle
-                </span>
-              </div>
-            </button>
 
-            {/* Admin */}
-            <button
-              type="button"
-              onClick={() => selectRole("admin")}
-              className={`role-card glass-card rounded-[24px] p-card-inner-padding text-left flex flex-col items-start gap-4 border transition-all duration-300 group hover:-translate-y-1 focus:outline-none ${
-                selectedRole === "admin"
-                  ? "border-brand-lavender/50 glow-active focus:ring-2 focus:ring-brand-lavender/50"
-                  : "border-outline-variant focus:ring-2 focus:ring-brand-lavender/30"
-              }`}
-            >
-              <div className="w-12 h-12 rounded-full bg-brand-teal/5 flex items-center justify-center text-brand-teal group-hover:text-brand-teal transition-colors">
-                <span
-                  className="material-symbols-outlined text-3xl"
-                  style={{ fontVariationSettings: "'FILL' 1" }}
-                >
-                  admin_panel_settings
-                </span>
-              </div>
-
-              <div>
-                <h3 className="text-headline-sm font-headline-sm text-on-surface mb-2">
-                  Admin
-                </h3>
-
-                <p className="text-body-md font-body-md text-on-surface-variant leading-relaxed">
-                  I manage the platform — uploading source material, updates,
-                  and content.
-                </p>
-              </div>
-
-              <div
-                className={`mt-auto pt-4 w-full flex justify-end check-icon transition-opacity ${
-                  selectedRole === "admin"
-                    ? "opacity-100"
-                    : "opacity-0"
-                }`}
-              >
-                <span className="material-symbols-outlined text-brand-lavender">
-                  check_circle
-                </span>
-              </div>
-            </button>
           </div>
 
           {/* Footer */}

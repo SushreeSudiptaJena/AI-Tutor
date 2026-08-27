@@ -34,8 +34,26 @@ export default function App() {
         */}
         <Route path="/forgot-password" element={<ForgotPassword />} />
 
-        <Route path="/onboarding/1" element={<Onboarding1 />} />
-        <Route path="/onboarding/2" element={<Onboarding2 />} />
+        {/* The welcome steps belong to SIGNUP. Guarded as student-only so a
+            teacher or admin who types the URL is bounced to their own
+            surface rather than being asked "who are you?" -- teachers are
+            issued their account by an admin and never sign up (auth-004). */}
+        <Route
+          path="/onboarding/1"
+          element={
+            <RequireAuth role="student">
+              <Onboarding1 />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/onboarding/2"
+          element={
+            <RequireAuth role="student">
+              <Onboarding2 />
+            </RequireAuth>
+          }
+        />
 
         {/* The student flow past login. Guarded server-side via /auth/me:
             these pages call student-only endpoints. */}
