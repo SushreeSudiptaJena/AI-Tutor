@@ -56,3 +56,23 @@ $ python -m uvicorn app.main:app --host 0.0.0.0 --port $PORT --app-dir backend
 
 NOT COVERED: the Render service itself has not been created. No public URL
 exists and the golden path has never run on Render. infra-007 stays in_progress.
+
+=== 5. live deploy verification, 2026-08-27, against https://ai-tutor-80by.onrender.com ===
+   /health                    -> {"status":"ok","db":"ok"}  (0.63s, warm)
+   8 browser navigations      -> HTTP 200 text/html (/, /login, /admin, /admin/login,
+                                 /teacher, /dashboard, /onboarding/course, /typo-route)
+   5 api fetches              -> application/json; /teacher/nope and /student/gaps/9999 are 404
+   /assets/index-BpFiJM1E.js  -> HTTP 200  508734 bytes
+   /assets/index-CuAz9IP6.css -> HTTP 200  95381 bytes
+   provider chain             -> groq -> gemini -> glm -> groq(alt) -> glm-coding -> mock
+   llm cache on deploy        -> entries 0, bytes 0 (ships empty, as designed)
+   login as asha@example.edu  -> 200, 64-char token
+   GET /tutor/history         -> 4 stored turns (tutor-002 persistence confirmed in prod)
+
+   The served bundle hash index-BpFiJM1E.js MATCHES the local build made with
+   .env.local moved aside -- which is what proves .env.production took effect on
+   Render and the frontend is calling relative same-origin paths.
+
+   NOT COVERED: the golden path has not been run against the public URL. That
+   mutates shared demo state, so it needs the owner's go-ahead. infra-007 is
+   BLOCKED on that, not passing.

@@ -166,6 +166,30 @@ Every tutor-generated response uses this shape. **Frontend must branch on `outco
 > `beyond_syllabus`: the guardrail refuses, it does not help around itself.
 > `beyond_syllabus` appears **only** on `POST /tutor/ask`; gap lessons keep the
 > plain refusal.
+> **Follow-ups, and `resolved_question` (`tutor-003`).** `POST /tutor/ask` is
+> still stateless per call, and still carries no conversation into the answer
+> prompt. What it does now is resolve a **follow-up** into a standalone question
+> before anything else runs: "explain that more simply" becomes "Explain model
+> managers more simply", using the last few turns of the student's own
+> `tutor_messages`. The rewrite happens **before** the guardrail, the retrieval
+> query and the evidence check, so all three keep scoring the question the
+> student meant -- a follow-up that resolves into a request for assignment code
+> is still caught by the guardrail, and the alignment badge still describes what
+> was actually asked.
+>
+> When and only when a rewrite happened, the response carries an optional
+> `"resolved_question": "<the standalone question>"` on **every** outcome. The
+> UI should surface it ("answering: ...") so a wrong resolution is visible
+> rather than silently answering something else. It is **absent** when the
+> question needed no rewriting, which is the common case -- do not render an
+> empty label. A self-contained question costs no extra model call and no extra
+> query, and every failure path (provider down, unreadable reply, a rewrite that
+> invents subject matter) falls back to the question as asked, so the worst case
+> is exactly today's behaviour.
+>
+> `GET /tutor/history` is unchanged and still stores **what the student typed**,
+> not the rewrite: the transcript is a record of the conversation, not of our
+> interpretation of it.
 > **Where the guardrail runs.** `graded_work_refused` can only be returned by
 > **`POST /tutor/ask`**. It is never returned by `/student/gaps/{id}/lesson`,
 > `/student/practice/*`, or any other route — those are driven by a concept or a
@@ -1025,6 +1049,7 @@ Every shape above is final enough to mock. Suggested order, matching `feature_li
 | 2026-08-26 | **`admin-010`** (owner-directed; Sushree editing person 6's file). Subjects are now linked to cohorts: `GET/POST /admin/batches/{id}/courses`, `DELETE /admin/batches/{id}/courses/{course_id}`, optional `batch_id` on `POST /admin/courses`, `batch_ids` on the `Course` object, `courses_without_batch` on `/admin/overview`. Many-to-many by design. `admission_batches` is untouched and still means admission *years*. |
 | 2026-08-26 | **`admin-009` + `auth-004`** (owner-directed restructure; Sushree editing, normally person 6's file). **Auth:** signup is now **student-only** (`university?`, `roll_number?` added, `role` removed) — teachers are admin-issued. **Admin, new "Batches" surface:** `GET/POST /admin/batches`, `POST /admin/batches/{id}/curriculum` (pdf/docx), `POST /admin/batches/{id}/curriculum/reuse`, `GET /admin/overview` (dashboard metrics). **Teacher assignment per subject:** `GET/POST /admin/courses/{id}/teachers`, `DELETE /admin/courses/{id}/teachers/{user_id}`. `User` gains nullable `university` and `roll_number`. No existing endpoint changed shape. |
 | 2026-08-26 | **`tutor-002`** (owner-directed; Sushree edited this file, normally person 6's): `insufficient_evidence` may now carry an optional `beyond_syllabus` block — see the note at `TutorResponse`. New endpoint **`GET /tutor/history`** returning the signed-in student's own transcript; `POST /tutor/ask` writes it. Neither changes any existing field or outcome name. |
+| 2026-08-27 | **`tutor-003`**: `TutorResponse` gains an optional `resolved_question`, present only when a follow-up was rewritten into a standalone question. Additive on every outcome -- no existing field, outcome name or endpoint changes, and a client that ignores it behaves exactly as before. See the note at `TutorResponse`. |
 | 2026-08-24 | Admin built: `admin-002` departments/courses/prerequisites, `admin-001` material upload with archiving-not-deleting and version history, `admin-003` audit log. The `sourced_content` audit actions are the documented verbs (`.approve`/`.reject`), not the resulting status. The two ingest endpoints are marked NOT BUILT. |
 | 2026-08-24 | Teacher panels built: `teacher-002` reasoning paths, `teacher-003` gap map, `teacher-005` before/after (now with `measured`/`attempts_in_window`; `delta_share` null until tested), `teacher-006` reteach suggest/patch/approve **plus new `GET /teacher/reteach`** and `GET /student/assignments`, `teacher-007` verification queue. |
 | 2026-08-24 | `GET /student/mastery` is **now built** (`student-007`) — exact shape as documented; no aggregate score, no time-on-task, and nothing countable to rebuild one from. |

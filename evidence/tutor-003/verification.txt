@@ -1,0 +1,45 @@
+tutor-003 verification -- follow-up coreference rewrite
+date: 2026-08-27
+
+=== 1. the new tests, by name ===
+  (18 test functions, 2 of them parametrized -- 25 cases total)
+    test_a_follow_up_is_recognised_as_needing_context
+    test_a_self_contained_question_does_not_need_context
+    test_a_self_contained_question_costs_no_model_call_and_no_history_read
+    test_a_stateless_call_is_never_rewritten
+    test_the_first_message_of_a_conversation_is_not_rewritten
+    test_a_follow_up_is_resolved_against_the_conversation
+    test_the_prompt_carries_the_earlier_turns
+    test_a_tutor_answer_is_excerpted_not_pasted_whole
+    test_a_provider_failure_returns_the_original_question
+    test_unreadable_json_returns_the_original_question
+    test_an_empty_rewrite_returns_the_original_question
+    test_a_history_read_that_fails_returns_the_original_question
+    test_a_rewrite_that_invents_subject_matter_is_rejected
+    test_a_rewriter_that_returns_the_message_unchanged_is_not_a_rewrite
+    test_the_guardrail_and_retrieval_see_the_RESOLVED_question
+    test_the_response_reports_what_it_actually_answered
+    test_resolved_question_is_absent_when_nothing_was_rewritten
+    test_the_transcript_stores_what_the_student_TYPED
+
+=== 2. whole suite: 385 before, 410 after ===
+410 passed in 10.61s
+
+=== 3. behaviour trace: what each stage of the pipeline receives ===
+  student typed   : 'explain that more simply'
+  guardrail saw   : 'Explain model managers more simply.'
+  retrieval saw   : 'Explain model managers more simply.'
+  evidence scored : 'Explain model managers more simply.'
+  resolved_question in response: 'Explain model managers more simply.'
+  transcript stored: ['explain that more simply']
+
+  student typed   : 'What is a QuerySet in Django?'
+  guardrail saw   : 'What is a QuerySet in Django?'
+  retrieval saw   : 'What is a QuerySet in Django?'
+  evidence scored : 'What is a QuerySet in Django?'
+  resolved_question in response: '(absent)'
+  transcript stored: ['What is a QuerySet in Django?']
+
+=== 4. cost: a self-contained question makes no extra call ===
+  self-contained question -> model calls: 0, history reads: 0, rewritten: False
+  reason: already self-contained

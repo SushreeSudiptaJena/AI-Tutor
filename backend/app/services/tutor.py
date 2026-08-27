@@ -44,7 +44,7 @@ from sqlalchemy.orm import Session as OrmSession
 from .. import prompts
 from ..models import TutorMessage, UncertaintyFlag
 from ..providers import complete
-from . import evidence, guardrail, language as lang, retrieval, speech
+from . import evidence, followup, guardrail, language as lang, retrieval, speech
 
 REFUSAL_BODY = (
     "I don't have approved course material covering this, so I won't cite any "
@@ -107,6 +107,18 @@ def ask(
     target = lang.normalise(language)
     asked_in_english = lang.to_english(question, target)
 
+    # tutor-003. A follow-up -- "explain that more simply", "why?" --
+    # means nothing on its own, and everything downstream sees only the
+    # question text. Resolving it HERE, before the guardrail, is the whole
+    # point: the guardrail, the retrieval query and the alignment score then
+    # all measure the question the student actually meant, exactly as they
+    # measure a standalone one today. Costs nothing on a self-contained
+    # question, and returns the original unchanged on any failure.
+    resolution = followup.resolve(
+        db, asked_in_english, user_id=user_id, course_id=course_id
+    )
+    asked_in_english = resolution.question
+
     # The guardrail runs before retrieval so a request to do graded work never
     # reaches an answer prompt. Its first gate is a vector search, so the
     # common case -- a question that is not homework at all -- costs one query
@@ -133,6 +145,12 @@ def ask(
             "citations": cites,
             "matched_assignment": verdict.matched_assignment,
         }
+        # tutor-003. Present only when a rewrite actually happened, so the UI
+        # can show "answering: <resolved>" and a wrong resolution is visible
+        # to the student instead of the tutor silently answering something
+        # else.
+        if resolution.rewritten:
+            out["resolved_question"] = resolution.question
         _remember(db, user_id, course_id, question, out)
         return out
 
@@ -181,6 +199,12 @@ def ask(
             "citations": cites,
             "evidence": report.to_dict(),
         }
+        # tutor-003. Present only when a rewrite actually happened, so the UI
+        # can show "answering: <resolved>" and a wrong resolution is visible
+        # to the student instead of the tutor silently answering something
+        # else.
+        if resolution.rewritten:
+            out["resolved_question"] = resolution.question
         _remember(db, user_id, course_id, question, out)
         return out
 
@@ -225,6 +249,12 @@ def ask(
     except Exception:  # noqa: BLE001 -- the refusal is complete and correct without this
         pass
 
+    # tutor-003. Present only when a rewrite actually happened, so the UI
+    # can show "answering: <resolved>" and a wrong resolution is visible
+    # to the student instead of the tutor silently answering something
+    # else.
+    if resolution.rewritten:
+        out["resolved_question"] = resolution.question
     _remember(db, user_id, course_id, question, out)
     return out
 
