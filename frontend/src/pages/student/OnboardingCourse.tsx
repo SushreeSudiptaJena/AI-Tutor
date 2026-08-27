@@ -103,7 +103,7 @@ export default function OnboardingCourse() {
         <div className="mt-xl grid gap-xl md:grid-cols-[0.8fr_1.2fr] md:items-start">
           <div>
             <BookOpen className="h-10 w-10 text-mustard" />
-            <h1 className="mt-md font-serif text-5xl leading-tight">
+            <h1 className="mt-md font-sans text-5xl leading-tight">
               {picked ? "Pick your first subject." : "Find your batch."}
             </h1>
             <p className="mt-md text-body-lg text-on-surface-variant">

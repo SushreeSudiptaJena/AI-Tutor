@@ -32,7 +32,7 @@ export default function WhoAreYou() {
             Step 1 of 2
           </p>
 
-          <h1 className="text-[48px] md:text-[56px] leading-tight font-serif font-bold text-ink tracking-tight">
+          <h1 className="text-[48px] md:text-[56px] leading-tight font-sans font-bold text-ink tracking-tight">
             Who are you?
           </h1>
 

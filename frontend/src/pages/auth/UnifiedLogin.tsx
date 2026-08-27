@@ -87,7 +87,7 @@ export default function UnifiedLogin() {
               <span className="text-ink-soft uppercase tracking-wider text-xs font-semibold mb-4">
                 Students & teachers
               </span>
-              <h1 className="font-serif text-[42px] font-bold text-ink mb-10 leading-tight">
+              <h1 className="font-sans text-[42px] font-bold text-ink mb-10 leading-tight">
                 Knowledge is the path, not the peak.
               </h1>
 

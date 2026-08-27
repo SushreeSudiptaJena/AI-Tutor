@@ -1,14 +1,18 @@
-@import url("https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500;1,600&family=Courier+Prime:ital,wght@0,400;0,700;1,400&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=EB+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500;1,600&family=Courier+Prime:ital,wght@0,400;0,700;1,400&display=swap");
 @import url("https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0");
 @import "tailwindcss";
 
 /* ---------------------------------------------------------------------------
  * ONE DESIGN SYSTEM: the landing page's paper-desk.
  *
- * Warm paper (#faf7f1), ink (#2b2926), an orange accent (#e4552b), EB
- * Garamond for text and Courier Prime for labels. Every semantic token above
+ * Warm paper (#faf7f1), ink (#2b2926), an orange accent (#e4552b), Inter for
+ * text and headings, Courier Prime for labels. Every semantic token above
  * points at it, so the student, admin, teacher and auth surfaces all inherit
  * one look without their markup changing.
+ *
+ * EB Garamond survives as --font-serif / the `font-serif` utility, but only
+ * the landing page still asks for it. Setting it as the app's body font made
+ * every content area read as the same sharp serif as the chrome around it.
  *
  * .admin-scope and .teacher-scope survive only for the few structural values
  * that genuinely differ per surface -- they no longer carry palettes. Two
@@ -44,17 +48,17 @@
   --color-on-error-container: #8a3216;
   --color-tertiary: #e4552b;
   --color-on-tertiary-container: #8a3216;
-  --font-family-display-lg: "EB Garamond", Georgia, serif;
-  --font-family-headline-lg: "EB Garamond", Georgia, serif;
-  --font-family-headline-md: "EB Garamond", Georgia, serif;
-  --font-family-headline-sm: "EB Garamond", Georgia, serif;
-  --font-family-body-md: "EB Garamond", Georgia, serif;
-  --font-family-body-lg: "EB Garamond", Georgia, serif;
-  --font-family-body-sm: "EB Garamond", Georgia, serif;
+  --font-family-display-lg: "Inter", "Helvetica Neue", Arial, sans-serif;
+  --font-family-headline-lg: "Inter", "Helvetica Neue", Arial, sans-serif;
+  --font-family-headline-md: "Inter", "Helvetica Neue", Arial, sans-serif;
+  --font-family-headline-sm: "Inter", "Helvetica Neue", Arial, sans-serif;
+  --font-family-body-md: "Inter", "Helvetica Neue", Arial, sans-serif;
+  --font-family-body-lg: "Inter", "Helvetica Neue", Arial, sans-serif;
+  --font-family-body-sm: "Inter", "Helvetica Neue", Arial, sans-serif;
   --font-family-label-md: "Courier Prime", "Courier New", monospace;
   --font-family-label-sm: "Courier Prime", "Courier New", monospace;
   --font-family-serif: "EB Garamond", Georgia, serif;
-  --font-sans: "EB Garamond", Georgia, serif;
+  --font-sans: "Inter", "Helvetica Neue", Arial, sans-serif;
   --font-serif: "EB Garamond", Georgia, serif;
   --spacing-xs: 8px;
   --spacing-sm: 16px;
@@ -105,7 +109,7 @@
   --text-headline-lg-mobile--line-height: 36px;
   --text-label-lg: 15px;
   --text-label-lg--line-height: 20px;
-  --font-headline-lg-mobile: "EB Garamond", Georgia, serif;
+  --font-headline-lg-mobile: "Inter", "Helvetica Neue", Arial, sans-serif;
   --font-label-lg: "Courier Prime", "Courier New", monospace;
 
   /* Admin-surface layout tokens. Same rule as the teacher block below, and
@@ -123,11 +127,11 @@
      declaration there is no `font-title-md` utility at all, so those card
      headings were rendering at body size (16px instead of 18px) -- which
      reads as "the spacing is off" long before anyone suspects the font. */
-  --font-headline-lg: "EB Garamond", Georgia, serif;
-  --font-headline-sm: "EB Garamond", Georgia, serif;
-  --font-body-lg: "EB Garamond", Georgia, serif;
-  --font-title-md: "EB Garamond", Georgia, serif;
-  --font-body-sm: "EB Garamond", Georgia, serif;
+  --font-headline-lg: "Inter", "Helvetica Neue", Arial, sans-serif;
+  --font-headline-sm: "Inter", "Helvetica Neue", Arial, sans-serif;
+  --font-body-lg: "Inter", "Helvetica Neue", Arial, sans-serif;
+  --font-title-md: "Inter", "Helvetica Neue", Arial, sans-serif;
+  --font-body-sm: "Inter", "Helvetica Neue", Arial, sans-serif;
   --text-title-md: 18px;
   --text-title-md--line-height: 26px;
 
@@ -175,8 +179,8 @@
   --color-sky: #afd0ea;
   --color-lime: #c7d652;
   --font-mono: "Courier Prime", "Courier New", monospace;
-  --font-headline-md: "EB Garamond", Georgia, serif;
-  --font-body-md: "EB Garamond", Georgia, serif;
+  --font-headline-md: "Inter", "Helvetica Neue", Arial, sans-serif;
+  --font-body-md: "Inter", "Helvetica Neue", Arial, sans-serif;
   --font-label-md: "Courier Prime", "Courier New", monospace;
   --font-label-sm: "Courier Prime", "Courier New", monospace;
 }
@@ -202,7 +206,7 @@
 .md-body strong { font-weight: 700; }
 .md-body em { font-style: italic; }
 .md-body code {
-  font-family: "JetBrains Mono", monospace;
+  font-family: var(--font-mono);
   font-size: 0.9em;
   background: rgba(127, 127, 127, 0.15);
   padding: 0.1em 0.35em;
@@ -254,6 +258,7 @@
   --line: rgba(43, 41, 38, 0.16);
   --lift: 0 10px 22px -14px rgba(43, 41, 38, 0.28);
   --lift-sm: 0 6px 14px -10px rgba(43, 41, 38, 0.24);
+  --font-sans: "Inter", "Helvetica Neue", Arial, sans-serif;
   --font-serif: "EB Garamond", Georgia, "Times New Roman", serif;
   --font-mono: "Courier Prime", "Courier New", ui-monospace, monospace;
 }
@@ -261,7 +266,7 @@
 body {
   background: var(--paper);
   color: var(--ink);
-  font-family: var(--font-serif);
+  font-family: var(--font-sans);
 }
 
 html.text-lg-mode { font-size: 18px; }
@@ -269,6 +274,11 @@ html.text-xl-mode { font-size: 21px; }
 html.high-contrast { filter: contrast(1.35); }
 html, body, #root { min-height: 100%; margin: 0; }
 body { overscroll-behavior: none; }
+
+/* The landing page was designed in EB Garamond and reads as a newspaper --
+ * it keeps the serif while the app surfaces run on the sans. Landing.css
+ * sets font-family explicitly in most places; this covers what inherits. */
+.scroll-story { font-family: var(--font-serif); }
 button, a, input { font: inherit; }
 a:focus-visible, button:focus-visible, input:focus-visible { outline: 2px solid var(--color-tertiary); outline-offset: 2px; }
 ::-webkit-scrollbar { display: none; }
@@ -378,11 +388,11 @@ a:focus-visible, button:focus-visible, input:focus-visible { outline: 2px solid 
 
 }
 
-.font-headline-md { font-family: var(--font-serif); font-size: 24px; line-height: 32px; font-weight: 600; }
+.font-headline-md { font-family: var(--font-sans); font-size: 24px; line-height: 32px; font-weight: 600; }
 .font-label-md { font-family: var(--font-mono); font-size: 14px; line-height: 20px; font-weight: 500; }
 .font-label-sm { font-family: var(--font-mono); font-size: 12px; line-height: 16px; font-weight: 600; }
-.font-body-md { font-family: var(--font-serif); font-size: 16px; line-height: 24px; font-weight: 400; }
-.font-display-lg { font-family: var(--font-serif); font-size: 48px; line-height: 56px; letter-spacing: -0.02em; font-weight: 700; }
+.font-body-md { font-family: var(--font-sans); font-size: 16px; line-height: 24px; font-weight: 400; }
+.font-display-lg { font-family: var(--font-sans); font-size: 48px; line-height: 56px; letter-spacing: -0.02em; font-weight: 700; }
 
 @keyframes dash {
   to { stroke-dashoffset: -100; }

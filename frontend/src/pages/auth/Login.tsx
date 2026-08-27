@@ -132,7 +132,7 @@ export default function Login() {
               </span>
 
               {/* Main heading */}
-              <h1 className="font-serif text-[42px] font-bold text-ink mb-10 leading-tight">
+              <h1 className="font-sans text-[42px] font-bold text-ink mb-10 leading-tight">
                 Knowledge is the path, not the peak.
               </h1>
 

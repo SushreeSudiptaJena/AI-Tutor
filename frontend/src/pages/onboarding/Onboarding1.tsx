@@ -48,7 +48,7 @@ export default function Onboarding1() {
               Step 1 of 2
             </p>
 
-            <h1 className="text-display-lg md:text-[56px] font-serif text-on-surface leading-tight tracking-tight">
+            <h1 className="text-display-lg md:text-[56px] font-sans text-on-surface leading-tight tracking-tight">
               Who are you?
             </h1>
           </header>

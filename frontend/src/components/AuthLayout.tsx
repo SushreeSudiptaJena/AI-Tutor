@@ -16,7 +16,7 @@ export function AuthLayout({ children }: { children: ReactNode }) {
         </span>
 
         <div className="max-w-[24rem]">
-          <p className="font-serif text-headline-lg text-on-surface leading-tight">
+          <p className="font-sans text-headline-lg text-on-surface leading-tight">
             Knowledge is the path,
             <br />
             not the peak.
