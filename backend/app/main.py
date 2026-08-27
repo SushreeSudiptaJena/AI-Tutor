@@ -22,10 +22,16 @@ app = FastAPI(
 
 # The team is remote: the frontend runs on a teammate's laptop against a
 # cloudflared tunnel, so we allow vite dev origins and *.trycloudflare.com.
+#
+# *.onrender.com is here for the deployed build. It is belt-and-braces rather
+# than load-bearing -- Render serves the frontend from this same process, so
+# those calls are same-origin and never preflight. It matters only if someone
+# points a locally-run or separately-hosted frontend at the deployed API.
 app.add_middleware(
     CORSMiddleware,
     allow_origin_regex=r"^https?://(localhost|127\.0\.0\.1)(:\d+)?$"
-    r"|^https://[a-z0-9-]+\.trycloudflare\.com$",
+    r"|^https://[a-z0-9-]+\.trycloudflare\.com$"
+    r"|^https://[a-z0-9-]+\.onrender\.com$",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -129,3 +135,62 @@ app.include_router(auth.router)
 app.include_router(student.router)
 app.include_router(teacher.router)
 app.include_router(tutor.router)
+
+
+# --- the built frontend -----------------------------------------------------
+# Deployed as ONE Render service: this process serves the API *and* the Vite
+# build, so the browser talks to a single origin and there is no CORS hop and
+# no second service to cold-start. Locally `npm run dev` still serves the
+# frontend on :5173 and frontend/dist may not exist -- everything below is
+# skipped in that case, so nothing here affects development or the test suite.
+#
+# Registered AFTER the routers on purpose. FastAPI matches routes in
+# registration order, so every real endpoint above wins before the SPA
+# catch-all at the bottom is ever considered.
+FRONTEND_DIST = config.REPO_ROOT / "frontend" / "dist"
+
+if FRONTEND_DIST.is_dir():
+    from fastapi.responses import FileResponse
+    from fastapi.staticfiles import StaticFiles
+
+    _INDEX = FRONTEND_DIST / "index.html"
+
+    # Hashed filenames (index-BpFiJM1E.js) -- Vite emits a new name whenever
+    # the contents change, so these are safe to serve straight off disk.
+    app.mount("/assets", StaticFiles(directory=FRONTEND_DIST / "assets"),
+              name="assets")
+
+    @app.get("/{full_path:path}", include_in_schema=False, response_model=None)
+    def spa(full_path: str, request: Request) -> FileResponse | JSONResponse:
+        """Serve the SPA shell for client-side routes.
+
+        React Router owns /login, /dashboard, /admin, /admin/login and
+        /teacher in the browser. A hard refresh or a pasted link sends that
+        path to us first, and the shell has to come back so the router can
+        take over.
+
+        The split is on Accept, NOT on a path prefix. The frontend's routes
+        and the API's genuinely overlap -- /admin and /teacher are both a
+        router path and a router prefix -- so any prefix rule breaks one side
+        or the other. What actually distinguishes them is who is asking: a
+        browser navigating sends `Accept: text/html`, while every call from
+        lib/api.ts is a fetch() that sends `Accept: */*`. So an unknown path
+        answers HTML to a navigation and the contract's JSON 404 to a fetch,
+        which is what each caller can handle.
+        """
+        # The root is never an API route, so it is always the app -- including
+        # to a bare `curl /`, which sends Accept: */* and would otherwise get
+        # the JSON 404 below and read as a broken static mount.
+        if not full_path:
+            return FileResponse(_INDEX)
+
+        # A real file (favicon.ico, robots.txt) wins over the shell. The
+        # is_relative_to guard keeps ../ out of the path.
+        candidate = (FRONTEND_DIST / full_path).resolve()
+        if candidate.is_file() and candidate.is_relative_to(FRONTEND_DIST):
+            return FileResponse(candidate)
+
+        if "text/html" not in request.headers.get("accept", ""):
+            return error("not_found", "No such route.", 404)
+
+        return FileResponse(_INDEX)

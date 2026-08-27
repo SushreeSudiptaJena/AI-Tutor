@@ -1,0 +1,77 @@
+# Render blueprint -- https://render.com/docs/blueprint-spec
+#
+# ONE web service. FastAPI serves the API and the built frontend from the same
+# origin, so there is no CORS hop and no second service to wake. See
+# docs/deploy-render.md for the click-through and the known limits.
+#
+# The database is NOT declared here: the app runs against the existing Neon
+# instance (ap-southeast-1), which already holds the ingested chunks and their
+# embeddings. Render must not create or manage one.
+
+services:
+  - type: web
+    name: ai-tutor
+    runtime: python
+    plan: free
+    # Neon lives in ap-southeast-1. db.py measures a connection open at ~3.5s
+    # to another region against ~0.12s for a query on an open one, so the
+    # service belongs next to the database.
+    region: singapore
+    branch: main
+    healthCheckPath: /health
+    buildCommand: ./render-build.sh
+    # --app-dir backend puts backend/ on sys.path so `app.main` resolves the
+    # same way it does locally. $PORT is assigned by Render; binding 0.0.0.0 is
+    # required or the health check cannot reach the process.
+    startCommand: python -m uvicorn app.main:app --host 0.0.0.0 --port $PORT --app-dir backend
+
+    envVars:
+      # Matches the local venv this was verified against, and is also Render's
+      # current default. onnxruntime and PyMuPDF both have 3.14 wheels.
+      - key: PYTHON_VERSION
+        value: 3.14.3
+
+      # Keeps the embedding model inside the project directory so the
+      # build-time download in render-build.sh survives into runtime. The
+      # default (/tmp) would be wiped on every spin-down.
+      - key: FASTEMBED_CACHE_PATH
+        value: /opt/render/project/src/.fastembed_cache
+
+      # --- secrets: sync:false means Render prompts for these, and they are
+      # --- never written to git. Paste the values from the local .env.
+      - key: DATABASE_URL
+        sync: false
+      - key: FALLBACK_API_KEY_GROQ
+        sync: false
+      - key: FALLBACK_API_KEY_GEMINI
+        sync: false
+      - key: GLM_API_KEY
+        sync: false
+      - key: SARVAM_API_KEY
+        sync: false
+
+      # --- providers (mirrors the working local .env) ---
+      - key: PROVIDER
+        value: groq
+      - key: FALLBACK_MODEL_GROQ
+        value: openai/gpt-oss-120b
+      - key: FALLBACK_MODEL_GROQ_ALTERNATIVE
+        value: qwen/qwen3.6-27b
+      - key: FALLBACK_MODEL_GEMINI
+        value: gemini-3.6-flash
+      - key: GLM_MODEL
+        value: glm-4.5-flash
+      - key: GLM_ANTHROPIC_BASE_URL
+        value: https://open.bigmodel.cn/api/anthropic
+      - key: GLM_CODING_MODEL
+        value: glm-5.3
+
+      # --- retrieval ---
+      - key: EMBEDDING_MODEL
+        value: BAAI/bge-small-en-v1.5
+      # 0.70, measured against both ingested corpora -- see the long note in
+      # backend/app/config.py. Re-measure after any new ingest.
+      - key: ALIGNMENT_REFUSAL_THRESHOLD
+        value: "0.70"
+      - key: LLM_CACHE_ENABLED
+        value: "1"

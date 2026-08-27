@@ -43,3 +43,6 @@ frontend/dist/
 dev-harness/
 backend_run.log
 backend_run.err.log
+
+# embedding model, pre-fetched by render-build.sh (see render.yaml)
+.fastembed_cache/

@@ -1,0 +1,58 @@
+deploy-render verification
+date: 2026-08-27
+
+=== 1. backend test suite (must be unaffected) ===
+.........................                                                [100%]
+385 passed in 13.69s
+
+=== 2. frontend production build, empty VITE_API_BASE ===
+(frontend/.env.production; .env.local was moved aside for this check)
+bundle: frontend/dist/assets/index-BpFiJM1E.js
+occurrences of 'localhost:8000' in bundle: 0
+relative api path present in bundle: "/auth/login"
+
+=== 3. render.yaml ===
+ runtime/plan/region: python free singapore
+ healthCheckPath   : /health
+ buildCommand      : ./render-build.sh
+ startCommand      : python -m uvicorn app.main:app --host 0.0.0.0 --port $PORT --app-dir backend
+ prompted secrets  : DATABASE_URL, FALLBACK_API_KEY_GROQ, FALLBACK_API_KEY_GEMINI, GLM_API_KEY, SARVAM_API_KEY
+
+=== 4. live HTTP, booted with the exact render.yaml startCommand ===
+$ python -m uvicorn app.main:app --host 0.0.0.0 --port $PORT --app-dir backend
+
+-- /health, against the real Neon instance --
+   {"status":"ok","db":"ok"}
+
+-- browser navigations (Accept: text/html) -> SPA shell --
+   /                      HTTP 200  text/html; charset=utf-8
+   /login                 HTTP 200  text/html; charset=utf-8
+   /admin                 HTTP 200  text/html; charset=utf-8
+   /admin/login           HTTP 200  text/html; charset=utf-8
+   /teacher               HTTP 200  text/html; charset=utf-8
+   /dashboard             HTTP 200  text/html; charset=utf-8
+   /onboarding/course     HTTP 200  text/html; charset=utf-8
+   /typo-route            HTTP 200  text/html; charset=utf-8
+   /admin, /admin/login and /teacher are BOTH React Router paths and API router
+   prefixes. These are exactly the cases a path-prefix rule gets wrong.
+
+-- api fetches (Accept: */*) -> the contract's JSON error envelope --
+   /health                HTTP 200  application/json
+   /languages             HTTP 200  application/json
+   /teacher/nope          HTTP 404  application/json
+   /admin/nope            HTTP 404  application/json
+   /student/gaps/9999     HTTP 404  application/json
+   body of /student/gaps/9999: {"error":{"code":"not_found","message":"No such route.","detail":{}}}
+
+-- the root is the app even to a bare curl (Accept: */*) --
+   /                      HTTP 200  text/html; charset=utf-8
+
+-- the shell's own hashed assets resolve --
+   /assets/index-BpFiJM1E.js -> HTTP 200  508734 bytes
+   /assets/index-CuAz9IP6.css -> HTTP 200  95381 bytes
+
+-- CORS preflight from an onrender.com origin --
+   access-control-allow-origin: https://ai-tutor.onrender.com
+
+NOT COVERED: the Render service itself has not been created. No public URL
+exists and the golden path has never run on Render. infra-007 stays in_progress.

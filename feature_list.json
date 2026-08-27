@@ -1209,6 +1209,30 @@
       ],
       "evidence": "evidence/student-010/verification.txt",
       "notes": "Every teacher panel already scoped by the signed-in teacher's course_id, so this is one field and one control rather than a change per panel. Assignment comes from course_teachers (admin-009) -- a teacher never picks their own subjects. Found and fixed on the way: the seeded teacher had a course_id but NO assignment row, so the switcher was empty and unusable; seed.py now creates it."
+    },
+    {
+      "id": "infra-007",
+      "priority": 56,
+      "area": "infra",
+      "title": "Single-service deploy on Render (FastAPI serves the built frontend)",
+      "user_visible_behavior": "Anyone with the Render URL opens the app in a browser -- no tunnel, no local frontend, no VITE_API_BASE to paste. Deep links and hard refreshes work.",
+      "status": "in_progress",
+      "depends_on": [
+        "infra-002"
+      ],
+      "demo_mode": "live",
+      "verification": [
+        "render.yaml parses and declares one web service: runtime python, plan free, region singapore, healthCheckPath /health.",
+        "Frontend builds with an empty VITE_API_BASE and the bundle contains zero localhost:8000 references, calling relative paths instead.",
+        "Booted with the exact render.yaml startCommand, /health returns {\"status\":\"ok\",\"db\":\"ok\"} against the real Neon instance.",
+        "Browser navigations (Accept: text/html) to /, /login, /admin, /admin/login, /teacher, /dashboard, /onboarding/course and an unknown path all return the SPA shell.",
+        "API fetches (Accept: */*) to unknown paths under /teacher, /admin and /student return the contract's JSON 404 envelope, not HTML.",
+        "The served shell's hashed JS and CSS assets both resolve 200.",
+        "backend/tests still passes (385).",
+        "REMAINING: the service is actually created in the Render dashboard and the public URL serves the golden path."
+      ],
+      "evidence": "evidence/deploy-render/verification.txt",
+      "notes": "Everything above is verified LOCALLY against the deploy configuration -- the Render service itself has not been created yet, which is why this is in_progress and not passing. Sushree clicks New > Blueprint and pastes the five sync:false secrets; docs/deploy-render.md is the runbook.\n\nDesign note worth not re-litigating: the SPA catch-all in main.py splits on the Accept header, NOT on a path prefix. The frontend and the API genuinely share paths -- /admin and /teacher are both React Router routes and API router prefixes -- so any prefix rule breaks one side. A prefix list returns JSON 404 on a hard refresh of /teacher; no list at all hands the HTML shell to a fetch(), which dies on \"Unexpected token '<'\". Browsers navigating send Accept: text/html and every call from lib/api.ts is a fetch() sending Accept: */*, so that is the axis that actually separates them.\n\nFree-tier limits are real and documented in the runbook: sleeps after 15 min idle (~50s wake), 512MB RAM is tight with onnxruntime + BGE loaded, uploaded PDFs are ephemeral (chunks and embeddings live in Neon so retrieval survives; the source file does not), and the LLM disk cache starts empty on each deploy. The embedding model is pre-fetched during BUILD via FASTEMBED_CACHE_PATH, because build output persists into runtime while /tmp does not -- otherwise the first question after every wake would also pay a ~130MB download."
     }
   ]
 }
