@@ -1,0 +1,1 @@
+{"text": "{\"entailment\":0.55,\"reason\":\"passages explain how to define a custom manager and its get_queryset but do not provide the design rationale for preferring a manager over view‑level filtering\"}", "provider": "groq", "model": "openai/gpt-oss-120b"}

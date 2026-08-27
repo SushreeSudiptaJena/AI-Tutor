@@ -1,0 +1,1 @@
+{"text": "{\"entailment\":0.85,\"reason\":\"Passages define a QuerySet and explain its lazy evaluation and use for retrieving and filtering model objects, covering the core answer though without explicit usage guidelines\"}", "provider": "groq", "model": "openai/gpt-oss-120b"}

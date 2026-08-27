@@ -1,0 +1,1 @@
+{"text": "{\"entailment\":0.95,\"reason\":\"Provides step-by-step code and explanation for creating a thread with pthread_create, covering all needed details\"}", "provider": "groq", "model": "openai/gpt-oss-120b"}

@@ -1,0 +1,1 @@
+{"text": "{\"entailment\":0.95,\"reason\":\"Passages give step-by-step instructions and example code (pthread_t variable, pthread_create call, function definition) for creating a thread in C\"}", "provider": "groq", "model": "openai/gpt-oss-120b"}

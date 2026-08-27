@@ -1,0 +1,1 @@
+{"text": "{\"entailment\":0.75,\"reason\":\"Passages detail Django's request/response flow, covering browser request, server handling, view processing, and response back, which provides the core HTTP cycle but lack broader general web context\"}", "provider": "groq", "model": "openai/gpt-oss-120b"}

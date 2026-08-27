@@ -1,0 +1,1 @@
+{"text": "{\"entailment\":0.8,\"reason\":\"passes define forms and field validation, show form.errors in templates and form_class in views, but lack a complete integrated explanation\"}", "provider": "groq", "model": "openai/gpt-oss-120b"}

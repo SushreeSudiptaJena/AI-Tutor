@@ -1,0 +1,1 @@
+{"text": "{\n  \"entailment\": 0.5,\n  \"reason\": \"Passages explain Django-specific URL patterns and routing but do not provide a general explanation of URL paths and routing in how the web works\"\n}", "provider": "groq", "model": "openai/gpt-oss-120b"}

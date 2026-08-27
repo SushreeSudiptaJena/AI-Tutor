@@ -1,0 +1,1 @@
+{"text": "{\"entailment\":0.55,\"reason\":\"mentions that templates can inherit from a base template but does not explain the {% extends %} syntax or block mechanism, so only partial coverage\"}", "provider": "groq", "model": "openai/gpt-oss-120b"}

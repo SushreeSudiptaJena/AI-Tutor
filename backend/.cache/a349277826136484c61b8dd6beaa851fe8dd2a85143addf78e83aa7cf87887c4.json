@@ -1,0 +1,1 @@
+{"text": "{\"entailment\":0.5,\"reason\":\"Passages mention Django applications but do not define what a Django app is\"}", "provider": "groq", "model": "openai/gpt-oss-120b"}

@@ -1,0 +1,1 @@
+{"text": "{\"entailment\":0.0,\"reason\":\"Passages discuss VHDL coding and digital latch behavior, not CMOS latch-up causes or prevention methods\"}", "provider": "groq", "model": "openai/gpt-oss-120b"}

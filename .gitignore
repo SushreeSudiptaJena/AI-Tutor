@@ -14,8 +14,25 @@ venv/
 node_modules/
 frontend/dist/
 
-# llm response cache (regenerate; do not commit)
-backend/.cache/
+# LLM response cache -- COMMITTED ON PURPOSE since the Render deploy.
+#
+# It used to be ignored, on the reasoning that it regenerates. That reasoning
+# holds on a laptop and fails on a free Render instance: .cache is written at
+# RUNTIME, and a free instance restarts from the built image on every wake, so
+# a warmed cache is gone after fifteen idle minutes and the demo pays full
+# provider latency again (measured live: 9-24s a call).
+#
+# Committing it makes the warm cache part of the BUILD, so every cold start,
+# every redeploy and every wake begins with the rehearsed answers already in
+# hand. cache.py keys on sha256(system + prompt + schema) -- no machine, no
+# provider, no model -- so a cache warmed on a laptop is valid on Render.
+#
+# Safe to commit: an entry stores only the response ({text, provider, model}).
+# The prompt, which carries the retrieved textbook context, is never written to
+# disk -- it only exists as the filename hash. The books stay ignored below.
+#
+# Cost: local runs add entries, so it shows up in git status. Worth it until
+# the event; re-ignore afterwards if the noise annoys anyone.
 
 # models / large artefacts
 backend/data/*.pdf

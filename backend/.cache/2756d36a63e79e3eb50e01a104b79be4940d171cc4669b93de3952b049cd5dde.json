@@ -1,0 +1,1 @@
+{"text": "{\n  \"entailment\": 0.5,\n  \"reason\": \"The passages demonstrate one-to-many and many-to-one relationships through specific Django code examples and mention foreign keys, but do not provide a general explanation of the concept in relational data.\"\n}", "provider": "gemini", "model": "gemini-3.6-flash"}

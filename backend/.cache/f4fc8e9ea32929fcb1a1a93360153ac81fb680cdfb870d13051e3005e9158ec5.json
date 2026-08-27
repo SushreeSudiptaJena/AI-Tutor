@@ -1,0 +1,1 @@
+{"text": "{\"entailment\":0.95,\"reason\":\"Passages give concrete examples of filtering, lookups, chaining, and querying records using Django ORM, covering the requested topic\"}", "provider": "groq", "model": "openai/gpt-oss-120b"}

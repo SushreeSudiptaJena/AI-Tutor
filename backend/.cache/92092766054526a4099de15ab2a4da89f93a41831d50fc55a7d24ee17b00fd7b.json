@@ -1,0 +1,1 @@
+{"text": "{\"entailment\":0.85,\"reason\":\"passages explain many-to-one relationship and that Django creates a foreign key column on the many side (post), covering the reasoning about foreign key placement\"}", "provider": "groq", "model": "openai/gpt-oss-120b"}

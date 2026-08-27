@@ -1,0 +1,1 @@
+{"text": "{\"entailment\": 0.85, \"reason\": \"The passages explain custom model managers, how to define them by overriding get_queryset(), and how they interact with Django models and the ORM.\"}", "provider": "gemini", "model": "gemini-3.6-flash"}

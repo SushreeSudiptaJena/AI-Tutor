@@ -1,0 +1,1 @@
+{"text": "{\n  \"entailment\": 0.3,\n  \"reason\": \"The passages mention that model class attributes represent fields, but do not explain Django field types or how model fields work.\"\n}", "provider": "gemini", "model": "gemini-3.6-flash"}

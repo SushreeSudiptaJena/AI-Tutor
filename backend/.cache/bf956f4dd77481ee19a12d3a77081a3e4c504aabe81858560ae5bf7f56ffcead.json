@@ -1,0 +1,1 @@
+{"text": "{\"entailment\":0.95,\"reason\":\"Passage 1 explicitly defines a one-to-many relationship between Category and Product tables, providing the needed information\"}", "provider": "groq", "model": "openai/gpt-oss-120b"}

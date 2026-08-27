@@ -1,0 +1,1 @@
+{"text": "{\n  \"entailment\": 0.9,\n  \"reason\": \"The passages explain what a model manager is and explicitly outline when to create a custom one (adding extra manager methods or modifying the initial QuerySet).\"\n}", "provider": "gemini", "model": "gemini-3.6-flash"}

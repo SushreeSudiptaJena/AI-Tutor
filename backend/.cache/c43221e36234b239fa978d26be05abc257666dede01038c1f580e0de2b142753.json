@@ -1,0 +1,1 @@
+{"text": "{\"entailment\":0.6,\"reason\":\"Passages show GET and POST usage in code and mention Fetch API, but lack a broader explanation of HTTP methods and overall web operation\"}", "provider": "groq", "model": "openai/gpt-oss-120b"}

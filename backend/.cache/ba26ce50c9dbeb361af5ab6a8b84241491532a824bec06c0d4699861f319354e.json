@@ -1,0 +1,1 @@
+{"text": "{\"entailment\":0.0,\"reason\":\"Passages discuss Django web development and deployment, no information about sourdough starter or baking\"}", "provider": "groq", "model": "openai/gpt-oss-120b"}

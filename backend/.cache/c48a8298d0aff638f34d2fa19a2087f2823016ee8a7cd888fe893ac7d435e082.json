@@ -1,0 +1,1 @@
+{"text": "{\"entailment\":0.95,\"reason\":\"Passages define QuerySets, describe their lazy nature, and list evaluation triggers, covering the needed explanation\"}", "provider": "groq", "model": "openai/gpt-oss-120b"}

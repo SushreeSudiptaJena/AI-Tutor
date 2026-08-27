@@ -1,0 +1,1 @@
+{"text": "{\"entailment\":0.95,\"reason\":\"Passage 1 explicitly explains that include() references and incorporates URL patterns from another module into the current URLconf, adding them under a path and optional namespace\"}", "provider": "groq", "model": "openai/gpt-oss-120b"}

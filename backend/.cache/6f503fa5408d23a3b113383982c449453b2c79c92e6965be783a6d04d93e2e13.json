@@ -1,0 +1,1 @@
+{"text": "{\n  \"entailment\": 0.95,\n  \"reason\": \"Passages detail Django QuerySet filtering, lookups, chaining, exclusion, ordering, and related query operations, providing sufficient information to explain filtering and querying records in relational data.\"\n}", "provider": "groq", "model": "openai/gpt-oss-120b"}

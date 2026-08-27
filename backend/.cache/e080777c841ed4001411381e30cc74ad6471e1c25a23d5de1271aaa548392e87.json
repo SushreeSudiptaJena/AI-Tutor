@@ -1,0 +1,1 @@
+{"text": "{\"entailment\":0.6,\"reason\":\"covers view definition and HttpRequest in view functions, but lacks details on how the request object is used in templates and forms\"}", "provider": "groq", "model": "openai/gpt-oss-120b"}

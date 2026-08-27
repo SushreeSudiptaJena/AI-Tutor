@@ -1,0 +1,1 @@
+{"text": "{\"entailment\":0.88,\"reason\":\"passes define URL patterns, mapping URLs to views, and include namespaces, covering core concepts of URL routing\"}", "provider": "groq", "model": "openai/gpt-oss-120b"}

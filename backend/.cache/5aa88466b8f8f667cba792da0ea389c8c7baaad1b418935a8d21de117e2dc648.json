@@ -1,0 +1,1 @@
+{"text": "{\"entailment\":0.88,\"reason\":\"passages define URL patterns, path(), include(), namespaces, and routers, covering how URL paths map to views and routing in Django\"}", "provider": "groq", "model": "openai/gpt-oss-120b"}

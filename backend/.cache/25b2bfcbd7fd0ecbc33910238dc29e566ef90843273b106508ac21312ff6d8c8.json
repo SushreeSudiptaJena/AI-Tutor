@@ -1,0 +1,1 @@
+{"text": "{\"entailment\":0.82,\"reason\":\"Passages explain that HTTP is request/response only and that server state must be stored in sessions/cookies, covering the needed concept\"}", "provider": "groq", "model": "openai/gpt-oss-120b"}

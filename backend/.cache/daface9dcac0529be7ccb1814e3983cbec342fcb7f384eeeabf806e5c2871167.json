@@ -1,0 +1,1 @@
+{"text": "{\"entailment\":0.15,\"reason\":\"Passages only mention Django class-based views and model usage, lacking any explanation of basic Python class and object concepts.\"}", "provider": "groq", "model": "openai/gpt-oss-120b"}

@@ -1,0 +1,1 @@
+{"text": "{\"entailment\":0.95,\"reason\":\"Passage 1 explicitly defines vector components (horizontal = F cosθ, vertical = F sinθ) and explains resolving vectors, providing all needed information\"}", "provider": "groq", "model": "openai/gpt-oss-120b"}

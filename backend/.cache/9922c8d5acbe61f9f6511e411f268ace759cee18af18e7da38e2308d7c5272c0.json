@@ -1,0 +1,1 @@
+{"text": "{\"intent\":\"understand\",\"confidence\":0.99,\"reason\":\"The student asks for the design rationale behind using a custom manager rather than a view filter, indicating they want conceptual understanding, not the code solution.\"}", "provider": "groq", "model": "openai/gpt-oss-120b"}

@@ -1,0 +1,1 @@
+{"text": "{\"entailment\": 0.85, \"reason\": \"The passages detail Django URL routing, path patterns, and the request-response processing cycle.\"}", "provider": "gemini", "model": "gemini-3.6-flash"}

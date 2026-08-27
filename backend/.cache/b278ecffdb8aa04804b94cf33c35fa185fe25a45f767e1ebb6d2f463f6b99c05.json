@@ -1,0 +1,1 @@
+{"text": "{\"entailment\":0.2,\"reason\":\"Passages only cover Django-specific form rendering and a hidden input widget, lacking a general explanation of HTML forms and input fields as requested\"}", "provider": "groq", "model": "openai/gpt-oss-120b"}

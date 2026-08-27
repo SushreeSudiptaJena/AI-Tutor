@@ -1,0 +1,1 @@
+{"text": "{\"entailment\":0.6,\"reason\":\"Passages mention primary keys and foreign keys only in Django models, giving limited definitions, but lack a full general explanation of relational primary and foreign keys\"}", "provider": "groq", "model": "openai/gpt-oss-120b"}

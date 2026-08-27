@@ -1,0 +1,1 @@
+{"text": "{\"entailment\":0.95,\"reason\":\"Passage 1 defines a QuerySet as a collection of database queries to retrieve objects, directly answering the question.\"}", "provider": "groq", "model": "openai/gpt-oss-120b"}

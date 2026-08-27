@@ -1,0 +1,1 @@
+{"text": "{\"entailment\": 1.0, \"reason\": \"The source explicitly states that a block at constant velocity has zero net force, which directly supports the answer that the net force is zero.\"}", "provider": "gemini", "model": "gemini-3.6-flash"}

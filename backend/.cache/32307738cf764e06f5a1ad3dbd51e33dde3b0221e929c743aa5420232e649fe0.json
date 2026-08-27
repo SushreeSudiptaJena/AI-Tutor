@@ -1,0 +1,1 @@
+{"text": "{\"entailment\":0.0,\"reason\":\"Passages discuss a Django book and contain no information about the 2018 FIFA World Cup\"}", "provider": "groq", "model": "openai/gpt-oss-120b"}

@@ -1,0 +1,1 @@
+{"text": "{\"entailment\": 0.0, \"reason\": \"The passages are from a programming book about Django and contain no information about the 2018 FIFA World Cup.\"}", "provider": "gemini", "model": "gemini-3.6-flash"}

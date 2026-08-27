@@ -1,0 +1,1 @@
+{"text": "{\"entailment\":0.0,\"reason\":\"Passages do not discuss name attributes or that inputs without a name are not submitted; they focus on Django code and JavaScript handling\"}", "provider": "groq", "model": "openai/gpt-oss-120b"}

@@ -1,0 +1,1 @@
+{"text": "{\"entailment\":0.55,\"reason\":\"provides a brief definition of inheritance but lacks detailed Python fundamentals such as syntax, super(), and method resolution order\"}", "provider": "groq", "model": "openai/gpt-oss-120b"}

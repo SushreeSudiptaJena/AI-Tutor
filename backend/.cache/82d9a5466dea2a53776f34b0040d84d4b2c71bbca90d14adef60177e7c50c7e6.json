@@ -1,0 +1,1 @@
+{"text": "{\"entailment\":0.96,\"reason\":\"Provides a definition of QuerySet and lists all situations when it is evaluated\"}", "provider": "groq", "model": "openai/gpt-oss-120b"}

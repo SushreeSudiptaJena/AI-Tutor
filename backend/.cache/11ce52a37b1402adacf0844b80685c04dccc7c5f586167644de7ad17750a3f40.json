@@ -1,0 +1,1 @@
+{"text": "{\"entailment\":0.0,\"reason\":\"passages cover C compile-time assertions and string handling, with no mention of Rust's borrow checker or data race prevention\"}", "provider": "groq", "model": "openai/gpt-oss-120b"}

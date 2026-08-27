@@ -1,0 +1,1 @@
+{"text": "{\"entailment\":0.95,\"reason\":\"provides clear definitions contrasting a project (settings/installation) with an app (models, views, etc.)\"}", "provider": "groq", "model": "openai/gpt-oss-120b"}

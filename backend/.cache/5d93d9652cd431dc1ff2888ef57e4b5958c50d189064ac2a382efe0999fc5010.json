@@ -1,0 +1,1 @@
+{"text": "{\n  \"entailment\": 0.05,\n  \"reason\": \"Passages discuss sequential logic design and state machines, with no mention of branch prediction or superscalar CPU pipelines.\"\n}", "provider": "groq", "model": "openai/gpt-oss-120b"}

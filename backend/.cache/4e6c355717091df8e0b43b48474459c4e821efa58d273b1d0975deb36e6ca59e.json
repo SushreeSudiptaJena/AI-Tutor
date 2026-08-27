@@ -1,0 +1,1 @@
+{"text": "{\"entailment\":0.1,\"reason\":\"Passages only describe using GET to retrieve data and using POST with fetch; they do not discuss GET's safety, idempotence, or the problem of using GET for state‑changing actions.\"}", "provider": "groq", "model": "openai/gpt-oss-120b"}

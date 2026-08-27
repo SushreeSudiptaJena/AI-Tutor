@@ -1,0 +1,1 @@
+{"text": "{\n  \"entailment\": 0.95,\n  \"reason\": \"Passages define a QuerySet as a collection of database queries and detail when it is evaluated (lazy evaluation, specific triggers, and translation to SQL).\"\n}", "provider": "groq", "model": "openai/gpt-oss-120b"}

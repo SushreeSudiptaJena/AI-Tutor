@@ -1,0 +1,1 @@
+{"text": "{\"entailment\":0.95,\"reason\":\"Passages define virtual environments, explain isolation of packages, and describe how venv creates independent environments\"}", "provider": "groq", "model": "openai/gpt-oss-120b"}

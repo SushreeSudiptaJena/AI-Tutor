@@ -1,0 +1,1 @@
+{"text": "{\"entailment\":0.5,\"reason\":\"Provides a definition of a multiplexer but does not explain what a decoder is, so the key contrast is missing\"}", "provider": "groq", "model": "openai/gpt-oss-120b"}

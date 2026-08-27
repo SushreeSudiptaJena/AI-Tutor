@@ -1,0 +1,1 @@
+{"text": "{\"entailment\":0.95,\"reason\":\"Passages define what a manager is, describe default vs custom managers, show how to subclass models.Manager, override get_queryset, and use the custom manager in a model\"}", "provider": "groq", "model": "openai/gpt-oss-120b"}

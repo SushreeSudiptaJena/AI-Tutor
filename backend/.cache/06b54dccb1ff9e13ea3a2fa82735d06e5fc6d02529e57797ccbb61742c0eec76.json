@@ -1,0 +1,1 @@
+{"text": "{\"entailment\":0.05,\"reason\":\"Passages only cover Django class-based views, mixins, and ordering fields; they do not mention class attributes being shared across instances or the mutable default bug.\"}", "provider": "groq", "model": "openai/gpt-oss-120b"}
