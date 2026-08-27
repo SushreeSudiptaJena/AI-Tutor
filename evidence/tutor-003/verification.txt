@@ -43,3 +43,36 @@ date: 2026-08-27
 === 4. cost: a self-contained question makes no extra call ===
   self-contained question -> model calls: 0, history reads: 0, rewritten: False
   reason: already self-contained
+
+=== 5. LIVE, against https://ai-tutor-80by.onrender.com, 2026-08-27 ===
+    Real provider (groq), cold LLM cache, asha@example.edu on CSW2.
+
+    turn 1 -- a self-contained question, must NOT be rewritten
+      Q: 'What is the difference between GET and POST in Django?'   [200, 9.3s]
+      outcome           : answered
+      resolved_question : (absent)          <- no rewrite, no extra model call
+      alignment         : 86%   citations: 4
+
+    turn 2 -- the bare follow-up that used to come back as a refusal
+      Q: 'explain that more simply'                                 [200, 10.5s]
+      outcome           : answered          <- was insufficient_evidence before tutor-003
+      resolved_question : 'Explain the difference between GET and POST in Django more simply.'
+      alignment         : 81%   citations: 4
+
+    turn 3 -- a one-word follow-up
+      Q: 'why?'                                                     [200, 24.0s]
+      outcome           : answered
+      resolved_question : 'Why is there a difference between GET and POST in Django?'
+      alignment         : 86%   citations: 4
+
+    GET /tutor/history afterwards -- the transcript is the conversation, not our
+    rewriting of it:
+      [student typed] 'What is the difference between GET and POST in Django?'
+      [tutor]         resolved_question=(absent)
+      [student typed] 'explain that more simply'
+      [tutor]         resolved_question='Explain the difference between GET and POST in Django more simply.'
+      [student typed] 'why?'
+      [tutor]         resolved_question='Why is there a difference between GET and POST in Django?'
+
+    Note the alignment scores: 86 / 81 / 86. A follow-up now scores like the
+    question it means, because the evidence check is handed the resolved text.

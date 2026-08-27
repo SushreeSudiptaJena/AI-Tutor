@@ -1,0 +1,39 @@
+infra-007 -- golden path against the LIVE Render service
+date: 2026-08-27   target: https://ai-tutor-80by.onrender.com
+
+Setup found dirty and corrected first (this is the session-025 trap, live):
+  asha's active subject was CS-C (id 4), not CSW2 (id 5) -- a rehearsal left
+  her switched, so GET /student/diagnostic returned 0 items and the smoke
+  script could not find its HTTP-methods item. Her preferred_language was
+  also 'hi'. Both restored via PATCH /student/active-subject and
+  PATCH /auth/me/preferences, then reset_demo_state.py for a clean slate.
+
+backend/scripts/smoke_golden_path.py https://ai-tutor-80by.onrender.com
+1. diagnostic -- answer the HTTP-methods item wrong, as the demo script does
+   Found 1 prerequisite gap.
+  [PASS] no score in the submit response
+  [PASS] a gap was raised for the missed concept
+   gap 1087 <- Computer Science Workshop 1
+  [PASS] the gap is attributed to the prerequisite course
+2. the answer survives a reload (student-009)
+  [PASS] the picked option comes back
+3. lesson
+   outcome=answered alignment=66% top-sim=0.7519 citations=4
+  [PASS] the lesson was answered, not refused
+  [PASS] it carries real page citations
+  [PASS] read-aloud text is present
+4. practice scoped to that gap
+   set 25 | HTTP methods, GET and POST | generated | 3 items
+  [PASS] practice is scoped to the gap's concept
+5. answer one wrong -> a specific misconception
+   correct=False diagnosis='Chooses GET for a request that changes server state'
+  [PASS] the wrong answer is diagnosed
+  [PASS] the diagnosis is specific, not generic
+6. confirm -> the heatmap moves
+   confirmed_count 8 -> 9
+  [PASS] confirming increments the heatmap
+7. the pending question survives a reload too (student-009)
+   your_answer='GET' correct=False confirmed=True
+  [PASS] the answer and its confirmed diagnosis come back
+
+GOLDEN PATH INTACT
