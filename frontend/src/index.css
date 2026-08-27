@@ -293,14 +293,6 @@ a:focus-visible, button:focus-visible, input:focus-visible { outline: 2px solid 
 
 .admin-scope {
 
-  --font-sans: 'Hanken Grotesk', system-ui, sans-serif;
-  --font-serif: 'Newsreader', serif;
-  --font-headline-sm: 'Hanken Grotesk', system-ui, sans-serif;
-  --font-headline-md: 'Hanken Grotesk', system-ui, sans-serif;
-  --font-body-md: 'Hanken Grotesk', system-ui, sans-serif;
-  --font-body-lg: 'Hanken Grotesk', system-ui, sans-serif;
-  --font-label-md: 'Hanken Grotesk', system-ui, sans-serif;
-  --font-label-sm: 'Hanken Grotesk', system-ui, sans-serif;
 
   --spacing-unit: 8px;
   --spacing-card-inner-padding: 24px;
@@ -384,18 +376,13 @@ a:focus-visible, button:focus-visible, input:focus-visible { outline: 2px solid 
   --radius-lg: 0.5rem;
   --radius-xl: 0.75rem;
 
-  --font-headline-md: "Montserrat", sans-serif;
-  --font-headline-lg: "Montserrat", sans-serif;
-  --font-title-md: "Montserrat", sans-serif;
-  --font-body-md: "Inter", sans-serif;
-  --font-body-lg: "Inter", sans-serif;
 }
 
-.font-headline-md { font-family: "Montserrat", sans-serif; font-size: 24px; line-height: 32px; font-weight: 600; }
-.font-label-md { font-family: "Inter", sans-serif; font-size: 14px; line-height: 20px; font-weight: 500; }
-.font-label-sm { font-family: "Inter", sans-serif; font-size: 12px; line-height: 16px; font-weight: 600; }
-.font-body-md { font-family: "Inter", sans-serif; font-size: 16px; line-height: 24px; font-weight: 400; }
-.font-display-lg { font-family: "Montserrat", sans-serif; font-size: 48px; line-height: 56px; letter-spacing: -0.02em; font-weight: 700; }
+.font-headline-md { font-family: var(--font-serif); font-size: 24px; line-height: 32px; font-weight: 600; }
+.font-label-md { font-family: var(--font-mono); font-size: 14px; line-height: 20px; font-weight: 500; }
+.font-label-sm { font-family: var(--font-mono); font-size: 12px; line-height: 16px; font-weight: 600; }
+.font-body-md { font-family: var(--font-serif); font-size: 16px; line-height: 24px; font-weight: 400; }
+.font-display-lg { font-family: var(--font-serif); font-size: 48px; line-height: 56px; letter-spacing: -0.02em; font-weight: 700; }
 
 @keyframes dash {
   to { stroke-dashoffset: -100; }
@@ -452,4 +439,30 @@ a:focus-visible, button:focus-visible, input:focus-visible { outline: 2px solid 
   background: var(--color-card);
   border: 1px solid var(--color-outline-variant);
   box-shadow: 0 6px 14px -10px rgba(43, 41, 38, 0.24);
+}
+
+
+/* ---------------------------------------------------------------------------
+ * Material Symbols, owned by us.
+ *
+ * The .material-symbols-outlined rule normally comes from Google's external
+ * stylesheet, which our bundle loads BEFORE its own utilities -- so any
+ * font-* utility on the icon (or a font utility whose rule simply sits later
+ * in the sheet) beats it, the ligature font never applies, and every icon
+ * renders as its own name: "dashboard", "notifications", "person". Declaring
+ * it here, last and !important, makes an icon an icon whatever else is on it.
+ * ------------------------------------------------------------------------- */
+.material-symbols-outlined {
+  font-family: "Material Symbols Outlined" !important;
+  font-weight: normal;
+  font-style: normal;
+  line-height: 1;
+  letter-spacing: normal;
+  text-transform: none;
+  display: inline-block;
+  white-space: nowrap;
+  word-wrap: normal;
+  direction: ltr;
+  font-feature-settings: "liga";
+  -webkit-font-smoothing: antialiased;
 }

@@ -1,0 +1,79 @@
+Teacher console rework + student typography — 2026-08-27
+Owner's list, each item verified live.
+
+1. MY CLASSES: real subjects, no "Create New Class"
+   {"cards":3,"noCreateBox":true,
+    "subjects":["Computer Science Workshop 2","Programming with C",
+                "Digital Logic Design"]}
+   The box promised something the API refuses: a teacher does not create
+   classes, an admin assigns them (admin-009). Each card names the cohorts
+   taking the subject and can make it the console's active subject.
+   Seed change: the demo teacher is now assigned every subject carrying an
+   ingested corpus -- CSW2, DLD and CS-C -- instead of one. The retired
+   physics stand-in (PH101/PH000) is excluded by code: it still has a corpus
+   and is deliberately kept in the database, but nobody teaches it, and
+   listing it as a class would be a lie on the demo screen.
+
+2. TABS REMOVED: Students, Attendance, Assignments
+   nav is now dashboard · my-classes · lesson-plans, then the AI insights.
+   All three were static mockups with no endpoint, and this build stores no
+   attendance or per-student roster by design (models.py's stated absences).
+   The three page files are deleted, not hidden.
+
+3. LESSON PLANS: the real material library (teacher-010, new endpoints)
+   {"chips":["All subjects","DLD","CSW2","CS-C"],"cards":15,
+    "viewLinks":15,"saveLinks":15,"noMathematics":true}
+   The filter chips are real course codes, not "Mathematics"/"Sciences".
+   It houses every subject's material, as asked -- the corpus is
+   institutional teaching material, and a lesson plan is often built from a
+   neighbouring subject's book.
+   VIEW and SAVE work:
+     view:  200 application/pdf 38,446,870 bytes
+     save:  content-disposition: attachment; filename="Django-5-By-Example…"
+     archived material -> 404; uploading stays admin-only.
+   `has_file` is false when the row outlived the file, and the buttons are
+   replaced by "File unavailable" rather than a link that 404s.
+
+4. HEATMAP: cached, and only re-rendered when something moved
+   "Polling every 20s" (was 5s). First paint is instant from the session
+   cache; the poll compares class_size and every (misconception, count) pair
+   and returns the PREVIOUS object when nothing changed, so React does not
+   re-render a table three times a minute for nothing. A change invalidates
+   the cache so the next mount is correct. Refocusing the tab also ticks --
+   the cheapest signal that the class may have practised since.
+
+5. SETTINGS SEPARATED FROM PROFILE
+   {"separate":true,"hasSignOut":true}
+   Profile (new page) sits behind the top-right avatar: who you are, what you
+   teach, sign out. Settings keeps the console's behaviour, in the sidebar.
+
+6. NOTIFICATIONS BUTTON IS LIVE
+   {"opens":true,"badge":"Notifications (4 open uncertainty flags)"}
+   It was decorative with a permanent red dot. It now carries the real count
+   and opens the open uncertainty flags with a link into the panel.
+
+7. STUDENT TYPOGRAPHY
+   Before: STUDENT {"nav":"EB Garamond","h1":"Montserrat","body":"EB Garamond"}
+           TEACHER {"nav":"EB Garamond","h1":"Montserrat","body":"Inter"}
+   After:  both {"h1":"EB Garamond","body":"EB Garamond"}, nav in Courier Prime
+   Two leftovers were overriding the theme: index.css's hand-written type
+   classes still hardcoded Montserrat/Inter, and .admin-scope/.teacher-scope
+   still carried Montserrat, Inter, Hanken Grotesk and Newsreader. All now
+   read the tokens. Navigation and labels use the mono UI face, main content
+   the serif reading face -- the landing page's own split, and what stops the
+   student's content sharing a font with its nav buttons.
+
+FOUND WHILE VERIFYING
+* Every material reported has_file:false. `source_path` is sometimes an
+  absolute path (upload route) and sometimes a bare filename (ingest
+  scripts); resolving only the absolute form marked every seeded book
+  unavailable. Both forms resolve now.
+* Setting the nav to the mono face made EVERY icon render as its own name
+  ("dashboard", "notifications", "person"). The .material-symbols-outlined
+  rule lives in Google's external stylesheet, which loads BEFORE our
+  utilities, so any font-* utility outranks it. The rule is declared in
+  index.css now, last and !important.
+* A plain <a href> cannot send an Authorization header, so View/Save would
+  have 401'd. deps.current_user accepts ?token= as a fallback -- the same
+  opaque session token, no new authority -- documented as header-preferred
+  because a query token lands in browser history.

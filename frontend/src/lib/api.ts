@@ -793,3 +793,39 @@ export const getTeacherSubjects = () =>
 /** Moves every teacher panel at once -- they all scope by this one field. */
 export const setTeacherActiveSubject = (course_id: number) =>
   api<User>("/teacher/active-subject", { method: "PATCH", body: { course_id } });
+
+// --- the material library (teacher-010) ------------------------------------
+
+export type TeacherMaterial = {
+  id: number;
+  course_id: number;
+  course_code: string | null;
+  course_title: string | null;
+  title: string;
+  kind: string;
+  page_count: number;
+  chunk_count: number;
+  ingest_status: string;
+  uploaded_at: string | null;
+  /** false when the row outlived the file on disk */
+  has_file: boolean;
+};
+
+export const getTeacherMaterials = (courseId?: number) =>
+  api<{ items: TeacherMaterial[] }>(
+    `/teacher/materials${courseId ? `?course_id=${courseId}` : ""}`,
+  ).then((r) => r.items);
+
+/**
+ * A plain <a href> cannot send an Authorization header, so the token rides
+ * as a query parameter for this one route. It is the same opaque session
+ * token the header would carry -- no new authority -- and it keeps View and
+ * Save as ordinary links the browser can open and download natively.
+ */
+export const materialFileUrl = (materialId: number, download = false) => {
+  const t = getToken();
+  const qs = new URLSearchParams();
+  if (download) qs.set("download", "1");
+  if (t) qs.set("token", t);
+  return `${BASE}/teacher/materials/${materialId}/file?${qs.toString()}`;
+};

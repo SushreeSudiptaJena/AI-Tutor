@@ -751,6 +751,26 @@ SSE frames, if built: `event: token` with `data: {"text":"…"}`, then a final `
 
 > Every teacher response is **anonymized**: no `student_id`, no name, no email, in any field. Verify this in the API payload, not just the rendered UI.
 
+### Lesson plans: the material library — `teacher-010`
+
+A teacher can read the material behind every subject they teach, and open or
+download the file itself. Admin-only `/admin/courses/{id}/materials` is where
+uploading lives; this is the read side, scoped to the signed-in teacher.
+
+| Method | Path | Notes |
+|---|---|---|
+| `GET` | `/teacher/materials` | `{ items: [Material] }` across **all** the teacher's assigned subjects, newest first. Each row carries `course_code` and `course_title` so the library can group by subject without a second call. `?course_id=` narrows it. Archived material is excluded. |
+| `GET` | `/teacher/materials/{material_id}/file` | The file itself. `?download=1` sets `Content-Disposition: attachment` (the Save button); without it the browser renders it inline (the View button). **403** if the material does not belong to a subject the teacher is assigned to; **404** if the file is missing from disk, which is a real state — the row can outlive the file. |
+
+```json
+// Material, as the library sees it
+{ "id": 4, "course_id": 5, "course_code": "CSW2", "course_title": "Computer Science Workshop 2",
+  "title": "Django 5 By Example", "kind": "textbook", "page_count": 1190,
+  "chunk_count": 3261, "ingest_status": "complete", "uploaded_at": "…", "has_file": true }
+```
+`has_file` is false when the row exists but nothing is on disk — the UI
+disables View/Save rather than offering a link that 404s.
+
 ### Which subject the console shows — `teacher-009`
 
 Every teacher panel below scopes by the signed-in teacher's **active
@@ -1000,6 +1020,7 @@ Every shape above is final enough to mock. Suggested order, matching `feature_li
 | 2026-08-24 | Golden path complete. `POST /student/practice/generate` (needs `gap_id`; also returns `concept` and `source: generated\|seeded`), `POST /student/practice/{id}/answer`, `POST /student/misconception-diagnosis/{id}/confirm`, `GET /teacher/misconceptions/heatmap`, `GET /teacher/uncertainty-flags` and its `/resolve`. `student-004` Show Source needs no endpoint — it is the `Citation` object. |
 | 2026-08-24 | **`TutorResponse` gains `speech_text`** (`a11y-001`, backend half). Read-aloud must use it instead of `body`: `body` is markdown, and `[4]` is spoken as "four" mid-sentence. Present on every outcome, including refusals. |
 | 2026-08-24 | `i18n-001` built and verified live: Hindi in, Hindi out, identical citations and an identical alignment score. Response `language` now reports what was produced. Both routes fall back to `User.preferred_language` instead of defaulting to `en`. |
+| 2026-08-27 | **`teacher-010`**: `GET /teacher/materials` (every material across the teacher's assigned subjects, with `course_code`/`course_title`) and `GET /teacher/materials/{id}/file` (inline, or `?download=1` to save). Read-only; uploading stays admin-only. |
 | 2026-08-26 | **`student-010` + `teacher-009`** (owner-directed; Sushree editing person 6's file). Cohort-awareness reaches the student and teacher surfaces. `User` gains `batch_id`. New: `GET /student/batches`, `POST /student/enroll`, `GET /student/subjects`, `PATCH /student/active-subject`, `GET /teacher/subjects`, `PATCH /teacher/active-subject`. No existing route changed shape — they all still scope by `course_id`, which is now called the *active subject*. |
 | 2026-08-26 | **`admin-010`** (owner-directed; Sushree editing person 6's file). Subjects are now linked to cohorts: `GET/POST /admin/batches/{id}/courses`, `DELETE /admin/batches/{id}/courses/{course_id}`, optional `batch_id` on `POST /admin/courses`, `batch_ids` on the `Course` object, `courses_without_batch` on `/admin/overview`. Many-to-many by design. `admission_batches` is untouched and still means admission *years*. |
 | 2026-08-26 | **`admin-009` + `auth-004`** (owner-directed restructure; Sushree editing, normally person 6's file). **Auth:** signup is now **student-only** (`university?`, `roll_number?` added, `role` removed) — teachers are admin-issued. **Admin, new "Batches" surface:** `GET/POST /admin/batches`, `POST /admin/batches/{id}/curriculum` (pdf/docx), `POST /admin/batches/{id}/curriculum/reuse`, `GET /admin/overview` (dashboard metrics). **Teacher assignment per subject:** `GET/POST /admin/courses/{id}/teachers`, `DELETE /admin/courses/{id}/teachers/{user_id}`. `User` gains nullable `university` and `roll_number`. No existing endpoint changed shape. |

@@ -246,14 +246,36 @@ def seed_users(db: OrmSession, data: dict, courses: dict[str, Course]) -> dict[s
         row = users[u["email"]]
         if row.role != "teacher" or row.course_id is None:
             continue
-        link = db.scalar(
-            select(CourseTeacher).where(
-                CourseTeacher.course_id == row.course_id,
-                CourseTeacher.user_id == row.id,
+        # The demo teacher teaches more than one subject on purpose: the
+        # console's subject switcher, My Classes and the material library all
+        # look broken with a single assignment, and a real teacher has
+        # several. Any course carrying an ingested corpus qualifies.
+        with_corpus = {
+            cid for (cid,) in db.execute(
+                select(Material.course_id)
+                .where(Material.ingest_status == "complete", Material.status == "active")
+                .distinct()
+            ).all()
+        }
+        # ...except the retired physics stand-in (PH101/PH000). It still has
+        # a corpus and is deliberately left in the database, but it is not a
+        # subject anybody teaches now, and listing it as one of this
+        # teacher's classes would be a lie on the demo screen.
+        retired = {
+            cid for (cid,) in db.execute(
+                select(Course.id).where(Course.code.like("PH%"))
+            ).all()
+        }
+        with_corpus -= retired
+        for course_id in {row.course_id, *with_corpus}:
+            link = db.scalar(
+                select(CourseTeacher).where(
+                    CourseTeacher.course_id == course_id,
+                    CourseTeacher.user_id == row.id,
+                )
             )
-        )
-        if link is None:
-            db.add(CourseTeacher(course_id=row.course_id, user_id=row.id))
+            if link is None:
+                db.add(CourseTeacher(course_id=course_id, user_id=row.id))
     db.flush()
 
     log(f"  users            {len(users)}")

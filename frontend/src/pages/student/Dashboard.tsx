@@ -1571,7 +1571,7 @@ export default function Dashboard() {
       {/* Sidebar */}
       <aside className="fixed left-0 top-0 z-50 flex h-full w-[240px] flex-col bg-forest-green">
         <div className="mb-md mt-sm p-lg">
-          <span className="font-sans text-3xl font-bold tracking-widest text-white uppercase">
+          <span className="font-mono text-3xl font-bold tracking-widest text-white uppercase">
             JOURNEY
           </span>
         </div>
@@ -1585,7 +1585,7 @@ export default function Dashboard() {
                 <button
                   key={item.label}
                   aria-current={activeSection === item.label ? "page" : undefined}
-                  className={`flex w-full items-center rounded-lg px-sm py-3 text-left text-xs font-bold tracking-wider uppercase transition-all ${
+                  className={`font-mono flex w-full items-center rounded-lg px-sm py-3 text-left text-xs font-bold tracking-wider uppercase transition-all ${
                     activeSection === item.label
                       ? "border-l-4 border-[#e5b045] bg-forest-light text-white"
                       : "text-on-primary/70 hover:bg-forest-light hover:text-white"
@@ -1605,7 +1605,7 @@ export default function Dashboard() {
           <div className="mt-auto border-t border-on-primary/10 pt-4">
             <button
               aria-current={activeSection === "Settings" ? "page" : undefined}
-              className={`mb-2 flex w-full items-center rounded-lg px-sm py-3 text-xs font-bold tracking-wider uppercase transition-all ${
+              className={`font-mono mb-2 flex w-full items-center rounded-lg px-sm py-3 text-xs font-bold tracking-wider uppercase transition-all ${
                 activeSection === "Settings"
                   ? "border-l-4 border-[#e5b045] bg-forest-light text-white"
                   : "text-on-primary/70 hover:bg-forest-light hover:text-white"

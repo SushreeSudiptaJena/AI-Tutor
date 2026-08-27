@@ -7,7 +7,7 @@ request is authenticated.
 
 from __future__ import annotations
 
-from fastapi import Depends, Header, HTTPException, status
+from fastapi import Depends, Header, HTTPException, Query, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session as OrmSession
 
@@ -24,6 +24,7 @@ def _unauthenticated(message: str = "Not authenticated.") -> HTTPException:
 
 def current_user(
     authorization: str | None = Header(default=None),
+    token: str | None = Query(default=None),
     db: OrmSession = Depends(get_db),
 ) -> User:
     """Resolve `Authorization: Bearer <token>` to a User, or 401.
@@ -31,7 +32,16 @@ def current_user(
     The header is checked before the database is touched, so an unauthenticated
     request costs no query -- which is also why the test suite can exercise the
     401 path with no database at all.
+
+    `?token=` is accepted as a fallback for ONE reason (teacher-010): a plain
+    `<a href>` or a browser download cannot send a header, and the material
+    library's View/Save links are ordinary links on purpose. It is the same
+    opaque session token, so it grants nothing extra -- but it does end up in
+    browser history, so prefer the header everywhere it is possible.
     """
+    if not authorization and token and token.strip():
+        authorization = f"Bearer {token.strip()}"
+
     if not authorization:
         raise _unauthenticated("Missing Authorization header.")
 

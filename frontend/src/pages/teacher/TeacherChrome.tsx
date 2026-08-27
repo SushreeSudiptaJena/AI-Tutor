@@ -4,8 +4,10 @@ import {
   clearSessionCache,
   getMe,
   getTeacherSubjects,
+  getUncertaintyFlags,
   setTeacherActiveSubject,
   type TeacherSubject,
+  type UncertaintyFlagDto,
 } from "@/lib/api";
 
 /**
@@ -19,13 +21,14 @@ import {
  * Ascent" -- the screens arrived with a placeholder persona baked in.
  */
 
+// Students, Attendance and Assignments are gone: they were static mockups
+// with no endpoint behind them, and this build deliberately stores no
+// attendance or per-student roster (see the absences at the top of
+// models.py). Lesson Plans is the material library (teacher-010).
 const NAV_TOP: [string, string, string][] = [
   ["dashboard", "dashboard", "Dashboard"],
   ["my-classes", "school", "My Classes"],
-  ["students", "group", "Students"],
-  ["attendance", "how_to_reg", "Attendance"],
   ["lesson-plans", "auto_stories", "Lesson Plans"],
-  ["assignments", "assignment", "Assignments"],
 ];
 
 const NAV_INSIGHTS: [string, string, string][] = [
@@ -40,8 +43,8 @@ const NAV_INSIGHTS: [string, string, string][] = [
 
 function itemClasses(active: boolean): string {
   return active
-    ? "flex items-center px-4 py-3 rounded-lg transition-all gap-3 bg-surface/10 text-on-primary font-semibold border-l-4 border-secondary"
-    : "flex items-center px-4 py-3 rounded-lg hover:bg-surface/5 hover:text-on-primary transition-all gap-3 text-on-primary";
+    ? "font-mono text-[13px] tracking-wide flex items-center px-4 py-3 rounded-lg transition-all gap-3 bg-surface/10 text-on-primary font-semibold border-l-4 border-secondary"
+    : "font-mono text-[13px] tracking-wide flex items-center px-4 py-3 rounded-lg hover:bg-surface/5 hover:text-on-primary transition-all gap-3 text-on-primary";
 }
 
 export default function TeacherChrome({
@@ -84,6 +87,20 @@ export default function TeacherChrome({
   }
 
   const current = subjects.find((s) => s.is_current);
+
+  // The bell was decorative. It now opens what a teacher would actually
+  // want behind it: the open uncertainty flags, with a way into the panel.
+  const [bellOpen, setBellOpen] = useState(false);
+  const [flags, setFlags] = useState<UncertaintyFlagDto[]>([]);
+  useEffect(() => {
+    let alive = true;
+    cached("flags-open", () => getUncertaintyFlags("open"))
+      .then((r) => alive && setFlags(r))
+      .catch(() => alive && setFlags([]));
+    return () => {
+      alive = false;
+    };
+  }, []);
 
   const link = ([path, icon, label]: [string, string, string]) => (
     <a
@@ -166,19 +183,69 @@ export default function TeacherChrome({
             )}
           </div>
           <div className="flex items-center gap-6">
-            <button className="relative text-on-primary hover:text-on-primary transition-colors">
-              <span className="material-symbols-outlined">notifications</span>
-              <div className="absolute -top-1 -right-1 w-2 h-2 bg-error rounded-full"></div>
-            </button>
-            <div className="flex items-center gap-3 pl-6 border-l border-on-primary/20">
+            <div className="relative">
+              <button
+                onClick={() => setBellOpen((v) => !v)}
+                aria-label={`Notifications (${flags.length} open uncertainty flags)`}
+                aria-expanded={bellOpen}
+                className="relative text-on-primary hover:opacity-80 transition-opacity"
+              >
+                <span className="material-symbols-outlined">notifications</span>
+                {flags.length > 0 && (
+                  <span className="absolute -top-1 -right-1 min-w-4 h-4 px-1 bg-orange text-on-primary rounded-full font-label-sm text-[10px] flex items-center justify-center">
+                    {flags.length}
+                  </span>
+                )}
+              </button>
+
+              {bellOpen && (
+                <div className="absolute right-0 mt-3 w-[22rem] bg-card text-ink rounded-xl border border-outline-variant shadow-[0_10px_22px_-14px_rgba(43,41,38,0.28)] p-4 z-50">
+                  <p className="font-label-sm text-label-sm uppercase tracking-widest text-ink-faint mb-3">
+                    Open uncertainty flags
+                  </p>
+                  {flags.length === 0 ? (
+                    <p className="font-body-md text-body-md text-ink-soft">
+                      Nothing outstanding — everything the class asked was grounded in the
+                      material.
+                    </p>
+                  ) : (
+                    <>
+                      <ul className="space-y-2 max-h-[16rem] overflow-y-auto">
+                        {flags.slice(0, 5).map((f) => (
+                          <li key={f.id} className="font-body-md text-body-md line-clamp-2">
+                            {f.question}
+                          </li>
+                        ))}
+                      </ul>
+                      <a
+                        href="#"
+                        data-path="uncertainty-flags"
+                        onClick={() => setBellOpen(false)}
+                        className="mt-3 inline-block font-label-md text-label-md text-orange hover:underline"
+                      >
+                        See all {flags.length} →
+                      </a>
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
+            {/* Profile lives behind the avatar; Settings stays in the
+                sidebar. They were one screen before. */}
+            <a
+              href="#"
+              data-path="profile"
+              aria-label="Open your profile"
+              className="flex items-center gap-3 pl-6 border-l border-on-primary/20 hover:opacity-80 transition-opacity"
+            >
               <div className="text-right hidden sm:block">
                 <div className="text-body-md font-semibold text-on-primary">{name}</div>
                 <div className="text-label-sm text-on-primary">Educator</div>
               </div>
-              <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center border-2 border-secondary/50 shadow-lg">
-                <span className="material-symbols-outlined text-secondary text-[22px]">person</span>
+              <div className="w-10 h-10 rounded-full bg-orange flex items-center justify-center shadow-lg">
+                <span className="material-symbols-outlined text-on-primary text-[22px]">person</span>
               </div>
-            </div>
+            </a>
           </div>
         </header>
         <main className="pt-20 p-margin-desktop bg-paper text-ink">

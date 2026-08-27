@@ -20,10 +20,15 @@ system look more accurate than it is.
 
 from __future__ import annotations
 
+import re
+from pathlib import Path
+
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
+from fastapi.responses import FileResponse
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session as OrmSession
 
+from ..config import REPO_ROOT
 from ..db import get_db
 from ..deps import teacher_only
 from ..models import (
@@ -41,6 +46,7 @@ from ..models import (
     UncertaintyFlag,
     User,
     CourseTeacher,
+    Material,
 )
 from ..providers import AllProvidersFailed
 from ..services import reteach
@@ -54,6 +60,9 @@ from ..schemas import (
 )
 
 router = APIRouter(prefix="/teacher", tags=["teacher"])
+
+# where ingestion and the admin upload route both put files
+UPLOAD_DIR = REPO_ROOT / "backend" / "data" / "pdfs"
 
 
 def _class_size(db: OrmSession, course_id: int | None) -> int:
@@ -1111,3 +1120,118 @@ def set_active_subject(
     user.course_id = body.course_id
     db.flush()
     return UserOut.model_validate(user)
+
+
+# ---------------------------------------------------------------------------
+# teacher-010 -- the material library behind Lesson Plans
+# ---------------------------------------------------------------------------
+
+def _material_path(material: Material) -> Path | None:
+    """Where the file for a material actually lives.
+
+    `source_path` is sometimes an absolute path (written by the upload route)
+    and sometimes a bare filename (written by the ingest scripts). Resolving
+    only the absolute form reported every seeded book as "file unavailable",
+    which is how this was found.
+    """
+    if not material.source_path:
+        return None
+    p = Path(material.source_path)
+    if p.is_absolute():
+        return p if p.exists() else None
+    candidate = UPLOAD_DIR / p.name
+    return candidate if candidate.exists() else None
+
+
+def _assigned_course_ids(db: OrmSession, user: User) -> list[int]:
+    """Every subject this teacher is assigned to (admin-009)."""
+    return list(db.scalars(
+        select(CourseTeacher.course_id).where(CourseTeacher.user_id == user.id)
+    ).all())
+
+
+@router.get("/materials")
+def list_materials(
+    course_id: int | None = None,
+    db: OrmSession = Depends(get_db),
+    user: User = Depends(teacher_only),
+) -> dict:
+    """The whole institutional library, read-only.
+
+    Every subject, not just the ones this teacher is assigned to: a lesson
+    plan is often built from a neighbouring subject's book, and the corpus is
+    institutional teaching material rather than private data. Uploading stays
+    admin-only, and archived rows are excluded -- a superseded edition is not
+    a lesson plan.
+    """
+    stmt = select(Material).where(Material.status == "active")
+    if course_id is not None:
+        stmt = stmt.where(Material.course_id == course_id)
+    rows = db.scalars(
+        stmt.order_by(Material.uploaded_at.desc(), Material.id.desc())
+    ).all()
+
+    courses = {
+        c.id: c
+        for c in db.scalars(
+            select(Course).where(Course.id.in_({m.course_id for m in rows} or {0}))
+        ).all()
+    }
+    items = []
+    for m in rows:
+        c = courses.get(m.course_id)
+        items.append({
+            "id": m.id,
+            "course_id": m.course_id,
+            "course_code": c.code if c else None,
+            "course_title": c.title if c else None,
+            "title": m.title,
+            "kind": m.kind,
+            "page_count": m.page_count,
+            "chunk_count": m.chunk_count,
+            "ingest_status": m.ingest_status,
+            "uploaded_at": m.uploaded_at.isoformat().replace("+00:00", "Z")
+            if m.uploaded_at else None,
+            # the row can outlive the file; say so rather than offering a
+            # link that 404s
+            "has_file": _material_path(m) is not None,
+        })
+    return {"items": items}
+
+
+@router.get("/materials/{material_id}/file")
+def material_file(
+    material_id: int,
+    download: int = 0,
+    db: OrmSession = Depends(get_db),
+    user: User = Depends(teacher_only),
+):
+    """The file itself -- inline for View, attachment for Save."""
+    material = db.get(Material, material_id)
+    if material is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={"code": "not_found", "message": "No such material."},
+        )
+    if material.status != "active":
+        # an archived edition is out of the library on purpose: its pages no
+        # longer match what students are being cited from
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={"code": "not_found", "message": "That material has been archived."},
+        )
+    path = _material_path(material)
+    if path is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={"code": "not_found",
+                    "message": "The file for this material is not on disk."},
+        )
+
+    disposition = "attachment" if download else "inline"
+    safe = re.sub(r'[^A-Za-z0-9._-]+', "-", material.title)[:80] or "material"
+    return FileResponse(
+        path,
+        media_type="application/pdf" if path.suffix.lower() == ".pdf" else "application/octet-stream",
+        headers={"Content-Disposition": f'{disposition}; filename="{safe}{path.suffix}"'},
+    )

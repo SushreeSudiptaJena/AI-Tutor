@@ -6,9 +6,11 @@
  */
 import { useEffect, useState } from "react";
 import TeacherChrome from "./TeacherChrome";
-import { getHeatmap, type Heatmap } from "@/lib/api";
+import { cached, getHeatmap, invalidateCache, type Heatmap } from "@/lib/api";
 
-const POLL_MS = 5000;
+// Slower than the original 5s. The first paint comes from the session cache,
+// so the poll only has to catch a change -- it is not what fills the screen.
+const POLL_MS = 20000;
 
 function band(share: number): { label: string; chip: string; bar: string } {
   if (share >= 0.3)
@@ -34,15 +36,50 @@ export default function MisconceptionHeatmapHighContrast() {
 
   useEffect(() => {
     let alive = true;
-    const load = () =>
+
+    // Instant: whatever this session already fetched. The panel is on screen
+    // before the network answers -- that is the point of the cache.
+    cached("heatmap-teacher", getHeatmap)
+      .then((d) => alive && (setData(d), setError(null)))
+      .catch(() => alive && setError("Could not load the heatmap."));
+
+    // Then poll, but only re-render when something actually MOVED. Setting
+    // state every tick re-rendered the whole table three times a minute for
+    // nothing, and made "last updated" jump while the class sat still.
+    const tick = () =>
       getHeatmap()
-        .then((d) => alive && (setData(d), setError(null)))
-        .catch(() => alive && setError("Could not load the heatmap."));
-    load();
-    const timer = setInterval(load, POLL_MS);
+        .then((fresh) => {
+          if (!alive) return;
+          setError(null);
+          setData((prev) => {
+            const unchanged =
+              prev !== null &&
+              prev.class_size === fresh.class_size &&
+              prev.items.length === fresh.items.length &&
+              prev.items.every(
+                (it, i) =>
+                  it.misconception_id === fresh.items[i].misconception_id &&
+                  it.confirmed_count === fresh.items[i].confirmed_count,
+              );
+            if (unchanged) return prev;
+            // the cache feeds the next mount, so it must not go stale
+            invalidateCache("heatmap-teacher");
+            return fresh;
+          });
+        })
+        .catch(() => {
+          /* a failed poll must never blank a panel that is already correct */
+        });
+
+    const timer = setInterval(tick, POLL_MS);
+    // Returning to the tab is the cheapest signal that time has passed and
+    // the class may have practised since.
+    const onFocus = () => tick();
+    window.addEventListener("focus", onFocus);
     return () => {
       alive = false;
       clearInterval(timer);
+      window.removeEventListener("focus", onFocus);
     };
   }, []);
 

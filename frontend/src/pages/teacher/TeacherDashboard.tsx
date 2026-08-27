@@ -1,6 +1,4 @@
 import { MouseEvent, useState } from "react";
-import AssignmentsLibraryHighContrast from "./AssignmentsLibraryHighContrast";
-import AttendanceTrackerHighContrast from "./AttendanceTrackerHighContrast";
 import BeforeAfterTrackingHighContrast from "./BeforeAfterTrackingHighContrast";
 import ContentVerificationHighContrast from "./ContentVerificationHighContrast";
 import DashboardOverviewHighContrast from "./DashboardOverviewHighContrast";
@@ -10,17 +8,14 @@ import MyClassesHighContrast from "./MyClassesHighContrast";
 import PrerequisiteGapMapHighContrast from "./PrerequisiteGapMapHighContrast";
 import ReasoningPathBreakdownHighContrast from "./ReasoningPathBreakdownHighContrast";
 import SettingsHighContrast from "./SettingsHighContrast";
-import StudentDirectoryHighContrast from "./StudentDirectoryHighContrast";
+import TeacherProfile from "./TeacherProfile";
 import SuggestedReteachHighContrast from "./SuggestedReteachHighContrast";
 import UncertaintyFlagsHighContrast from "./UncertaintyFlagsHighContrast";
 
 const pages = {
   dashboard: DashboardOverviewHighContrast,
   "my-classes": MyClassesHighContrast,
-  students: StudentDirectoryHighContrast,
-  attendance: AttendanceTrackerHighContrast,
   "lesson-plans": LessonPlansLibraryHighContrast,
-  assignments: AssignmentsLibraryHighContrast,
   "misconception-heatmap": MisconceptionHeatmapHighContrast,
   "reasoning-path-breakdown": ReasoningPathBreakdownHighContrast,
   "gap-map": PrerequisiteGapMapHighContrast,
@@ -29,6 +24,7 @@ const pages = {
   "suggested-reteach": SuggestedReteachHighContrast,
   "content-verification": ContentVerificationHighContrast,
   settings: SettingsHighContrast,
+  profile: TeacherProfile,
 };
 
 type TeacherPage = keyof typeof pages;
