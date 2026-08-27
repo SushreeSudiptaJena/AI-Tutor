@@ -2,7 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import RequireAuth from "@/components/RequireAuth";
 import Login from "@/pages/auth/Login";
 import UnifiedLogin from "@/pages/auth/UnifiedLogin";
-import Landing from "@/pages/Landing";
+import Landing from "@/pages/landing/Landing";
 import Signup from "@/pages/auth/Signup";
 import ForgotPassword from "@/pages/auth/ForgotPassword";
 import AdminDashboard from "@/pages/admin/AdminDashboard";

@@ -62,16 +62,16 @@ export default function UncertaintyFlagsHighContrast() {
 
   return (
     <TeacherChrome active="uncertainty-flags">
-      <header className="flex flex-col md:flex-row justify-between items-end gap-6 relative z-10 border-b border-[#FFFFFF]/20 pb-8">
+      <header className="flex flex-col md:flex-row justify-between items-end gap-6 relative z-10 border-b border-ink/15 pb-8">
         <div className="flex flex-col max-w-2xl">
-          <span className="font-label-sm text-label-sm uppercase tracking-[0.2em] text-[#FFFFFF] mb-4 flex items-center gap-2">
+          <span className="font-label-sm text-label-sm uppercase tracking-[0.2em] text-ink mb-4 flex items-center gap-2">
             <span className="material-symbols-outlined text-[16px] text-secondary">warning</span>
             Curriculum Coverage
           </span>
-          <h1 className="font-display-lg text-display-lg text-[#FFFFFF] m-0 leading-tight">
+          <h1 className="font-display-lg text-display-lg text-ink m-0 leading-tight">
             Uncertainty Flags
           </h1>
-          <p className="font-body-lg text-body-lg text-[#FFFFFF] mt-4 max-w-[36rem]">
+          <p className="font-body-lg text-body-lg text-ink mt-4 max-w-[36rem]">
             Every question the tutor could not ground in the approved material, and therefore refused
             to answer. Anonymous by design — what the class needs, not who asked.
           </p>
@@ -80,7 +80,7 @@ export default function UncertaintyFlagsHighContrast() {
           <button
             onClick={() => setShowResolved(false)}
             className={`px-5 py-3 rounded-lg font-title-md text-title-md transition-colors ${
-              !showResolved ? "bg-secondary text-[#1A1A1A]" : "border border-[#FFFFFF]/30 text-[#FFFFFF]"
+              !showResolved ? "bg-secondary text-ink" : "border border-ink/25 text-ink"
             }`}
           >
             Open ({open?.length ?? "…"})
@@ -88,7 +88,7 @@ export default function UncertaintyFlagsHighContrast() {
           <button
             onClick={() => setShowResolved(true)}
             className={`px-5 py-3 rounded-lg font-title-md text-title-md transition-colors ${
-              showResolved ? "bg-secondary text-[#1A1A1A]" : "border border-[#FFFFFF]/30 text-[#FFFFFF]"
+              showResolved ? "bg-secondary text-ink" : "border border-ink/25 text-ink"
             }`}
           >
             Resolved ({resolved?.length ?? "…"})
@@ -97,14 +97,14 @@ export default function UncertaintyFlagsHighContrast() {
       </header>
 
       {error && (
-        <p role="alert" className="bg-error/20 text-[#FFFFFF] px-6 py-4 rounded-xl">
+        <p role="alert" className="bg-error/20 text-ink px-6 py-4 rounded-xl">
           {error}
         </p>
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 relative z-10">
         {list.length === 0 && !error && (
-          <p className="font-body-lg text-body-lg text-[#FFFFFF]/70">
+          <p className="font-body-lg text-body-lg text-ink-soft">
             {showResolved
               ? "Nothing resolved yet."
               : "No open flags — everything the class has asked is grounded in the material."}
@@ -113,7 +113,7 @@ export default function UncertaintyFlagsHighContrast() {
         {list.map((f) => (
           <article
             key={f.id}
-            className="bg-surface-container-lowest text-[#1A1A1A] p-8 rounded-2xl shadow-[0_4px_40px_rgba(0,0,0,0.05)] flex flex-col gap-4"
+            className="bg-surface-container-lowest text-ink p-8 rounded-2xl shadow-[0_4px_40px_rgba(0,0,0,0.05)] flex flex-col gap-4"
           >
             <div className="flex items-start justify-between gap-4">
               <h3 className="font-title-md text-title-md leading-snug">{f.question}</h3>
@@ -121,18 +121,18 @@ export default function UncertaintyFlagsHighContrast() {
                 {f.alignment_percent}% aligned
               </span>
             </div>
-            <p className="font-body-md text-body-md text-[#1A1A1A]/80">
+            <p className="font-body-md text-body-md text-ink/80">
               {REASONS[f.reason] ?? f.reason}
             </p>
-            <div className="flex items-center justify-between mt-auto pt-4 border-t border-[#1A1A1A]/10">
-              <span className="font-label-sm text-label-sm text-[#1A1A1A]/60 uppercase">
+            <div className="flex items-center justify-between mt-auto pt-4 border-t border-ink/10">
+              <span className="font-label-sm text-label-sm text-ink/60 uppercase">
                 {since(f.occurred_at)} · {f.status}
               </span>
               {f.status === "open" && (
                 <button
                   onClick={() => resolve(f.id)}
                   disabled={busyId === f.id}
-                  className="bg-primary text-[#FFFFFF] px-5 py-2.5 rounded-lg font-title-md text-title-md hover:bg-primary/90 disabled:opacity-50 transition-colors flex items-center gap-2"
+                  className="bg-primary text-on-primary px-5 py-2.5 rounded-lg font-title-md text-title-md hover:bg-primary/90 disabled:opacity-50 transition-colors flex items-center gap-2"
                 >
                   <span className="material-symbols-outlined text-[18px]">check_circle</span>
                   {busyId === f.id ? "Resolving…" : "Mark resolved"}

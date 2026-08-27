@@ -1,0 +1,69 @@
+One design system: the paper-desk theme, applied to the whole app
+Verified 2026-08-27. Build green + the utility guard passes (228 token
+classes). Screenshots 01-18 in this directory.
+
+WHAT THE LANDING PAGE ACTUALLY IS
+It was never merged. `origin/feature/landing-page` held
+frontend/src/pages/landing/{Landing.tsx (920 lines), Landing.css (1,725)}: a
+newspaper -- "THE DAILY EDGE" -- taped to a desk, with scroll-reveal slides.
+What was at "/" until now was the stopgap I wrote in session 021. It is
+merged, its CSS globals moved into index.css, and "/" renders it.
+
+ITS DESIGN LANGUAGE, NOW THE APP'S
+  paper #faf7f1 / paper-2 #f3ede3 / paper-3 #e8dfd1   surfaces
+  card  #fffdf9                                        raised surfaces
+  ink   #2b2926 / ink-soft #6f6862 / ink-faint #9c948b type
+  orange #e4552b (+ #c74620), peach, sky, lime         accents
+  EB Garamond for text, Courier Prime for labels and buttons
+  .btn = ink fill, #fff7f0 text, mono uppercase, lift shadow, -2px on hover
+
+HOW IT WAS APPLIED
+1. Every semantic token in @theme repointed at the paper palette: 55 colour
+   tokens rewritten, 14 added, 19 font tokens rewritten. Any surface reading
+   tokens changed with no markup edits.
+2. .admin-scope and .teacher-scope no longer carry palettes at all -- they
+   were the two competing designs that caused the bleed this project spent a
+   session untangling. They keep only structural values.
+3. ~500 hardcoded colours retired across 26 files: text-[#1A1A1A] (237),
+   text-[#FFFFFF] (148), the lime CTA #7AB139, the dark login gradient, and
+   Tailwind's gray-*/white/black defaults on the auth screens.
+4. Shared components in index.css -- .btn-ink, .btn-ghost, .paper-card --
+   matching the landing's own .btn/.card, so a button looks the same
+   everywhere.
+5. Landing.css speaks in --paper/--ink/--orange; those names are aliased at
+   :root onto the tokens, so 1,600 lines keep working against ONE palette.
+6. The landing's CTA was href="#login" -- a dead in-page anchor. It is now a
+   router Link, beside new "Create an account" and "Admin console" doors:
+     CTAs: [{"Sign in","/login"},{"Create an account","/signup"},
+            {"Admin console","/admin/login"}]
+     clicked Sign in -> /login
+
+CONTRAST SWEEP (17 pages, automated)
+A checker walks every text node, resolves the nearest painted background and
+reports pairs below 2.2:1. It found three real breaks, all fixed:
+  * the landing rendered #fff7f0 text on paper at 1.01:1 -- stage 1 had moved
+    --paper/--ink out from under Landing.css, so every rule referencing them
+    lost its value. Fixed by the :root aliases.
+  * the admin's .ns-glass-card / .ns-glass-panel / .ns-btn-primary were still
+    the dark console's (rgba(36,49,56,.4) behind ink text). Retinted to card
+    + outline + ink.
+  * 20 buttons ended up ink-on-ink: their label had been literal white on a
+    dark fill, and a blanket white->ink pass made it invisible. Anything on a
+    BARE dark fill (bg-primary/bg-ink/bg-error) now uses text-on-primary.
+    The first pass missed 3 of them because `hover:bg-primary/90` tripped the
+    "is this a wash?" guard -- a variant is not the base fill.
+Everything still flagged is the checker failing to composite oklab/alpha
+(e.g. ink on `oklab(... / 0.8)` over paper), confirmed by eye on the
+screenshots.
+
+WHAT IT LOOKS LIKE NOW
+  01 landing        the newspaper, unchanged from its branch
+  06-09 student     paper canvas, ink sidebar, serif headings, mono labels
+  10-13 teacher     paper canvas, ink chrome, peach data cards, orange bars
+  14-17 admin       paper canvas, light sidebar, orange accents, ink CTA
+  02-05 auth        paper gradient, card panel, ink button
+
+KNOWN
+Asha's dashboard reads 0 gaps: the flow tests reset her diagnostic. Run
+backend/scripts/reset_demo_state.py and re-take the diagnostic before
+demoing. Nothing to do with the theme.

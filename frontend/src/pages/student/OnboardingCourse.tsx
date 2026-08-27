@@ -119,7 +119,7 @@ export default function OnboardingCourse() {
             )}
           </div>
 
-          <div className="border border-outline-variant bg-white p-lg shadow-sm">
+          <div className="border border-outline-variant bg-card p-lg shadow-sm">
             {error && (
               <p className="mb-md text-body-sm text-error" role="alert">
                 {error}

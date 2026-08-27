@@ -17,7 +17,7 @@ export default function StudentDirectoryHighContrast() {
 <div className="flex items-center gap-4 hidden md:flex">
 <div className="px-4 py-2 bg-surface-container rounded-full flex items-center gap-2 shadow-sm cursor-pointer hover:bg-surface-container-high transition-colors">
 <div className="w-2 h-2 rounded-full bg-error animate-pulse"></div>
-<span className="font-label-sm text-label-sm text-[#1A1A1A]">3 Alerts Active</span>
+<span className="font-label-sm text-label-sm text-ink">3 Alerts Active</span>
 </div>
 <button className="px-6 py-3 bg-secondary text-white rounded-lg font-title-md text-title-md shadow-md hover:bg-secondary-container hover:text-white transition-all flex items-center gap-2">
 <span className="material-symbols-outlined">add</span> New Student
@@ -30,18 +30,18 @@ export default function StudentDirectoryHighContrast() {
 <span className="material-symbols-outlined text-3xl text-secondary">monitoring</span>
 </div>
 <div className="flex flex-col">
-<span className="font-label-sm text-label-sm text-[#1A1A1A] uppercase tracking-wider mb-1">Cohort Mastery Average</span>
+<span className="font-label-sm text-label-sm text-ink uppercase tracking-wider mb-1">Cohort Mastery Average</span>
 <div className="flex items-baseline gap-2">
-<span className="font-display-lg text-display-lg text-[#1A1A1A] leading-none">78%</span>
-<span className="font-body-md text-body-md text-[#1A1A1A] font-semibold flex items-center"><span className="material-symbols-outlined text-sm">trending_up</span> +4.2%</span>
+<span className="font-display-lg text-display-lg text-ink leading-none">78%</span>
+<span className="font-body-md text-body-md text-ink font-semibold flex items-center"><span className="material-symbols-outlined text-sm">trending_up</span> +4.2%</span>
 </div>
 </div>
 </div>
 <div className="flex-1 bg-surface-container-lowest rounded-xl p-card-padding shadow-md flex items-center gap-6 relative overflow-hidden">
 <div className="absolute right-0 bottom-0 w-32 h-32 bg-secondary/10 rounded-tl-full"></div>
 <div className="flex flex-col flex-1 z-10">
-<span className="font-label-sm text-label-sm text-[#1A1A1A] uppercase tracking-wider mb-1">Attention Required</span>
-<span className="font-headline-lg text-headline-lg text-[#1A1A1A] mb-2">12 Students</span>
+<span className="font-label-sm text-label-sm text-ink uppercase tracking-wider mb-1">Attention Required</span>
+<span className="font-headline-lg text-headline-lg text-ink mb-2">12 Students</span>
 <div className="w-full h-1 bg-surface-variant rounded-full overflow-hidden">
 <div className="h-full bg-error w-1/4 rounded-full"></div>
 </div>
@@ -51,16 +51,16 @@ export default function StudentDirectoryHighContrast() {
 <section className="w-full bg-surface-container-lowest rounded-xl shadow-lg relative z-10 flex flex-col overflow-hidden">
 <div className="p-6 border-b-2 border-surface-container flex flex-col md:flex-row items-center justify-between gap-4 bg-surface-container-lowest">
 <div className="relative w-full md:w-96 flex items-center">
-<span className="material-symbols-outlined absolute left-4 text-[#1A1A1A] z-10">search</span>
-<input className="w-full pl-12 pr-4 py-3 bg-surface rounded-lg border-2 border-transparent focus:border-secondary focus:bg-surface-container-lowest outline-none transition-all font-body-md text-[#1A1A1A] shadow-inner text-body-md placeholder:text-[#1A1A1A]" id="studentSearch" placeholder="Search by name, ID, or tag..." type="text"/>
+<span className="material-symbols-outlined absolute left-4 text-ink z-10">search</span>
+<input className="w-full pl-12 pr-4 py-3 bg-surface rounded-lg border-2 border-transparent focus:border-secondary focus:bg-surface-container-lowest outline-none transition-all font-body-md text-ink shadow-inner text-body-md placeholder:text-ink" id="studentSearch" placeholder="Search by name, ID, or tag..." type="text"/>
 </div>
 <div className="flex items-center gap-3 w-full md:w-auto overflow-x-auto pb-2 md:pb-0 hide-scrollbar">
-<button className="px-4 py-2 rounded-full border-2 border-outline-variant text-[#1A1A1A] font-label-sm text-label-sm hover:border-secondary hover:text-[#1A1A1A] transition-colors whitespace-nowrap flex items-center gap-1">
+<button className="px-4 py-2 rounded-full border-2 border-outline-variant text-ink font-label-sm text-label-sm hover:border-secondary hover:text-ink transition-colors whitespace-nowrap flex items-center gap-1">
 <span className="material-symbols-outlined text-sm">filter_list</span> All Statuses
         </button>
-<button className="px-4 py-2 rounded-full border-2 border-outline-variant text-[#1A1A1A] font-label-sm text-label-sm hover:border-secondary hover:text-[#1A1A1A] transition-colors whitespace-nowrap">Mastered (80%+)</button>
-<button className="px-4 py-2 rounded-full border-2 border-error/50 text-[#1A1A1A] font-label-sm text-label-sm bg-error-container/20 hover:bg-error-container/40 transition-colors whitespace-nowrap">Flagged</button>
-<button className="w-10 h-10 rounded-full bg-surface-container flex items-center justify-center text-[#1A1A1A] hover:bg-surface-variant transition-colors ml-2 shrink-0">
+<button className="px-4 py-2 rounded-full border-2 border-outline-variant text-ink font-label-sm text-label-sm hover:border-secondary hover:text-ink transition-colors whitespace-nowrap">Mastered (80%+)</button>
+<button className="px-4 py-2 rounded-full border-2 border-error/50 text-on-primary font-label-sm text-label-sm bg-error-container/20 hover:bg-error-container/40 transition-colors whitespace-nowrap">Flagged</button>
+<button className="w-10 h-10 rounded-full bg-surface-container flex items-center justify-center text-ink hover:bg-surface-variant transition-colors ml-2 shrink-0">
 <span className="material-symbols-outlined">more_vert</span>
 </button>
 </div>
@@ -68,21 +68,21 @@ export default function StudentDirectoryHighContrast() {
 <div className="overflow-x-auto w-full">
 <table className="w-full text-left border-collapse min-w-[800px]">
 <thead>
-<tr className="bg-surface-container-lowest border-b-2 border-surface-container text-label-sm font-label-sm uppercase tracking-wider text-[#1A1A1A]">
-<th className="py-4 px-6 font-medium cursor-pointer hover:text-black transition-colors w-1/3">Student Name <span className="material-symbols-outlined text-[14px] align-middle">arrow_drop_down</span></th>
-<th className="py-4 px-6 font-medium cursor-pointer hover:text-black transition-colors w-1/4">Mastery %</th>
-<th className="py-4 px-6 font-medium cursor-pointer hover:text-black transition-colors w-1/4">Last Activity</th>
+<tr className="bg-surface-container-lowest border-b-2 border-surface-container text-label-sm font-label-sm uppercase tracking-wider text-ink">
+<th className="py-4 px-6 font-medium cursor-pointer hover:text-ink transition-colors w-1/3">Student Name <span className="material-symbols-outlined text-[14px] align-middle">arrow_drop_down</span></th>
+<th className="py-4 px-6 font-medium cursor-pointer hover:text-ink transition-colors w-1/4">Mastery %</th>
+<th className="py-4 px-6 font-medium cursor-pointer hover:text-ink transition-colors w-1/4">Last Activity</th>
 <th className="py-4 px-6 font-medium text-right w-1/6">Status</th>
 </tr>
 </thead>
-<tbody className="font-body-md text-body-md text-[#1A1A1A]" id="studentTableBody">
+<tbody className="font-body-md text-body-md text-ink" id="studentTableBody">
 <tr className="border-b border-surface-variant/50 hover:bg-surface/50 transition-colors group cursor-pointer">
 <td className="py-4 px-6">
 <div className="flex items-center gap-4">
-<div className="w-10 h-10 rounded-full bg-primary-fixed text-[#1A1A1A] flex items-center justify-center font-title-md text-title-md shrink-0">EL</div>
+<div className="w-10 h-10 rounded-full bg-primary-fixed text-on-primary flex items-center justify-center font-title-md text-title-md shrink-0">EL</div>
 <div className="flex flex-col">
-<span className="font-title-md text-title-md text-[#1A1A1A] group-hover:text-black transition-colors">Elena Rodriguez</span>
-<span className="font-label-sm text-label-sm text-[#1A1A1A]">ID: 847291</span>
+<span className="font-title-md text-title-md text-ink group-hover:text-ink transition-colors">Elena Rodriguez</span>
+<span className="font-label-sm text-label-sm text-ink">ID: 847291</span>
 </div>
 </div>
 </td>
@@ -94,9 +94,9 @@ export default function StudentDirectoryHighContrast() {
 </div>
 </div>
 </td>
-<td className="py-4 px-6 text-[#1A1A1A]">2 hours ago<br/><span className="text-label-sm font-label-sm text-[#1A1A1A]">Algebra II: Quadratics</span></td>
+<td className="py-4 px-6 text-ink">2 hours ago<br/><span className="text-label-sm font-label-sm text-ink">Algebra II: Quadratics</span></td>
 <td className="py-4 px-6 text-right">
-<span className="inline-flex items-center gap-1 px-3 py-1 bg-primary-fixed/20 text-[#1A1A1A] rounded-full font-label-sm text-label-sm font-semibold">
+<span className="inline-flex items-center gap-1 px-3 py-1 bg-primary-fixed/20 text-on-primary rounded-full font-label-sm text-label-sm font-semibold">
 <div className="w-1.5 h-1.5 rounded-full bg-primary-container"></div> On Track
               </span>
 </td>
@@ -104,10 +104,10 @@ export default function StudentDirectoryHighContrast() {
 <tr className="border-b border-surface-variant/50 hover:bg-surface/50 transition-colors group cursor-pointer bg-error-container/5">
 <td className="py-4 px-6">
 <div className="flex items-center gap-4">
-<div className="w-10 h-10 rounded-full bg-surface-variant text-[#1A1A1A] flex items-center justify-center font-title-md text-title-md shrink-0">JC</div>
+<div className="w-10 h-10 rounded-full bg-surface-variant text-ink flex items-center justify-center font-title-md text-title-md shrink-0">JC</div>
 <div className="flex flex-col">
-<span className="font-title-md text-title-md text-[#1A1A1A] group-hover:text-black transition-colors">Julian Chen</span>
-<span className="font-label-sm text-label-sm text-[#1A1A1A]">ID: 847302</span>
+<span className="font-title-md text-title-md text-ink group-hover:text-ink transition-colors">Julian Chen</span>
+<span className="font-label-sm text-label-sm text-ink">ID: 847302</span>
 </div>
 </div>
 </td>
@@ -119,9 +119,9 @@ export default function StudentDirectoryHighContrast() {
 </div>
 </div>
 </td>
-<td className="py-4 px-6 text-[#1A1A1A]">Yesterday<br/><span className="text-label-sm font-label-sm text-[#1A1A1A]">Calculus: Limits</span></td>
+<td className="py-4 px-6 text-ink">Yesterday<br/><span className="text-label-sm font-label-sm text-ink">Calculus: Limits</span></td>
 <td className="py-4 px-6 text-right">
-<span className="inline-flex items-center gap-1 px-3 py-1 bg-error-container text-[#1A1A1A] rounded-full font-label-sm text-label-sm border border-error/20 font-semibold">
+<span className="inline-flex items-center gap-1 px-3 py-1 bg-error-container text-on-primary rounded-full font-label-sm text-label-sm border border-error/20 font-semibold">
 <span className="material-symbols-outlined text-[14px]">warning</span> Intervention
               </span>
 </td>
@@ -129,10 +129,10 @@ export default function StudentDirectoryHighContrast() {
 <tr className="border-b border-surface-variant/50 hover:bg-surface/50 transition-colors group cursor-pointer">
 <td className="py-4 px-6">
 <div className="flex items-center gap-4">
-<div className="w-10 h-10 rounded-full bg-tertiary-fixed text-[#1A1A1A] flex items-center justify-center font-title-md text-title-md shrink-0">MK</div>
+<div className="w-10 h-10 rounded-full bg-tertiary-fixed text-ink flex items-center justify-center font-title-md text-title-md shrink-0">MK</div>
 <div className="flex flex-col">
-<span className="font-title-md text-title-md text-[#1A1A1A] group-hover:text-black transition-colors">Maya Kapoor</span>
-<span className="font-label-sm text-label-sm text-[#1A1A1A]">ID: 847115</span>
+<span className="font-title-md text-title-md text-ink group-hover:text-ink transition-colors">Maya Kapoor</span>
+<span className="font-label-sm text-label-sm text-ink">ID: 847115</span>
 </div>
 </div>
 </td>
@@ -144,9 +144,9 @@ export default function StudentDirectoryHighContrast() {
 </div>
 </div>
 </td>
-<td className="py-4 px-6 text-[#1A1A1A]">Today, 9:15 AM<br/><span className="text-label-sm font-label-sm text-[#1A1A1A]">Geometry: Proofs</span></td>
+<td className="py-4 px-6 text-ink">Today, 9:15 AM<br/><span className="text-label-sm font-label-sm text-ink">Geometry: Proofs</span></td>
 <td className="py-4 px-6 text-right">
-<span className="inline-flex items-center gap-1 px-3 py-1 bg-surface-container text-[#1A1A1A] rounded-full font-label-sm text-label-sm font-semibold">
+<span className="inline-flex items-center gap-1 px-3 py-1 bg-surface-container text-ink rounded-full font-label-sm text-label-sm font-semibold">
 <div className="w-1.5 h-1.5 rounded-full bg-outline"></div> Monitoring
               </span>
 </td>
@@ -154,10 +154,10 @@ export default function StudentDirectoryHighContrast() {
 <tr className="border-b border-surface-variant/50 hover:bg-surface/50 transition-colors group cursor-pointer">
 <td className="py-4 px-6">
 <div className="flex items-center gap-4">
-<div className="w-10 h-10 rounded-full bg-surface-variant text-[#1A1A1A] flex items-center justify-center font-title-md text-title-md shrink-0 bg-cover bg-center" data-alt="Close up portrait photograph of a young male student looking confident, well-lit studio lighting, cinematic, soft background blur, professional headshot style. Colors should complement deep teals and creams." style={{ backgroundImage: 'url(\'https://lh3.googleusercontent.com/aida-public/AB6AXuC45OTkDRbOixUNU_dWpiIF-s5yYG553AlAQ2cWtpv_yhdVbdnk5gwTtu6z1PAsfRhCRh0gVXbTUNuyuPzL5Vn1WO08lPaLvUcPXVnEYpTHJIgpuDKyJWhIjWiexQZlI--ZNuSRCzlokxdWQGHNX0pfJdZYL6-1k3sZIsmco5Q6aXhWD68elrdFXtXpK6RZjQMFWxl7xyo2c5U8qCa0qGUNKoDXU066GM8K_7bFhYWsl5A0kreM1bFi\')' }}></div>
+<div className="w-10 h-10 rounded-full bg-surface-variant text-ink flex items-center justify-center font-title-md text-title-md shrink-0 bg-cover bg-center" data-alt="Close up portrait photograph of a young male student looking confident, well-lit studio lighting, cinematic, soft background blur, professional headshot style. Colors should complement deep teals and creams." style={{ backgroundImage: 'url(\'https://lh3.googleusercontent.com/aida-public/AB6AXuC45OTkDRbOixUNU_dWpiIF-s5yYG553AlAQ2cWtpv_yhdVbdnk5gwTtu6z1PAsfRhCRh0gVXbTUNuyuPzL5Vn1WO08lPaLvUcPXVnEYpTHJIgpuDKyJWhIjWiexQZlI--ZNuSRCzlokxdWQGHNX0pfJdZYL6-1k3sZIsmco5Q6aXhWD68elrdFXtXpK6RZjQMFWxl7xyo2c5U8qCa0qGUNKoDXU066GM8K_7bFhYWsl5A0kreM1bFi\')' }}></div>
 <div className="flex flex-col">
-<span className="font-title-md text-title-md text-[#1A1A1A] group-hover:text-black transition-colors">David Smith</span>
-<span className="font-label-sm text-label-sm text-[#1A1A1A]">ID: 847422</span>
+<span className="font-title-md text-title-md text-ink group-hover:text-ink transition-colors">David Smith</span>
+<span className="font-label-sm text-label-sm text-ink">ID: 847422</span>
 </div>
 </div>
 </td>
@@ -169,9 +169,9 @@ export default function StudentDirectoryHighContrast() {
 </div>
 </div>
 </td>
-<td className="py-4 px-6 text-[#1A1A1A]">3 days ago<br/><span className="text-label-sm font-label-sm text-[#1A1A1A]">Stats: Probability</span></td>
+<td className="py-4 px-6 text-ink">3 days ago<br/><span className="text-label-sm font-label-sm text-ink">Stats: Probability</span></td>
 <td className="py-4 px-6 text-right">
-<span className="inline-flex items-center gap-1 px-3 py-1 bg-primary-fixed/20 text-[#1A1A1A] rounded-full font-label-sm text-label-sm font-semibold">
+<span className="inline-flex items-center gap-1 px-3 py-1 bg-primary-fixed/20 text-on-primary rounded-full font-label-sm text-label-sm font-semibold">
 <div className="w-1.5 h-1.5 rounded-full bg-primary-container"></div> On Track
               </span>
 </td>
@@ -180,14 +180,14 @@ export default function StudentDirectoryHighContrast() {
 </table>
 </div>
 <div className="p-4 border-t-2 border-surface-container bg-surface-container-lowest flex items-center justify-between">
-<span className="text-label-sm font-label-sm text-[#1A1A1A]">Showing 1-4 of 142 students</span>
+<span className="text-label-sm font-label-sm text-ink">Showing 1-4 of 142 students</span>
 <div className="flex items-center gap-2">
-<button className="w-8 h-8 rounded-full flex items-center justify-center text-[#1A1A1A] hover:bg-surface-container transition-colors disabled:opacity-50"><span className="material-symbols-outlined text-sm">chevron_left</span></button>
+<button className="w-8 h-8 rounded-full flex items-center justify-center text-ink hover:bg-surface-container transition-colors disabled:opacity-50"><span className="material-symbols-outlined text-sm">chevron_left</span></button>
 <button className="w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center font-label-sm text-label-sm shadow-md">1</button>
-<button className="w-8 h-8 rounded-full flex items-center justify-center text-[#1A1A1A] hover:bg-surface-container transition-colors font-label-sm text-label-sm">2</button>
-<button className="w-8 h-8 rounded-full flex items-center justify-center text-[#1A1A1A] hover:bg-surface-container transition-colors font-label-sm text-label-sm">3</button>
-<span className="text-[#1A1A1A] mx-1">...</span>
-<button className="w-8 h-8 rounded-full flex items-center justify-center text-[#1A1A1A] hover:bg-surface-container transition-colors"><span className="material-symbols-outlined text-sm">chevron_right</span></button>
+<button className="w-8 h-8 rounded-full flex items-center justify-center text-ink hover:bg-surface-container transition-colors font-label-sm text-label-sm">2</button>
+<button className="w-8 h-8 rounded-full flex items-center justify-center text-ink hover:bg-surface-container transition-colors font-label-sm text-label-sm">3</button>
+<span className="text-ink mx-1">...</span>
+<button className="w-8 h-8 rounded-full flex items-center justify-center text-ink hover:bg-surface-container transition-colors"><span className="material-symbols-outlined text-sm">chevron_right</span></button>
 </div>
 </div>
 </section>

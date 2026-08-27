@@ -37,7 +37,7 @@ export default function Onboarding1() {
           {/* Progress Bar */}
           <div className="w-full max-w-[28rem] mx-auto mb-8 h-1 bg-surface-container-low rounded-full overflow-hidden">
             <div
-              className="h-full bg-[#7AB139] transition-all duration-500"
+              className="h-full bg-ink transition-all duration-500"
               style={{ width: "50%" }}
             />
           </div>

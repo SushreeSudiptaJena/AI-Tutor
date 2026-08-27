@@ -38,17 +38,17 @@ export default function AssignmentsLibraryHighContrast() {
 </div>
 <div className="bg-secondary text-white px-3 py-1 rounded-full font-label-sm text-label-sm">Active</div>
 </div>
-<h3 className="font-headline-lg text-headline-lg text-[#1A1A1A] mb-2 line-clamp-2">Cellular Respiration Quiz</h3>
-<p className="font-body-sm text-body-md text-[#1A1A1A] mb-6 flex items-center gap-2">
+<h3 className="font-headline-lg text-headline-lg text-ink mb-2 line-clamp-2">Cellular Respiration Quiz</h3>
+<p className="font-body-sm text-body-md text-ink mb-6 flex items-center gap-2">
 <span className="material-symbols-outlined text-[16px]">calendar_today</span>
                         Due: Oct 15, 2024
                     </p>
 <div className="mt-auto pt-6 border-t border-surface-variant/10 flex justify-between items-center">
 <div>
-<span className="font-title-md text-title-md text-[#1A1A1A]">24/30</span>
-<span className="font-body-md text-body-md text-[#1A1A1A] ml-1">Submissions</span>
+<span className="font-title-md text-title-md text-ink">24/30</span>
+<span className="font-body-md text-body-md text-ink ml-1">Submissions</span>
 </div>
-<button className="w-10 h-10 rounded-full bg-surface-variant/20 hover:bg-primary hover:text-white transition-colors flex items-center justify-center text-[#1A1A1A]">
+<button className="w-10 h-10 rounded-full bg-surface-variant/20 hover:bg-primary hover:text-white transition-colors flex items-center justify-center text-on-primary">
 <span className="material-symbols-outlined">more_vert</span>
 </button>
 </div>
@@ -61,17 +61,17 @@ export default function AssignmentsLibraryHighContrast() {
 </div>
 <div className="bg-secondary text-white px-3 py-1 rounded-full font-label-sm text-label-sm">Active</div>
 </div>
-<h3 className="font-headline-lg text-headline-lg text-[#1A1A1A] mb-2 line-clamp-2">Mitosis vs Meiosis Worksheet</h3>
-<p className="font-body-sm text-body-md text-[#1A1A1A] mb-6 flex items-center gap-2">
+<h3 className="font-headline-lg text-headline-lg text-ink mb-2 line-clamp-2">Mitosis vs Meiosis Worksheet</h3>
+<p className="font-body-sm text-body-md text-ink mb-6 flex items-center gap-2">
 <span className="material-symbols-outlined text-[16px]">calendar_today</span>
                         Due: Oct 18, 2024
                     </p>
 <div className="mt-auto pt-6 border-t border-surface-variant/10 flex justify-between items-center">
 <div>
-<span className="font-title-md text-title-md text-[#1A1A1A]">5/30</span>
-<span className="font-body-md text-body-md text-[#1A1A1A] ml-1">Submissions</span>
+<span className="font-title-md text-title-md text-ink">5/30</span>
+<span className="font-body-md text-body-md text-ink ml-1">Submissions</span>
 </div>
-<button className="w-10 h-10 rounded-full bg-surface-variant/20 hover:bg-primary hover:text-white transition-colors flex items-center justify-center text-[#1A1A1A]">
+<button className="w-10 h-10 rounded-full bg-surface-variant/20 hover:bg-primary hover:text-white transition-colors flex items-center justify-center text-on-primary">
 <span className="material-symbols-outlined">more_vert</span>
 </button>
 </div>
@@ -84,17 +84,17 @@ export default function AssignmentsLibraryHighContrast() {
 </div>
 <div className="bg-inverse-surface text-white px-3 py-1 rounded-full font-label-sm text-label-sm">Closed</div>
 </div>
-<h3 className="font-headline-lg text-headline-lg text-[#1A1A1A] mb-2 line-clamp-2">DNA Replication Lab Report</h3>
-<p className="font-body-sm text-body-md text-[#1A1A1A] mb-6 flex items-center gap-2">
+<h3 className="font-headline-lg text-headline-lg text-ink mb-2 line-clamp-2">DNA Replication Lab Report</h3>
+<p className="font-body-sm text-body-md text-ink mb-6 flex items-center gap-2">
 <span className="material-symbols-outlined text-[16px]">calendar_today</span>
                         Due: Sep 30, 2024
                     </p>
 <div className="mt-auto pt-6 border-t border-surface-variant/10 flex justify-between items-center">
 <div>
-<span className="font-title-md text-title-md text-[#1A1A1A]">30/30</span>
-<span className="font-body-md text-body-md text-[#1A1A1A] ml-1">Submissions</span>
+<span className="font-title-md text-title-md text-ink">30/30</span>
+<span className="font-body-md text-body-md text-ink ml-1">Submissions</span>
 </div>
-<button className="w-10 h-10 rounded-full bg-surface-variant/20 hover:bg-primary hover:text-white transition-colors flex items-center justify-center text-[#1A1A1A]">
+<button className="w-10 h-10 rounded-full bg-surface-variant/20 hover:bg-primary hover:text-white transition-colors flex items-center justify-center text-on-primary">
 <span className="material-symbols-outlined">more_vert</span>
 </button>
 </div>
@@ -109,15 +109,15 @@ export default function AssignmentsLibraryHighContrast() {
 <div className="w-12 h-12 bg-surface-container-highest rounded-lg flex items-center justify-center text-tertiary">
 <span className="material-symbols-outlined text-[28px]">key</span>
 </div>
-<div className="bg-tertiary-container/20 text-[#1A1A1A] px-3 py-1 rounded-full font-label-sm text-label-sm">Key</div>
+<div className="bg-tertiary-container/20 text-ink px-3 py-1 rounded-full font-label-sm text-label-sm">Key</div>
 </div>
-<h3 className="font-headline-lg text-headline-lg text-[#1A1A1A] mb-2 line-clamp-2">Cellular Respiration Key</h3>
-<p className="font-body-sm text-body-md text-[#1A1A1A] mb-6 flex items-center gap-2">
+<h3 className="font-headline-lg text-headline-lg text-ink mb-2 line-clamp-2">Cellular Respiration Key</h3>
+<p className="font-body-sm text-body-md text-ink mb-6 flex items-center gap-2">
 <span className="material-symbols-outlined text-[16px]">link</span>
                         Matches: Cellular Respiration Quiz
                     </p>
 <div className="mt-auto pt-6 border-t border-surface-variant/10 flex justify-end items-center">
-<button className="text-[#1A1A1A] hover:text-secondary font-title-md text-title-md flex items-center gap-2 transition-colors">
+<button className="text-ink hover:text-secondary font-title-md text-title-md flex items-center gap-2 transition-colors">
                             View Key
                             <span className="material-symbols-outlined text-[20px]">arrow_forward</span>
 </button>
@@ -129,15 +129,15 @@ export default function AssignmentsLibraryHighContrast() {
 <div className="w-12 h-12 bg-surface-container-highest rounded-lg flex items-center justify-center text-tertiary">
 <span className="material-symbols-outlined text-[28px]">key</span>
 </div>
-<div className="bg-tertiary-container/20 text-[#1A1A1A] px-3 py-1 rounded-full font-label-sm text-label-sm">Key</div>
+<div className="bg-tertiary-container/20 text-ink px-3 py-1 rounded-full font-label-sm text-label-sm">Key</div>
 </div>
-<h3 className="font-headline-lg text-headline-lg text-[#1A1A1A] mb-2 line-clamp-2">DNA Replication Key</h3>
-<p className="font-body-sm text-body-md text-[#1A1A1A] mb-6 flex items-center gap-2">
+<h3 className="font-headline-lg text-headline-lg text-ink mb-2 line-clamp-2">DNA Replication Key</h3>
+<p className="font-body-sm text-body-md text-ink mb-6 flex items-center gap-2">
 <span className="material-symbols-outlined text-[16px]">link</span>
                         Matches: DNA Replication Lab Report
                     </p>
 <div className="mt-auto pt-6 border-t border-surface-variant/10 flex justify-end items-center">
-<button className="text-[#1A1A1A] hover:text-secondary font-title-md text-title-md flex items-center gap-2 transition-colors">
+<button className="text-ink hover:text-secondary font-title-md text-title-md flex items-center gap-2 transition-colors">
                             View Key
                             <span className="material-symbols-outlined text-[20px]">arrow_forward</span>
 </button>

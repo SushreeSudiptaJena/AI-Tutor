@@ -67,16 +67,16 @@ export default function DashboardOverviewHighContrast() {
 
   return (
     <TeacherChrome active="dashboard">
-      <header className="flex flex-col md:flex-row justify-between items-end gap-6 relative z-10 border-b border-[#FFFFFF]/20 pb-8">
+      <header className="flex flex-col md:flex-row justify-between items-end gap-6 relative z-10 border-b border-ink/15 pb-8">
         <div className="flex flex-col max-w-2xl">
-          <span className="font-label-sm text-label-sm uppercase tracking-[0.2em] text-[#FFFFFF] mb-4 flex items-center gap-2">
+          <span className="font-label-sm text-label-sm uppercase tracking-[0.2em] text-ink mb-4 flex items-center gap-2">
             <span className="material-symbols-outlined text-[16px] text-secondary">dashboard</span>
             Today
           </span>
-          <h1 className="font-display-lg text-display-lg text-[#FFFFFF] m-0 leading-tight">
+          <h1 className="font-display-lg text-display-lg text-ink m-0 leading-tight">
             Class Overview
           </h1>
-          <p className="font-body-lg text-body-lg text-[#FFFFFF] mt-4 max-w-[36rem]">
+          <p className="font-body-lg text-body-lg text-ink mt-4 max-w-[36rem]">
             Live aggregates from your class's own practice — confirmed misconceptions, prerequisite
             gaps, and the questions the tutor could not ground in the material.
           </p>
@@ -84,7 +84,7 @@ export default function DashboardOverviewHighContrast() {
       </header>
 
       {error && (
-        <p role="alert" className="bg-error/20 text-[#FFFFFF] px-6 py-4 rounded-xl">
+        <p role="alert" className="bg-error/20 text-ink px-6 py-4 rounded-xl">
           {error}
         </p>
       )}
@@ -93,11 +93,11 @@ export default function DashboardOverviewHighContrast() {
         {tiles.map((t) => (
           <div
             key={t.label}
-            className="bg-tertiary-fixed text-[#1A1A1A] p-8 rounded-2xl shadow-[0_4px_40px_rgba(0,0,0,0.05)] flex flex-col gap-3"
+            className="bg-tertiary-fixed text-ink p-8 rounded-2xl shadow-[0_4px_40px_rgba(0,0,0,0.05)] flex flex-col gap-3"
           >
             <span className="material-symbols-outlined text-secondary text-[28px]">{t.icon}</span>
             <span className="font-display-lg text-display-lg">{t.value}</span>
-            <span className="font-label-sm text-label-sm uppercase tracking-widest text-[#1A1A1A]/60">
+            <span className="font-label-sm text-label-sm uppercase tracking-widest text-ink/60">
               {t.label}
             </span>
           </div>
@@ -105,8 +105,8 @@ export default function DashboardOverviewHighContrast() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 relative z-10">
-        <section className="bg-surface-container-lowest text-[#1A1A1A] p-8 rounded-2xl shadow-[0_4px_40px_rgba(0,0,0,0.05)]">
-          <h2 className="font-title-md text-title-md mb-6 pb-4 border-b border-[#1A1A1A]/10">
+        <section className="bg-surface-container-lowest text-ink p-8 rounded-2xl shadow-[0_4px_40px_rgba(0,0,0,0.05)]">
+          <h2 className="font-title-md text-title-md mb-6 pb-4 border-b border-ink/10">
             Top Learning Gaps
           </h2>
           <div className="flex flex-col gap-4">
@@ -114,7 +114,7 @@ export default function DashboardOverviewHighContrast() {
               <div key={g.concept} className="flex items-center justify-between gap-4">
                 <div className="min-w-0">
                   <p className="font-title-md text-title-md truncate">{g.concept}</p>
-                  <p className="font-label-sm text-label-sm text-[#1A1A1A]/60">
+                  <p className="font-label-sm text-label-sm text-ink/60">
                     From {g.prerequisite_course}
                   </p>
                 </div>
@@ -124,15 +124,15 @@ export default function DashboardOverviewHighContrast() {
               </div>
             ))}
             {gaps?.length === 0 && (
-              <p className="font-body-md text-body-md text-[#1A1A1A]/70">
+              <p className="font-body-md text-body-md text-ink/70">
                 No open gaps — the class diagnostic came back clean.
               </p>
             )}
           </div>
         </section>
 
-        <section className="bg-surface-container-lowest text-[#1A1A1A] p-8 rounded-2xl shadow-[0_4px_40px_rgba(0,0,0,0.05)]">
-          <h2 className="font-title-md text-title-md mb-6 pb-4 border-b border-[#1A1A1A]/10">
+        <section className="bg-surface-container-lowest text-ink p-8 rounded-2xl shadow-[0_4px_40px_rgba(0,0,0,0.05)]">
+          <h2 className="font-title-md text-title-md mb-6 pb-4 border-b border-ink/10">
             Latest Uncertainty Flags
           </h2>
           <div className="flex flex-col gap-4">
@@ -145,7 +145,7 @@ export default function DashboardOverviewHighContrast() {
               </div>
             ))}
             {flags?.length === 0 && (
-              <p className="font-body-md text-body-md text-[#1A1A1A]/70">
+              <p className="font-body-md text-body-md text-ink/70">
                 No open flags — everything the class asked is grounded in the material.
               </p>
             )}

@@ -52,12 +52,12 @@ export default function Signup() {
   }
 
   return (
-    <div className="admin-scope min-h-screen bg-gray-100 text-gray-900 flex items-center justify-center p-4">
-      <div className="bg-white rounded-3xl w-full max-w-[28rem] p-8 md:p-12 shadow-2xl">
+    <div className="admin-scope min-h-screen bg-paper text-ink flex items-center justify-center p-4">
+      <div className="bg-card rounded-3xl w-full max-w-[28rem] p-8 md:p-12 shadow-2xl">
         <div className="flex flex-col">
           <Link
             to="/admin/login"
-            className="inline-flex w-fit items-center text-gray-500 hover:text-gray-800 transition-colors -ml-1 mb-6"
+            className="inline-flex w-fit items-center text-ink-soft hover:text-ink transition-colors -ml-1 mb-6"
           >
             <span className="material-symbols-outlined text-[18px] mr-1">
               arrow_back
@@ -65,11 +65,11 @@ export default function Signup() {
             Back
           </Link>
 
-          <span className="text-gray-500 uppercase tracking-wider text-xs font-semibold">
+          <span className="text-ink-soft uppercase tracking-wider text-xs font-semibold">
             Create your account
           </span>
         </div>
-        <h1 className="text-[32px] font-bold text-gray-900 mt-2 mb-8 leading-tight">
+        <h1 className="text-[32px] font-bold text-ink mt-2 mb-8 leading-tight">
           Start your learning path.
         </h1>
 
@@ -84,7 +84,7 @@ export default function Signup() {
               value={fullName}
               onChange={(e) => setFullName(e.target.value)}
               placeholder="Full name"
-              className="w-full px-4 py-3 rounded-lg border border-gray-200 bg-white focus:outline-none focus:ring-2 focus:ring-[#7AB139] focus:border-transparent text-gray-900 placeholder-gray-400 transition-shadow"
+              className="w-full px-4 py-3 rounded-lg border border-outline-variant bg-card focus:outline-none focus:ring-2 focus:ring-orange focus:border-transparent text-ink placeholder-ink-faint transition-shadow"
             />
           </div>
 
@@ -98,7 +98,7 @@ export default function Signup() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="Email"
-              className="w-full px-4 py-3 rounded-lg border border-gray-200 bg-white focus:outline-none focus:ring-2 focus:ring-[#7AB139] focus:border-transparent text-gray-900 placeholder-gray-400 transition-shadow"
+              className="w-full px-4 py-3 rounded-lg border border-outline-variant bg-card focus:outline-none focus:ring-2 focus:ring-orange focus:border-transparent text-ink placeholder-ink-faint transition-shadow"
             />
           </div>
 
@@ -113,19 +113,19 @@ export default function Signup() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="Password (min 8 characters)"
-              className="w-full px-4 py-3 rounded-lg border border-gray-200 bg-white focus:outline-none focus:ring-2 focus:ring-[#7AB139] focus:border-transparent text-gray-900 placeholder-gray-400 transition-shadow"
+              className="w-full px-4 py-3 rounded-lg border border-outline-variant bg-card focus:outline-none focus:ring-2 focus:ring-orange focus:border-transparent text-ink placeholder-ink-faint transition-shadow"
             />
           </div>
 
           <div>
-            <label htmlFor="university" className="block text-sm text-gray-500 mb-1">
+            <label htmlFor="university" className="block text-sm text-ink-soft mb-1">
               University
             </label>
             <select
               id="university"
               value={university}
               onChange={(e) => setUniversity(e.target.value)}
-              className="w-full px-4 py-3 rounded-lg border border-gray-200 bg-white focus:outline-none focus:ring-2 focus:ring-[#7AB139] focus:border-transparent text-gray-900"
+              className="w-full px-4 py-3 rounded-lg border border-outline-variant bg-card focus:outline-none focus:ring-2 focus:ring-orange focus:border-transparent text-ink"
             >
               {UNIVERSITIES.map((u) => (
                 <option key={u} value={u}>{u}</option>
@@ -142,15 +142,15 @@ export default function Signup() {
               value={rollNumber}
               onChange={(e) => setRollNumber(e.target.value)}
               placeholder="Registration / roll number (optional)"
-              className="w-full px-4 py-3 rounded-lg border border-gray-200 bg-white focus:outline-none focus:ring-2 focus:ring-[#7AB139] focus:border-transparent text-gray-900 placeholder-gray-400 transition-shadow"
+              className="w-full px-4 py-3 rounded-lg border border-outline-variant bg-card focus:outline-none focus:ring-2 focus:ring-orange focus:border-transparent text-ink placeholder-ink-faint transition-shadow"
             />
-            <p className="text-xs text-gray-400 mt-1">
+            <p className="text-xs text-ink-faint mt-1">
               Used to enrol you in your university's courses. Everyone is welcome in this build.
             </p>
           </div>
 
           {error && (
-            <p role="alert" className="text-red-600 text-sm">
+            <p role="alert" className="text-error text-sm">
               {error}
             </p>
           )}
@@ -158,15 +158,15 @@ export default function Signup() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-[#7AB139] hover:bg-[#689a2f] disabled:opacity-60 text-white font-semibold py-3 rounded-lg transition-colors mt-2 shadow-sm"
+            className="w-full btn-ink disabled:opacity-60 py-3 rounded-lg mt-2"
           >
             {loading ? "Creating account…" : "Sign Up"}
           </button>
         </form>
 
-        <p className="text-center text-gray-500 text-sm mt-8">
+        <p className="text-center text-ink-soft text-sm mt-8">
           Already have an account?{" "}
-          <Link to="/admin/login" className="text-[#7AB139] hover:underline font-medium">
+          <Link to="/admin/login" className="text-orange hover:underline font-medium">
             Log in
           </Link>
         </p>

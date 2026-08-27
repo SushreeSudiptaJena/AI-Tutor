@@ -159,7 +159,7 @@ function TutorCard({ response }: { response: TutorResponse }) {
         </p>
         <Md>{response.body}</Md>
         {response.hints.length > 0 && (
-          <div className="mt-sm rounded-lg bg-white p-sm">
+          <div className="mt-sm rounded-lg bg-card p-sm">
             <p className="mb-xs text-label-sm font-bold text-on-surface-variant uppercase">Hints</p>
             <ul className="list-disc space-y-xs pl-md text-body-sm text-on-surface">
               {response.hints.map((h) => (
@@ -185,7 +185,7 @@ function TutorCard({ response }: { response: TutorResponse }) {
         </p>
         <Md>{response.body}</Md>
         {response.beyond_syllabus && (
-          <div className="mt-md rounded-lg border border-mustard/40 bg-white p-md">
+          <div className="mt-md rounded-lg border border-mustard/40 bg-card p-md">
             <p className="mb-xs flex items-center gap-xs text-label-sm font-bold text-forest-green uppercase tracking-wider">
               <AlertTriangle className="h-4 w-4" aria-hidden />
               {response.beyond_syllabus.note}
@@ -238,7 +238,7 @@ function TutorCard({ response }: { response: TutorResponse }) {
           {showSources && (
             <ul className="mt-sm space-y-sm">
               {response.citations.map((c) => (
-                <li key={c.chunk_id} className="rounded-lg bg-white p-sm">
+                <li key={c.chunk_id} className="rounded-lg bg-card p-sm">
                   <p className="text-label-sm font-bold text-forest-green">
                     {c.book_title}
                     {c.page_no !== null && <> · p. {c.page_no}</>}
@@ -613,7 +613,7 @@ function SubjectSwitcher() {
           >
             {s.code}
             {s.semester !== null && (
-              <span className={s.is_current ? "text-white/70" : "text-on-surface-variant"}>
+              <span className={s.is_current ? "text-on-primary/70" : "text-on-surface-variant"}>
                 {" "}· sem {s.semester}
               </span>
             )}
@@ -784,7 +784,7 @@ function DiagnosticView({ goto }: { goto: (s: Section) => void }) {
                         className={`flex cursor-pointer items-center gap-sm rounded-lg border p-sm text-body-sm transition-colors ${
                           answers[item.id] === opt
                             ? "border-forest-green bg-sage-light text-on-surface"
-                            : "border-outline-variant/30 bg-white text-on-surface hover:border-forest-green/50"
+                            : "border-outline-variant/30 bg-card text-on-surface hover:border-forest-green/50"
                         }`}
                       >
                         <input
@@ -937,7 +937,7 @@ function LessonsView({
                     className={`w-full rounded-lg border p-sm text-left text-body-sm transition-colors ${
                       selected?.id === g.id
                         ? "border-forest-green bg-sage-light text-on-surface"
-                        : "border-outline-variant/30 bg-white text-on-surface hover:border-forest-green/50"
+                        : "border-outline-variant/30 bg-card text-on-surface hover:border-forest-green/50"
                     }`}
                   >
                     <span className="font-semibold">{g.concept}</span>
@@ -1122,8 +1122,8 @@ function PracticeView({ initialGap }: { initialGap: Gap | null }) {
                                 : isWrongChoice
                                   ? "border-error bg-error/10 text-on-surface"
                                   : chosen
-                                    ? "border-forest-green bg-white text-on-surface"
-                                    : "border-outline-variant/30 bg-white text-on-surface hover:border-forest-green/50"
+                                    ? "border-forest-green bg-card text-on-surface"
+                                    : "border-outline-variant/30 bg-card text-on-surface hover:border-forest-green/50"
                             }`}
                           >
                             {opt}
@@ -1331,7 +1331,7 @@ function TutorView() {
             value={question}
             onChange={(e) => setQuestion(e.target.value)}
             placeholder="Ask a follow-up…"
-            className="flex-1 rounded-full border border-outline-variant bg-white px-md py-sm text-body-md text-on-surface outline-none focus:border-forest-green"
+            className="flex-1 rounded-full border border-outline-variant bg-card px-md py-sm text-body-md text-on-surface outline-none focus:border-forest-green"
           />
           <button
             type="submit"
@@ -1443,7 +1443,7 @@ function StudentSettingsView({ user, onUserChanged }: { user: User | null; onUse
           value={user?.preferred_language ?? "en"}
           disabled={busy || !user}
           onChange={(e) => changeLanguage(e.target.value)}
-          className="rounded-lg border border-outline-variant bg-white px-md py-sm text-body-md text-on-surface outline-none focus:border-forest-green"
+          className="rounded-lg border border-outline-variant bg-card px-md py-sm text-body-md text-on-surface outline-none focus:border-forest-green"
         >
           {langs.map((l) => (
             <option key={l.code} value={l.code}>
@@ -1588,7 +1588,7 @@ export default function Dashboard() {
                   className={`flex w-full items-center rounded-lg px-sm py-3 text-left text-xs font-bold tracking-wider uppercase transition-all ${
                     activeSection === item.label
                       ? "border-l-4 border-[#e5b045] bg-forest-light text-white"
-                      : "text-white/70 hover:bg-forest-light hover:text-white"
+                      : "text-on-primary/70 hover:bg-forest-light hover:text-white"
                   }`}
                   onClick={() => setActiveSection(item.label)}
                   type="button"
@@ -1602,13 +1602,13 @@ export default function Dashboard() {
 
           <div className="flex-1" />
 
-          <div className="mt-auto border-t border-white/10 pt-4">
+          <div className="mt-auto border-t border-on-primary/10 pt-4">
             <button
               aria-current={activeSection === "Settings" ? "page" : undefined}
               className={`mb-2 flex w-full items-center rounded-lg px-sm py-3 text-xs font-bold tracking-wider uppercase transition-all ${
                 activeSection === "Settings"
                   ? "border-l-4 border-[#e5b045] bg-forest-light text-white"
-                  : "text-white/70 hover:bg-forest-light hover:text-white"
+                  : "text-on-primary/70 hover:bg-forest-light hover:text-white"
               }`}
               onClick={() => setActiveSection("Settings")}
               type="button"

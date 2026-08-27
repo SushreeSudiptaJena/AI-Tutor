@@ -72,44 +72,44 @@ export default function ContentVerificationHighContrast() {
 
   return (
     <TeacherChrome active="content-verification">
-      <header className="flex flex-col md:flex-row justify-between items-end gap-6 relative z-10 border-b border-[#FFFFFF]/20 pb-8">
+      <header className="flex flex-col md:flex-row justify-between items-end gap-6 relative z-10 border-b border-ink/15 pb-8">
         <div className="flex flex-col max-w-2xl">
-          <span className="font-label-sm text-label-sm uppercase tracking-[0.2em] text-[#FFFFFF] mb-4 flex items-center gap-2">
+          <span className="font-label-sm text-label-sm uppercase tracking-[0.2em] text-ink mb-4 flex items-center gap-2">
             <span className="material-symbols-outlined text-[16px] text-secondary">verified</span>
             Sourced Content
           </span>
-          <h1 className="font-display-lg text-display-lg text-[#FFFFFF] m-0 leading-tight">
+          <h1 className="font-display-lg text-display-lg text-ink m-0 leading-tight">
             Content Verification
           </h1>
-          <p className="font-body-lg text-body-lg text-[#FFFFFF] mt-4 max-w-[36rem]">
+          <p className="font-body-lg text-body-lg text-ink mt-4 max-w-[36rem]">
             Material the AI found outside the approved corpus, waiting for a human decision.
             Nothing here reaches a student until you approve it.
           </p>
         </div>
         <button
           onClick={() => setShowDecided((v) => !v)}
-          className="border border-[#FFFFFF]/30 text-[#FFFFFF] px-5 py-3 rounded-lg font-title-md text-title-md hover:border-secondary transition-colors"
+          className="border border-ink/25 text-ink px-5 py-3 rounded-lg font-title-md text-title-md hover:border-secondary transition-colors"
         >
           {showDecided ? "Show pending only" : "Show decided too"}
         </button>
       </header>
 
       {error && (
-        <p role="alert" className="bg-error/20 text-[#FFFFFF] px-6 py-4 rounded-xl">
+        <p role="alert" className="bg-error/20 text-ink px-6 py-4 rounded-xl">
           {error}
         </p>
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 relative z-10">
         {list.length === 0 && !error && (
-          <p className="font-body-lg text-body-lg text-[#FFFFFF]/70">
+          <p className="font-body-lg text-body-lg text-ink-soft">
             {showDecided ? "Queue is empty." : "Nothing pending — the gate is clear."}
           </p>
         )}
         {list.map((v) => (
           <article
             key={v.id}
-            className="bg-surface-container-lowest text-[#1A1A1A] p-8 rounded-2xl shadow-[0_4px_40px_rgba(0,0,0,0.05)] flex flex-col gap-4"
+            className="bg-surface-container-lowest text-ink p-8 rounded-2xl shadow-[0_4px_40px_rgba(0,0,0,0.05)] flex flex-col gap-4"
           >
             <div className="flex items-start justify-between gap-4">
               <h3 className="font-title-md text-title-md leading-snug">{v.title}</h3>
@@ -121,8 +121,8 @@ export default function ContentVerificationHighContrast() {
                 {v.status.toUpperCase()}
               </span>
             </div>
-            <p className="font-body-md text-body-md text-[#1A1A1A]/85 line-clamp-4">{v.excerpt}</p>
-            <p className="font-label-sm text-label-sm text-[#1A1A1A]/60 flex items-center gap-2">
+            <p className="font-body-md text-body-md text-ink/85 line-clamp-4">{v.excerpt}</p>
+            <p className="font-label-sm text-label-sm text-ink/60 flex items-center gap-2">
               <span className="material-symbols-outlined text-[16px]">travel_explore</span>
               Found for: <strong>{v.found_for_gap}</strong>
             </p>
@@ -143,13 +143,13 @@ export default function ContentVerificationHighContrast() {
                     value={reason}
                     onChange={(e) => setReason(e.target.value)}
                     placeholder="Why is this being rejected? (kept on the row)"
-                    className="w-full px-4 py-2.5 rounded-lg border border-[#1A1A1A]/20 bg-white text-[#1A1A1A] outline-none focus:border-primary"
+                    className="w-full px-4 py-2.5 rounded-lg border border-ink/20 bg-card text-ink outline-none focus:border-primary"
                   />
                   <div className="flex gap-2">
                     <button
                       onClick={() => reject(v.id)}
                       disabled={busyId === v.id}
-                      className="bg-error text-[#FFFFFF] px-5 py-2.5 rounded-lg font-title-md text-title-md disabled:opacity-50"
+                      className="bg-error text-on-primary px-5 py-2.5 rounded-lg font-title-md text-title-md disabled:opacity-50"
                     >
                       {busyId === v.id ? "Rejecting…" : "Confirm reject"}
                     </button>
@@ -158,7 +158,7 @@ export default function ContentVerificationHighContrast() {
                         setRejecting(null);
                         setReason("");
                       }}
-                      className="border border-[#1A1A1A]/20 px-5 py-2.5 rounded-lg font-title-md text-title-md"
+                      className="border border-ink/20 px-5 py-2.5 rounded-lg font-title-md text-title-md"
                     >
                       Cancel
                     </button>
@@ -169,7 +169,7 @@ export default function ContentVerificationHighContrast() {
                   <button
                     onClick={() => approve(v.id)}
                     disabled={busyId === v.id}
-                    className="bg-primary text-[#FFFFFF] px-5 py-2.5 rounded-lg font-title-md text-title-md hover:bg-primary/90 disabled:opacity-50 transition-colors flex items-center gap-2"
+                    className="bg-primary text-on-primary px-5 py-2.5 rounded-lg font-title-md text-title-md hover:bg-primary/90 disabled:opacity-50 transition-colors flex items-center gap-2"
                   >
                     <span className="material-symbols-outlined text-[18px]">check_circle</span>
                     {busyId === v.id ? "Approving…" : "Approve"}
@@ -184,7 +184,7 @@ export default function ContentVerificationHighContrast() {
               )
             ) : (
               v.reject_reason && (
-                <p className="font-label-sm text-label-sm text-[#1A1A1A]/60 mt-2">
+                <p className="font-label-sm text-label-sm text-ink/60 mt-2">
                   Rejected: {v.reject_reason}
                 </p>
               )

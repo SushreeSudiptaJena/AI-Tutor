@@ -33,26 +33,26 @@ export default function LessonPlansLibraryHighContrast() {
 <div className="font-label-sm text-label-sm text-white uppercase tracking-widest mt-1">Updates This Week</div>
 </div>
 </div>
-<button className="group relative px-8 py-4 bg-secondary text-[#1A1A1A] rounded-xl font-title-md text-title-md shadow-lg shadow-secondary/20 hover:shadow-xl hover:shadow-secondary/30 hover:-translate-y-1 transition-all duration-300 overflow-hidden flex items-center gap-3">
+<button className="group relative px-8 py-4 bg-secondary text-ink rounded-xl font-title-md text-title-md shadow-lg shadow-secondary/20 hover:shadow-xl hover:shadow-secondary/30 hover:-translate-y-1 transition-all duration-300 overflow-hidden flex items-center gap-3">
 <span className="relative z-10 flex items-center gap-2">
 <span className="material-symbols-outlined" style={{ fontVariationSettings: '\'FILL\' 1' }}>upload_file</span>
           Upload New Lesson Plan
         </span>
-<div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-out z-0"></div>
+<div className="absolute inset-0 bg-card/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-out z-0"></div>
 </button>
 </div>
 </div>
 {/* Filter & Sort Bar */}
-<div className="flex items-center justify-between bg-surface-container-low rounded-2xl p-2 mb-10 shadow-sm relative z-10 backdrop-blur-md border border-white/40">
+<div className="flex items-center justify-between bg-surface-container-low rounded-2xl p-2 mb-10 shadow-sm relative z-10 backdrop-blur-md border border-on-primary/40">
 <div className="flex gap-2">
-<button className="px-6 py-2.5 bg-surface text-[#1A1A1A] rounded-xl font-label-sm text-label-sm font-semibold shadow-sm transition-colors uppercase tracking-wider">All Subjects</button>
-<button className="px-6 py-2.5 hover:bg-surface-container rounded-xl font-label-sm text-label-sm transition-colors uppercase tracking-wider text-[#1A1A1A]">Mathematics</button>
-<button className="px-6 py-2.5 hover:bg-surface-container rounded-xl font-label-sm text-label-sm transition-colors uppercase tracking-wider text-[#1A1A1A]">Sciences</button>
-<button className="px-6 py-2.5 hover:bg-surface-container rounded-xl font-label-sm text-label-sm transition-colors uppercase tracking-wider text-[#1A1A1A]">Literature</button>
+<button className="px-6 py-2.5 bg-surface text-ink rounded-xl font-label-sm text-label-sm font-semibold shadow-sm transition-colors uppercase tracking-wider">All Subjects</button>
+<button className="px-6 py-2.5 hover:bg-surface-container rounded-xl font-label-sm text-label-sm transition-colors uppercase tracking-wider text-ink">Mathematics</button>
+<button className="px-6 py-2.5 hover:bg-surface-container rounded-xl font-label-sm text-label-sm transition-colors uppercase tracking-wider text-ink">Sciences</button>
+<button className="px-6 py-2.5 hover:bg-surface-container rounded-xl font-label-sm text-label-sm transition-colors uppercase tracking-wider text-ink">Literature</button>
 </div>
 <div className="flex items-center gap-4 px-4 border-l border-outline-variant/30">
-<span className="font-label-sm text-label-sm text-[#1A1A1A] uppercase">Sort By:</span>
-<select className="bg-transparent border-none font-title-md text-title-md text-[#1A1A1A] focus:outline-none cursor-pointer">
+<span className="font-label-sm text-label-sm text-ink uppercase">Sort By:</span>
+<select className="bg-transparent border-none font-title-md text-title-md text-ink focus:outline-none cursor-pointer">
 <option>Recently Added</option>
 <option>Alphabetical</option>
 <option>Most Downloaded</option>
@@ -62,14 +62,14 @@ export default function LessonPlansLibraryHighContrast() {
 {/* Lesson Plans Grid */}
 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8 relative z-10 w-full">
 {/* Card 1 */}
-<div className="group relative bg-[#F5F5DC] rounded-2xl p-6 flex flex-col h-[380px] shadow-[0_16px_40px_-12px_rgba(0,0,0,0.05)] hover:shadow-[0_24px_50px_-12px_rgba(0,0,0,0.1)] transition-all duration-500 hover:-translate-y-2 border border-white/50 w-full">
+<div className="group relative bg-card rounded-2xl p-6 flex flex-col h-[380px] shadow-[0_16px_40px_-12px_rgba(0,0,0,0.05)] hover:shadow-[0_24px_50px_-12px_rgba(0,0,0,0.1)] transition-all duration-500 hover:-translate-y-2 border border-on-primary/50 w-full">
 {/* Top Meta */}
 <div className="flex justify-between items-start mb-6 border-b border-[#E8E8CF] pb-4">
 <div className="flex flex-col">
-<span className="font-label-sm text-label-sm text-[#1A1A1A] uppercase tracking-widest bg-primary-fixed/30 px-3 py-1 rounded-full w-fit mb-2">Mathematics</span>
-<span className="font-label-sm text-label-sm text-[#1A1A1A]">Uploaded Oct 12, 2023</span>
+<span className="font-label-sm text-label-sm text-on-primary uppercase tracking-widest bg-primary-fixed/30 px-3 py-1 rounded-full w-fit mb-2">Mathematics</span>
+<span className="font-label-sm text-label-sm text-ink">Uploaded Oct 12, 2023</span>
 </div>
-<button className="text-[#1A1A1A] transition-colors">
+<button className="text-ink transition-colors">
 <span className="material-symbols-outlined">more_vert</span>
 </button>
 </div>
@@ -77,14 +77,14 @@ export default function LessonPlansLibraryHighContrast() {
 <div className="flex-1 flex flex-col justify-center items-center text-center px-4">
 <div className="w-16 h-16 rounded-2xl bg-surface flex items-center justify-center mb-6 shadow-sm group-hover:scale-110 transition-transform duration-500 ease-out relative">
 <div className="absolute inset-0 bg-primary/5 rounded-2xl animate-pulse"></div>
-<span className="material-symbols-outlined text-4xl text-[#1A1A1A]" style={{ fontVariationSettings: '\'FILL\' 1' }}>description</span>
+<span className="material-symbols-outlined text-4xl text-ink" style={{ fontVariationSettings: '\'FILL\' 1' }}>description</span>
 </div>
-<h3 className="font-title-md text-title-md text-[#1A1A1A] line-clamp-2 mb-2 transition-colors">Introduction to Calculus: Limits &amp; Continuity</h3>
-<p className="font-body-md text-body-md text-[#1A1A1A] line-clamp-2">Week 1 foundation covering limit theorems and continuous functions.</p>
+<h3 className="font-title-md text-title-md text-ink line-clamp-2 mb-2 transition-colors">Introduction to Calculus: Limits &amp; Continuity</h3>
+<p className="font-body-md text-body-md text-ink line-clamp-2">Week 1 foundation covering limit theorems and continuous functions.</p>
 </div>
 {/* Actions (Hover Revealed) */}
-<div className="absolute bottom-6 left-6 right-6 flex gap-3 opacity-0 translate-y-4 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-300 ease-out bg-[#F5F5DC] pt-4">
-<button className="flex-1 py-2.5 px-4 bg-transparent border-2 border-[#1A1A1A] text-[#1A1A1A] rounded-xl font-label-sm text-label-sm uppercase tracking-wider font-bold hover:bg-black/5 transition-colors flex justify-center items-center gap-2">
+<div className="absolute bottom-6 left-6 right-6 flex gap-3 opacity-0 translate-y-4 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-300 ease-out bg-card pt-4">
+<button className="flex-1 py-2.5 px-4 bg-transparent border-2 border-ink text-ink rounded-xl font-label-sm text-label-sm uppercase tracking-wider font-bold hover:bg-ink/5 transition-colors flex justify-center items-center gap-2">
 <span className="material-symbols-outlined text-[18px]">visibility</span>
           View
         </button>
@@ -95,25 +95,25 @@ export default function LessonPlansLibraryHighContrast() {
 </div>
 </div>
 {/* Card 2 */}
-<div className="group relative bg-[#F5F5DC] rounded-2xl p-6 flex flex-col h-[380px] shadow-[0_16px_40px_-12px_rgba(0,0,0,0.05)] hover:shadow-[0_24px_50px_-12px_rgba(0,0,0,0.1)] transition-all duration-500 hover:-translate-y-2 border border-white/50 w-full">
+<div className="group relative bg-card rounded-2xl p-6 flex flex-col h-[380px] shadow-[0_16px_40px_-12px_rgba(0,0,0,0.05)] hover:shadow-[0_24px_50px_-12px_rgba(0,0,0,0.1)] transition-all duration-500 hover:-translate-y-2 border border-on-primary/50 w-full">
 <div className="flex justify-between items-start mb-6 border-b border-[#E8E8CF] pb-4">
 <div className="flex flex-col">
-<span className="font-label-sm text-label-sm text-[#1A1A1A] uppercase tracking-widest bg-primary-fixed/30 px-3 py-1 rounded-full w-fit mb-2">Mathematics</span>
-<span className="font-label-sm text-label-sm text-[#1A1A1A]">Uploaded Oct 10, 2023</span>
+<span className="font-label-sm text-label-sm text-on-primary uppercase tracking-widest bg-primary-fixed/30 px-3 py-1 rounded-full w-fit mb-2">Mathematics</span>
+<span className="font-label-sm text-label-sm text-ink">Uploaded Oct 10, 2023</span>
 </div>
-<button className="text-[#1A1A1A] transition-colors">
+<button className="text-ink transition-colors">
 <span className="material-symbols-outlined">more_vert</span>
 </button>
 </div>
 <div className="flex-1 flex flex-col justify-center items-center text-center px-4">
 <div className="w-16 h-16 rounded-2xl bg-surface flex items-center justify-center mb-6 shadow-sm group-hover:scale-110 transition-transform duration-500 ease-out relative">
-<span className="material-symbols-outlined text-4xl text-[#1A1A1A]" style={{ fontVariationSettings: '\'FILL\' 1' }}>description</span>
+<span className="material-symbols-outlined text-4xl text-ink" style={{ fontVariationSettings: '\'FILL\' 1' }}>description</span>
 </div>
-<h3 className="font-title-md text-title-md text-[#1A1A1A] line-clamp-2 mb-2 transition-colors">Advanced Geometry Set: Non-Euclidean</h3>
-<p className="font-body-md text-body-md text-[#1A1A1A] line-clamp-2">Exploration of spherical and hyperbolic geometric principles.</p>
+<h3 className="font-title-md text-title-md text-ink line-clamp-2 mb-2 transition-colors">Advanced Geometry Set: Non-Euclidean</h3>
+<p className="font-body-md text-body-md text-ink line-clamp-2">Exploration of spherical and hyperbolic geometric principles.</p>
 </div>
-<div className="absolute bottom-6 left-6 right-6 flex gap-3 opacity-0 translate-y-4 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-300 ease-out bg-[#F5F5DC] pt-4">
-<button className="flex-1 py-2.5 px-4 bg-transparent border-2 border-[#1A1A1A] text-[#1A1A1A] rounded-xl font-label-sm text-label-sm uppercase tracking-wider font-bold hover:bg-black/5 transition-colors flex justify-center items-center gap-2">
+<div className="absolute bottom-6 left-6 right-6 flex gap-3 opacity-0 translate-y-4 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-300 ease-out bg-card pt-4">
+<button className="flex-1 py-2.5 px-4 bg-transparent border-2 border-ink text-ink rounded-xl font-label-sm text-label-sm uppercase tracking-wider font-bold hover:bg-ink/5 transition-colors flex justify-center items-center gap-2">
 <span className="material-symbols-outlined text-[18px]">visibility</span>
           View
         </button>
@@ -124,25 +124,25 @@ export default function LessonPlansLibraryHighContrast() {
 </div>
 </div>
 {/* Card 3 */}
-<div className="group relative bg-[#F5F5DC] rounded-2xl p-6 flex flex-col h-[380px] shadow-[0_16px_40px_-12px_rgba(0,0,0,0.05)] hover:shadow-[0_24px_50px_-12px_rgba(0,0,0,0.1)] transition-all duration-500 hover:-translate-y-2 border border-white/50 w-full">
+<div className="group relative bg-card rounded-2xl p-6 flex flex-col h-[380px] shadow-[0_16px_40px_-12px_rgba(0,0,0,0.05)] hover:shadow-[0_24px_50px_-12px_rgba(0,0,0,0.1)] transition-all duration-500 hover:-translate-y-2 border border-on-primary/50 w-full">
 <div className="flex justify-between items-start mb-6 border-b border-[#E8E8CF] pb-4">
 <div className="flex flex-col">
-<span className="font-label-sm text-label-sm text-[#1A1A1A] uppercase tracking-widest bg-secondary-fixed/50 px-3 py-1 rounded-full w-fit mb-2">Physics</span>
-<span className="font-label-sm text-label-sm text-[#1A1A1A]">Uploaded Oct 05, 2023</span>
+<span className="font-label-sm text-label-sm text-ink uppercase tracking-widest bg-secondary-fixed/50 px-3 py-1 rounded-full w-fit mb-2">Physics</span>
+<span className="font-label-sm text-label-sm text-ink">Uploaded Oct 05, 2023</span>
 </div>
-<button className="text-[#1A1A1A] transition-colors">
+<button className="text-ink transition-colors">
 <span className="material-symbols-outlined">more_vert</span>
 </button>
 </div>
 <div className="flex-1 flex flex-col justify-center items-center text-center px-4">
 <div className="w-16 h-16 rounded-2xl bg-surface flex items-center justify-center mb-6 shadow-sm group-hover:scale-110 transition-transform duration-500 ease-out relative">
-<span className="material-symbols-outlined text-4xl text-[#1A1A1A]" style={{ fontVariationSettings: '\'FILL\' 1' }}>description</span>
+<span className="material-symbols-outlined text-4xl text-ink" style={{ fontVariationSettings: '\'FILL\' 1' }}>description</span>
 </div>
-<h3 className="font-title-md text-title-md text-[#1A1A1A] line-clamp-2 mb-2 transition-colors">Kinematics &amp; Motion Equations</h3>
-<p className="font-body-md text-body-md text-[#1A1A1A] line-clamp-2">1D and 2D motion analysis with practical lab exercises.</p>
+<h3 className="font-title-md text-title-md text-ink line-clamp-2 mb-2 transition-colors">Kinematics &amp; Motion Equations</h3>
+<p className="font-body-md text-body-md text-ink line-clamp-2">1D and 2D motion analysis with practical lab exercises.</p>
 </div>
-<div className="absolute bottom-6 left-6 right-6 flex gap-3 opacity-0 translate-y-4 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-300 ease-out bg-[#F5F5DC] pt-4">
-<button className="flex-1 py-2.5 px-4 bg-transparent border-2 border-[#1A1A1A] text-[#1A1A1A] rounded-xl font-label-sm text-label-sm uppercase tracking-wider font-bold hover:bg-black/5 transition-colors flex justify-center items-center gap-2">
+<div className="absolute bottom-6 left-6 right-6 flex gap-3 opacity-0 translate-y-4 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-300 ease-out bg-card pt-4">
+<button className="flex-1 py-2.5 px-4 bg-transparent border-2 border-ink text-ink rounded-xl font-label-sm text-label-sm uppercase tracking-wider font-bold hover:bg-ink/5 transition-colors flex justify-center items-center gap-2">
 <span className="material-symbols-outlined text-[18px]">visibility</span>
           View
         </button>
@@ -156,19 +156,19 @@ export default function LessonPlansLibraryHighContrast() {
 <div className="group relative bg-surface-container rounded-2xl p-6 flex flex-col h-[380px] border border-outline-variant/30 border-dashed hover:border-solid hover:border-primary/50 transition-all duration-500 w-full">
 <div className="flex justify-between items-start mb-6 border-b border-outline-variant/20 pb-4">
 <div className="flex flex-col">
-<span className="font-label-sm text-label-sm text-[#1A1A1A] uppercase tracking-widest bg-surface-variant px-3 py-1 rounded-full w-fit mb-2">Draft</span>
-<span className="font-label-sm text-label-sm text-[#1A1A1A]">Modified 2 hrs ago</span>
+<span className="font-label-sm text-label-sm text-ink uppercase tracking-widest bg-surface-variant px-3 py-1 rounded-full w-fit mb-2">Draft</span>
+<span className="font-label-sm text-label-sm text-ink">Modified 2 hrs ago</span>
 </div>
 </div>
 <div className="flex-1 flex flex-col justify-center items-center text-center px-4 opacity-60 group-hover:opacity-100 transition-opacity">
 <div className="w-16 h-16 rounded-2xl bg-surface flex items-center justify-center mb-6 shadow-sm">
-<span className="material-symbols-outlined text-4xl text-[#1A1A1A]" style={{ fontVariationSettings: '\'FILL\' 1' }}>edit_document</span>
+<span className="material-symbols-outlined text-4xl text-ink" style={{ fontVariationSettings: '\'FILL\' 1' }}>edit_document</span>
 </div>
-<h3 className="font-title-md text-title-md text-[#1A1A1A] line-clamp-2 mb-2 italic">Cellular Biology Outline</h3>
-<p className="font-body-md text-body-md text-[#1A1A1A] line-clamp-2">Incomplete outline for Spring term biology module.</p>
+<h3 className="font-title-md text-title-md text-ink line-clamp-2 mb-2 italic">Cellular Biology Outline</h3>
+<p className="font-body-md text-body-md text-ink line-clamp-2">Incomplete outline for Spring term biology module.</p>
 </div>
 <div className="absolute bottom-6 left-6 right-6 flex gap-3 opacity-0 translate-y-4 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-300 ease-out bg-surface-container pt-4">
-<button className="flex-1 py-2.5 px-4 bg-surface text-[#1A1A1A] rounded-xl font-label-sm text-label-sm uppercase tracking-wider font-bold hover:bg-surface-variant transition-colors shadow-sm flex justify-center items-center gap-2">
+<button className="flex-1 py-2.5 px-4 bg-surface text-ink rounded-xl font-label-sm text-label-sm uppercase tracking-wider font-bold hover:bg-surface-variant transition-colors shadow-sm flex justify-center items-center gap-2">
 <span className="material-symbols-outlined text-[18px]">edit</span>
           Resume Edit
         </button>

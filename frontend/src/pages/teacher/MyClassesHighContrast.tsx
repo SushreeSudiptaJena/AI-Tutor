@@ -10,9 +10,9 @@ export default function MyClassesHighContrast() {
 <div className="absolute inset-0 opacity-10 mix-blend-overlay pointer-events-none" data-alt="A subtle, abstract topographic map of a mountain landscape, rendered in light teal and gold lines on a dark background, representing elevation and the journey of learning. minimalist and elegant." style={{ backgroundImage: 'url(\'https://lh3.googleusercontent.com/aida-public/AB6AXuABJiPZbAH-VyGOjD_-b_GgXVDITLgeCKZhOVQDTdjyK7lT_vNIzUATBE059h1RzCruPUvk4753rYe6HZb1gBfyUwM6BWV4OksF_Wh-owFYPuuyKJhKG2swqNIFnLGcpJlHzmb0Y5GOIjyy7vxoM2QY2SHRkV0FXZcTtMbVxZuKhBVQARV9SPRR0H8AE6SCAPAU45si7yHjpTp4w2-gqy-ztzzJJ_93xa4BVss-FmJPcLpX8HMp2Mo8\')' }}></div>
 <div className="absolute top-[-50%] left-[-20%] w-[150%] h-[200%] bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-primary-fixed/20 via-transparent to-transparent opacity-40 mix-blend-color-dodge blur-3xl pointer-events-none"></div>
 <div className="relative z-10 flex flex-col items-center text-center max-w-2xl px-6">
-<span className="font-label-sm text-label-sm text-[#1A1A1A] tracking-widest uppercase mb-4 bg-secondary/10 px-4 py-1.5 rounded-full inline-block backdrop-blur-md">Academic Roster</span>
-<h1 className="font-display-lg text-display-lg text-[#1A1A1A] mb-4">My Classes</h1>
-<p className="font-body-lg text-body-lg text-[#1A1A1A]">Select a class to review progress, lesson plans, and assignments.</p>
+<span className="font-label-sm text-label-sm text-ink tracking-widest uppercase mb-4 bg-secondary/10 px-4 py-1.5 rounded-full inline-block backdrop-blur-md">Academic Roster</span>
+<h1 className="font-display-lg text-display-lg text-ink mb-4">My Classes</h1>
+<p className="font-body-lg text-body-lg text-ink">Select a class to review progress, lesson plans, and assignments.</p>
 </div>
 </div>
 {/* Main Content Area */}
@@ -23,26 +23,26 @@ export default function MyClassesHighContrast() {
 <div>
 <div className="flex justify-between items-start mb-6">
 <div>
-<h2 className="font-headline-lg text-headline-lg text-[#1A1A1A] mb-1">Class 10A</h2>
-<span className="font-body-md text-body-md text-[#1A1A1A] uppercase tracking-wide">Mathematics</span>
+<h2 className="font-headline-lg text-headline-lg text-ink mb-1">Class 10A</h2>
+<span className="font-body-md text-body-md text-ink uppercase tracking-wide">Mathematics</span>
 </div>
-<div className="w-12 h-12 rounded-full bg-primary-fixed/20 flex items-center justify-center text-[#1A1A1A] shadow-inner">
+<div className="w-12 h-12 rounded-full bg-primary-fixed/20 flex items-center justify-center text-on-primary shadow-inner">
 <span className="material-symbols-outlined text-2xl text-secondary">calculate</span>
 </div>
 </div>
 <div className="space-y-4 mb-8">
-<div className="flex items-center gap-3 text-[#1A1A1A] pb-3 border-b border-surface-variant/50">
+<div className="flex items-center gap-3 text-ink pb-3 border-b border-surface-variant/50">
 <span className="material-symbols-outlined text-secondary text-xl">group</span>
 <div className="flex flex-col">
-<span className="font-label-sm text-label-sm text-[#1A1A1A] uppercase">Students</span>
-<span className="font-title-md text-title-md text-[#1A1A1A]">32</span>
+<span className="font-label-sm text-label-sm text-ink uppercase">Students</span>
+<span className="font-title-md text-title-md text-ink">32</span>
 </div>
 </div>
-<div className="flex items-center gap-3 text-[#1A1A1A]">
+<div className="flex items-center gap-3 text-ink">
 <span className="material-symbols-outlined text-secondary text-xl">menu_book</span>
 <div className="flex flex-col">
-<span className="font-label-sm text-label-sm text-[#1A1A1A] uppercase">Current Topic</span>
-<span className="font-body-lg text-body-lg text-[#1A1A1A]">Trigonometry</span>
+<span className="font-label-sm text-label-sm text-ink uppercase">Current Topic</span>
+<span className="font-body-lg text-body-lg text-ink">Trigonometry</span>
 </div>
 </div>
 </div>
@@ -58,26 +58,26 @@ export default function MyClassesHighContrast() {
 <div>
 <div className="flex justify-between items-start mb-6">
 <div>
-<h2 className="font-headline-lg text-headline-lg text-[#1A1A1A] mb-1">Class 9B</h2>
-<span className="font-body-md text-body-md text-[#1A1A1A] uppercase tracking-wide">Mathematics</span>
+<h2 className="font-headline-lg text-headline-lg text-ink mb-1">Class 9B</h2>
+<span className="font-body-md text-body-md text-ink uppercase tracking-wide">Mathematics</span>
 </div>
-<div className="w-12 h-12 rounded-full bg-primary-fixed/20 flex items-center justify-center text-[#1A1A1A] shadow-inner">
+<div className="w-12 h-12 rounded-full bg-primary-fixed/20 flex items-center justify-center text-on-primary shadow-inner">
 <span className="material-symbols-outlined text-2xl text-secondary">functions</span>
 </div>
 </div>
 <div className="space-y-4 mb-8">
-<div className="flex items-center gap-3 text-[#1A1A1A] pb-3 border-b border-surface-variant/50">
+<div className="flex items-center gap-3 text-ink pb-3 border-b border-surface-variant/50">
 <span className="material-symbols-outlined text-secondary text-xl">group</span>
 <div className="flex flex-col">
-<span className="font-label-sm text-label-sm text-[#1A1A1A] uppercase">Students</span>
-<span className="font-title-md text-title-md text-[#1A1A1A]">28</span>
+<span className="font-label-sm text-label-sm text-ink uppercase">Students</span>
+<span className="font-title-md text-title-md text-ink">28</span>
 </div>
 </div>
-<div className="flex items-center gap-3 text-[#1A1A1A]">
+<div className="flex items-center gap-3 text-ink">
 <span className="material-symbols-outlined text-secondary text-xl">menu_book</span>
 <div className="flex flex-col">
-<span className="font-label-sm text-label-sm text-[#1A1A1A] uppercase">Current Topic</span>
-<span className="font-body-lg text-body-lg text-[#1A1A1A]">Linear Equations</span>
+<span className="font-label-sm text-label-sm text-ink uppercase">Current Topic</span>
+<span className="font-body-lg text-body-lg text-ink">Linear Equations</span>
 </div>
 </div>
 </div>
@@ -93,26 +93,26 @@ export default function MyClassesHighContrast() {
 <div>
 <div className="flex justify-between items-start mb-6">
 <div>
-<h2 className="font-headline-lg text-headline-lg text-[#1A1A1A] mb-1">Class 11C</h2>
-<span className="font-body-md text-body-md text-[#1A1A1A] uppercase tracking-wide">Mathematics</span>
+<h2 className="font-headline-lg text-headline-lg text-ink mb-1">Class 11C</h2>
+<span className="font-body-md text-body-md text-ink uppercase tracking-wide">Mathematics</span>
 </div>
-<div className="w-12 h-12 rounded-full bg-primary-fixed/20 flex items-center justify-center text-[#1A1A1A] shadow-inner">
+<div className="w-12 h-12 rounded-full bg-primary-fixed/20 flex items-center justify-center text-on-primary shadow-inner">
 <span className="material-symbols-outlined text-2xl text-secondary">timeline</span>
 </div>
 </div>
 <div className="space-y-4 mb-8">
-<div className="flex items-center gap-3 text-[#1A1A1A] pb-3 border-b border-surface-variant/50">
+<div className="flex items-center gap-3 text-ink pb-3 border-b border-surface-variant/50">
 <span className="material-symbols-outlined text-secondary text-xl">group</span>
 <div className="flex flex-col">
-<span className="font-label-sm text-label-sm text-[#1A1A1A] uppercase">Students</span>
-<span className="font-title-md text-title-md text-[#1A1A1A]">25</span>
+<span className="font-label-sm text-label-sm text-ink uppercase">Students</span>
+<span className="font-title-md text-title-md text-ink">25</span>
 </div>
 </div>
-<div className="flex items-center gap-3 text-[#1A1A1A]">
+<div className="flex items-center gap-3 text-ink">
 <span className="material-symbols-outlined text-secondary text-xl">menu_book</span>
 <div className="flex flex-col">
-<span className="font-label-sm text-label-sm text-[#1A1A1A] uppercase">Current Topic</span>
-<span className="font-body-lg text-body-lg text-[#1A1A1A]">Calculus Intro</span>
+<span className="font-label-sm text-label-sm text-ink uppercase">Current Topic</span>
+<span className="font-body-lg text-body-lg text-ink">Calculus Intro</span>
 </div>
 </div>
 </div>

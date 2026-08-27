@@ -27,8 +27,8 @@ function WindowCard({
   bgClass: string; // full literal class -- Tailwind only generates what it can scan
 }) {
   return (
-    <div className={`${bgClass} text-[#1A1A1A] p-8 rounded-2xl shadow-[0_4px_40px_rgba(0,0,0,0.05)] flex flex-col gap-3`}>
-      <span className="font-label-sm text-label-sm uppercase tracking-widest text-[#1A1A1A]/60">
+    <div className={`${bgClass} text-ink p-8 rounded-2xl shadow-[0_4px_40px_rgba(0,0,0,0.05)] flex flex-col gap-3`}>
+      <span className="font-label-sm text-label-sm uppercase tracking-widest text-ink/60">
         {title}
       </span>
       {w ? (
@@ -39,13 +39,13 @@ function WindowCard({
           <span className="font-body-md text-body-md">
             {w.confirmed_count} student{w.confirmed_count === 1 ? "" : "s"} confirmed this reasoning
           </span>
-          <span className="font-label-sm text-label-sm text-[#1A1A1A]/60">
+          <span className="font-label-sm text-label-sm text-ink/60">
             {w.window}
             {w.attempts_in_window !== undefined && ` · ${w.attempts_in_window} attempts in window`}
           </span>
         </>
       ) : (
-        <span className="font-body-md text-body-md text-[#1A1A1A]/70">
+        <span className="font-body-md text-body-md text-ink/70">
           No reteach approved for this misconception yet — nothing to compare against.
         </span>
       )}
@@ -94,16 +94,16 @@ export default function BeforeAfterTrackingHighContrast() {
 
   return (
     <TeacherChrome active="tracking">
-      <header className="flex flex-col md:flex-row justify-between items-end gap-6 relative z-10 border-b border-[#FFFFFF]/20 pb-8">
+      <header className="flex flex-col md:flex-row justify-between items-end gap-6 relative z-10 border-b border-ink/15 pb-8">
         <div className="flex flex-col max-w-2xl">
-          <span className="font-label-sm text-label-sm uppercase tracking-[0.2em] text-[#FFFFFF] mb-4 flex items-center gap-2">
+          <span className="font-label-sm text-label-sm uppercase tracking-[0.2em] text-ink mb-4 flex items-center gap-2">
             <span className="material-symbols-outlined text-[16px] text-secondary">analytics</span>
             Intervention Impact
           </span>
-          <h1 className="font-display-lg text-display-lg text-[#FFFFFF] m-0 leading-tight">
+          <h1 className="font-display-lg text-display-lg text-ink m-0 leading-tight">
             Before / After Tracking
           </h1>
-          <p className="font-body-lg text-body-lg text-[#FFFFFF] mt-4 max-w-[36rem]">
+          <p className="font-body-lg text-body-lg text-ink mt-4 max-w-[36rem]">
             Confirmed occurrences of a misconception either side of its reteach. The delta is shown
             whatever its sign — including "it made no difference".
           </p>
@@ -113,7 +113,7 @@ export default function BeforeAfterTrackingHighContrast() {
       {/* Misconception selector: real ones from the heatmap */}
       <div className="flex flex-wrap gap-3 relative z-10">
         {(heat?.items ?? []).length === 0 && !error && (
-          <span className="font-body-md text-body-md text-[#FFFFFF]/70">
+          <span className="font-body-md text-body-md text-ink-soft">
             No confirmed misconceptions yet — nothing to track.
           </span>
         )}
@@ -123,8 +123,8 @@ export default function BeforeAfterTrackingHighContrast() {
             onClick={() => setSelected(m.misconception_id)}
             className={`px-5 py-2.5 rounded-full font-label-md text-label-md transition-colors border max-w-[24rem] truncate ${
               m.misconception_id === selected
-                ? "bg-secondary text-[#1A1A1A] border-secondary"
-                : "border-[#FFFFFF]/30 text-[#FFFFFF] hover:border-secondary"
+                ? "bg-secondary text-ink border-secondary"
+                : "border-ink/25 text-ink hover:border-secondary"
             }`}
             title={m.label}
           >
@@ -134,7 +134,7 @@ export default function BeforeAfterTrackingHighContrast() {
       </div>
 
       {error && (
-        <p role="alert" className="bg-error/20 text-[#FFFFFF] px-6 py-4 rounded-xl">
+        <p role="alert" className="bg-error/20 text-ink px-6 py-4 rounded-xl">
           {error}
         </p>
       )}
@@ -148,18 +148,18 @@ export default function BeforeAfterTrackingHighContrast() {
               {deltaText ? (
                 <span
                   className={`font-headline-lg text-headline-lg px-4 py-1 rounded-full ${
-                    improved ? "bg-secondary text-[#1A1A1A]" : "bg-error-container text-[#1A1A1A]"
+                    improved ? "bg-secondary text-on-primary" : "bg-error-container text-on-primary"
                   }`}
                 >
                   {deltaText}
                 </span>
               ) : (
-                <span className="font-label-md text-label-md text-[#FFFFFF]/70 text-center">
+                <span className="font-label-md text-label-md text-ink-soft text-center">
                   Not measured yet
                 </span>
               )}
               {data.reteach_at && (
-                <span className="font-label-sm text-label-sm text-[#FFFFFF]/50">
+                <span className="font-label-sm text-label-sm text-ink-faint">
                   Reteach approved {new Date(data.reteach_at).toLocaleDateString()}
                 </span>
               )}
@@ -168,19 +168,19 @@ export default function BeforeAfterTrackingHighContrast() {
           </div>
 
           {delta === null && data.after && (
-            <p className="border border-secondary/40 bg-secondary/10 text-[#FFFFFF] px-6 py-4 rounded-xl relative z-10">
+            <p className="border border-secondary/40 bg-secondary/10 text-ink px-6 py-4 rounded-xl relative z-10">
               {data.note ??
                 "Nobody has been asked since the reteach — zero evidence is not the same as zero occurrences. The delta appears once a student practises this problem type again."}
             </p>
           )}
           {delta !== null && improved && (
-            <p className="border border-secondary/40 bg-secondary/10 text-[#FFFFFF] px-6 py-4 rounded-xl relative z-10">
+            <p className="border border-secondary/40 bg-secondary/10 text-ink px-6 py-4 rounded-xl relative z-10">
               Fewer students confirm this reasoning after the reteach — {data.after?.attempts_in_window} attempts
               in the window make this a real measurement.
             </p>
           )}
           {delta !== null && !improved && (
-            <p className="border border-error/40 bg-error/10 text-[#FFFFFF] px-6 py-4 rounded-xl relative z-10">
+            <p className="border border-error/40 bg-error/10 text-ink px-6 py-4 rounded-xl relative z-10">
               This misconception is not shrinking — {delta === 0 ? "the reteach made no measurable difference yet" : "it is growing"}. Worth a different approach.
             </p>
           )}

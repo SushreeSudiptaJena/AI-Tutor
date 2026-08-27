@@ -45,12 +45,12 @@ export default function Login() {
   }
 
   return (
-    <div className="admin-scope min-h-screen bg-gray-100 text-gray-900 relative overflow-y-auto">
+    <div className="admin-scope min-h-screen bg-paper text-ink relative overflow-y-auto">
 
       {/* Background */}
       <div className="fixed inset-0 z-0 pointer-events-none">
-        <div className="absolute inset-0 bg-gradient-to-br from-[#243138] via-[#121414] to-[#1e3600]" />
-        <div className="absolute inset-0 bg-black/20" />
+        <div className="absolute inset-0 bg-gradient-to-br from-paper-2 via-paper to-peach-2" />
+        
       </div>
 
       {/* Top Navigation */}
@@ -66,14 +66,14 @@ export default function Login() {
           <div className="hidden md:flex items-center gap-6 ml-auto mr-8">
             <Link
               to="/"
-              className="text-white/80 hover:text-white transition-colors"
+              className="text-ink-soft hover:text-ink transition-colors"
             >
               Home
             </Link>
 
             <a
               href="#"
-              className="text-white/80 hover:text-white transition-colors"
+              className="text-ink-soft hover:text-ink transition-colors"
             >
               About
             </a>
@@ -82,7 +82,7 @@ export default function Login() {
           {/* Sign Up */}
           <Link
             to="/signup"
-            className="px-6 py-2 rounded-full border border-white/40 text-white hover:bg-white/10 transition-colors"
+            className="px-6 py-2 rounded-full border border-ink/30 text-ink hover:bg-ink/5 transition-colors"
           >
             Sign Up
           </Link>
@@ -92,10 +92,10 @@ export default function Login() {
       {/* Main Content */}
       <main className="relative z-10 min-h-screen flex items-center justify-center p-4 w-full">
 
-        <div className="bg-white rounded-3xl w-full max-w-5xl flex overflow-hidden shadow-2xl min-h-[600px] mt-8 mb-8">
+        <div className="bg-card rounded-3xl w-full max-w-5xl flex overflow-hidden border border-outline-variant shadow-xl min-h-[600px] mt-8 mb-8">
 
           {/* LEFT IMAGE PANEL */}
-          <div className="hidden md:block md:w-[46%] relative bg-gray-100">
+          <div className="hidden md:block md:w-[46%] relative bg-paper">
 
             <div className="w-full h-full overflow-hidden">
 
@@ -109,13 +109,13 @@ export default function Login() {
           </div>
 
           {/* RIGHT LOGIN PANEL */}
-          <div className="w-full md:w-[54%] p-8 md:p-12 lg:p-16 flex flex-col relative bg-white">
+          <div className="w-full md:w-[54%] p-8 md:p-12 lg:p-16 flex flex-col relative bg-card">
 
             {/* Back Button */}
             <button
               type="button"
               onClick={() => navigate(-1)}
-              className="inline-flex items-center text-gray-500 hover:text-gray-800 transition-colors mb-8 w-fit"
+              className="inline-flex items-center text-ink-soft hover:text-ink transition-colors mb-8 w-fit"
             >
               <span className="material-symbols-outlined text-[18px] mr-1">
                 arrow_back
@@ -127,12 +127,12 @@ export default function Login() {
             <div className="flex-grow flex flex-col justify-center max-w-[28rem] mx-auto w-full">
 
               {/* Small heading */}
-              <span className="text-gray-500 uppercase tracking-wider text-xs font-semibold mb-4">
+              <span className="text-ink-soft uppercase tracking-wider text-xs font-semibold mb-4">
                 Welcome back
               </span>
 
               {/* Main heading */}
-              <h1 className="font-serif text-[42px] font-bold text-gray-900 mb-10 leading-tight">
+              <h1 className="font-serif text-[42px] font-bold text-ink mb-10 leading-tight">
                 Knowledge is the path, not the peak.
               </h1>
 
@@ -160,7 +160,7 @@ export default function Login() {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="Email"
-                    className="w-full px-4 py-3 rounded-lg border border-gray-200 bg-white focus:outline-none focus:ring-2 focus:ring-[#7AB139] focus:border-transparent text-gray-900 placeholder-gray-400 transition-shadow"
+                    className="w-full px-4 py-3 rounded-lg border border-outline-variant bg-card focus:outline-none focus:ring-2 focus:ring-orange focus:border-transparent text-ink placeholder-ink-faint transition-shadow"
                   />
                 </div>
 
@@ -182,7 +182,7 @@ export default function Login() {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="Password"
-                    className="w-full px-4 py-3 pr-12 rounded-lg border border-gray-200 bg-white focus:outline-none focus:ring-2 focus:ring-[#7AB139] focus:border-transparent text-gray-900 placeholder-gray-400 transition-shadow"
+                    className="w-full px-4 py-3 pr-12 rounded-lg border border-outline-variant bg-card focus:outline-none focus:ring-2 focus:ring-orange focus:border-transparent text-ink placeholder-ink-faint transition-shadow"
                   />
 
                   {/* Password visibility */}
@@ -191,7 +191,7 @@ export default function Login() {
                     onClick={() =>
                       setShowPassword((value) => !value)
                     }
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-ink-faint hover:text-ink-soft"
                     aria-label={
                       showPassword
                         ? "Hide password"
@@ -212,7 +212,7 @@ export default function Login() {
 
                   <Link
                     to="/forgot-password"
-                    className="text-sm text-gray-500 hover:text-gray-800 transition-colors"
+                    className="text-sm text-ink-soft hover:text-ink transition-colors"
                   >
                     Forgot Password?
                   </Link>
@@ -223,7 +223,7 @@ export default function Login() {
                 {error && (
                   <p
                     role="alert"
-                    className="text-red-600 text-sm"
+                    className="text-error text-sm"
                   >
                     {error}
                   </p>
@@ -233,7 +233,7 @@ export default function Login() {
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full bg-[#7AB139] hover:bg-[#689a2f] disabled:opacity-60 text-white font-semibold py-3 rounded-lg transition-colors mt-6 shadow-sm"
+                  className="w-full btn-ink disabled:opacity-60 py-3 rounded-lg mt-6"
                 >
                   {loading
                     ? "Logging in…"
@@ -245,20 +245,20 @@ export default function Login() {
               {/* Divider */}
               <div className="relative flex items-center py-6">
 
-                <div className="flex-grow border-t border-gray-200" />
+                <div className="flex-grow border-t border-outline-variant" />
 
-                <span className="flex-shrink-0 mx-4 text-gray-400 text-sm">
+                <span className="flex-shrink-0 mx-4 text-ink-faint text-sm">
                   Or continue with
                 </span>
 
-                <div className="flex-grow border-t border-gray-200" />
+                <div className="flex-grow border-t border-outline-variant" />
 
               </div>
 
               {/* Google Button */}
               <button
                 type="button"
-                className="w-full flex items-center justify-center bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 font-semibold py-3 rounded-lg transition-colors shadow-sm"
+                className="w-full flex items-center justify-center bg-card border border-outline-variant hover:bg-paper-2 text-ink-soft font-semibold py-3 rounded-lg transition-colors shadow-sm"
               >
 
                 <svg
@@ -292,13 +292,13 @@ export default function Login() {
               </button>
 
               {/* Sign Up */}
-              <p className="text-center text-gray-500 text-sm mt-8 mb-6">
+              <p className="text-center text-ink-soft text-sm mt-8 mb-6">
 
                 Don't have an account?{" "}
 
                 <Link
                   to="/signup"
-                  className="text-[#7AB139] hover:underline font-medium"
+                  className="text-orange hover:underline font-medium"
                 >
                   Sign up
                 </Link>
@@ -306,7 +306,7 @@ export default function Login() {
               </p>
 
               {/* Footer */}
-              <div className="mt-auto pt-4 border-t border-gray-100 flex items-center justify-center text-gray-400 text-xs">
+              <div className="mt-auto pt-4 border-t border-outline-variant flex items-center justify-center text-ink-faint text-xs">
 
                 <span className="material-symbols-outlined text-[16px] mr-2">
                   school

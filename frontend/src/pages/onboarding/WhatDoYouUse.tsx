@@ -51,7 +51,7 @@ export default function WhatDoYouUse() {
   }
 
   return (
-    <div className="min-h-screen bg-[#121414] text-[#e2e2e2] flex flex-col items-center justify-center font-sans overflow-x-hidden relative">
+    <div className="min-h-screen bg-[#121414] text-ink flex flex-col items-center justify-center font-sans overflow-x-hidden relative">
 
       {/* Decorative background */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden">
@@ -65,7 +65,7 @@ export default function WhatDoYouUse() {
 
         {/* Step indicator */}
         <div className="mb-8">
-          <span className="text-[#c3c7ca] font-semibold text-[14px] tracking-widest uppercase">
+          <span className="text-ink-soft font-semibold text-[14px] tracking-widest uppercase">
             Step 2 of 2
           </span>
         </div>
@@ -76,7 +76,7 @@ export default function WhatDoYouUse() {
             What will you use this for?
           </h1>
 
-          <p className="text-[18px] leading-7 text-[#c3c7ca]">
+          <p className="text-[18px] leading-7 text-ink-soft">
             Select all that apply to help us tailor your AI-assisted
             research environment.
           </p>
@@ -136,7 +136,7 @@ export default function WhatDoYouUse() {
                     ${
                       isSelected
                         ? "text-[#9dd75b]"
-                        : "text-[#c3c7ca]"
+                        : "text-ink-soft"
                     }
                   `}
                   style={{
@@ -148,7 +148,7 @@ export default function WhatDoYouUse() {
                   {option.icon}
                 </span>
 
-                <span className="text-[20px] leading-7 font-medium text-[#e2e2e2]">
+                <span className="text-[20px] leading-7 font-medium text-ink">
                   {option.label}
                 </span>
               </button>
@@ -200,8 +200,8 @@ export default function WhatDoYouUse() {
           type="button"
           onClick={handleSkip}
           className="
-            text-[#c3c7ca]
-            hover:text-[#e2e2e2]
+            text-ink-soft
+            hover:text-ink
             text-[12px]
             font-medium
             transition-colors
@@ -213,7 +213,7 @@ export default function WhatDoYouUse() {
         </button>
 
         {/* Copyright */}
-        <span className="text-[#c3c7ca] text-[12px] mt-4 opacity-50">
+        <span className="text-ink-soft text-[12px] mt-4 opacity-50">
           © 2026 Journey.
         </span>
       </footer>

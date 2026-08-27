@@ -1,48 +1,61 @@
-@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500&family=JetBrains+Mono:wght@500&family=Manrope:wght@600;700&family=Montserrat:wght@500;600;700&family=Playfair+Display:wght@700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500;1,600&family=Courier+Prime:ital,wght@0,400;0,700;1,400&display=swap");
 @import url("https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0");
 @import "tailwindcss";
 
+/* ---------------------------------------------------------------------------
+ * ONE DESIGN SYSTEM: the landing page's paper-desk.
+ *
+ * Warm paper (#faf7f1), ink (#2b2926), an orange accent (#e4552b), EB
+ * Garamond for text and Courier Prime for labels. Every semantic token above
+ * points at it, so the student, admin, teacher and auth surfaces all inherit
+ * one look without their markup changing.
+ *
+ * .admin-scope and .teacher-scope survive only for the few structural values
+ * that genuinely differ per surface -- they no longer carry palettes. Two
+ * competing palettes is what caused the bleed this project spent a session
+ * untangling.
+ * ------------------------------------------------------------------------- */
 @theme {
-  --color-forest-green: #1a3d34;
-  --color-forest-light: #234b41;
-  --color-mustard: #e5b045;
-  --color-cream: #faf6ec;
-  --color-sage-light: #e3ede6;
-  --color-primary: #002824;
-  --color-primary-container: #183e3a;
-  --color-secondary: #3b665f;
-  --color-secondary-container: #beece3;
-  --color-background: #fbf9f1;
-  --color-surface: #fbf9f1;
-  --color-surface-container: #f0eee6;
-  --color-surface-container-low: #f6f4ec;
-  --color-surface-container-lowest: #ffffff;
-  --color-surface-container-highest: #e4e3db;
-  --color-surface-variant: #e4e3db;
-  --color-on-surface: #1b1c17;
-  --color-on-surface-variant: #414847;
-  --color-on-background: #1b1c17;
-  --color-on-primary: #ffffff;
-  --color-on-secondary: #ffffff;
-  --color-outline: #717977;
-  --color-outline-variant: #c0c8c6;
-  --color-error: #ba1a1a;
-  --color-error-container: #ffdad6;
-  --color-on-error-container: #93000a;
-  --color-tertiary: #9dd75b;
-  --color-on-tertiary-container: #70a62f;
-  --font-family-display-lg: "Manrope", sans-serif;
-  --font-family-headline-lg: "Manrope", sans-serif;
-  --font-family-headline-md: "Manrope", sans-serif;
-  --font-family-headline-sm: "Manrope", sans-serif;
-  --font-family-body-md: "Inter", sans-serif;
-  --font-family-body-lg: "Inter", sans-serif;
-  --font-family-body-sm: "Inter", sans-serif;
-  --font-family-label-md: "JetBrains Mono", monospace;
-  --font-family-label-sm: "JetBrains Mono", monospace;
-  --font-family-serif: "Playfair Display", serif;
-  --font-sans: "Inter", sans-serif;
-  --font-serif: "Playfair Display", serif;
+  --color-forest-green: #2b2926;
+  --color-forest-light: #4a4642;
+  --color-mustard: #e4552b;
+  --color-cream: #faf7f1;
+  --color-sage-light: #f3ede3;
+  --color-primary: #2b2926;
+  --color-primary-container: #f3ede3;
+  --color-secondary: #e4552b;
+  --color-secondary-container: #fbdcc7;
+  --color-background: #faf7f1;
+  --color-surface: #faf7f1;
+  --color-surface-container: #f3ede3;
+  --color-surface-container-low: #f3ede3;
+  --color-surface-container-lowest: #fffdf9;
+  --color-surface-container-highest: #e8dfd1;
+  --color-surface-variant: #f3ede3;
+  --color-on-surface: #2b2926;
+  --color-on-surface-variant: #6f6862;
+  --color-on-background: #2b2926;
+  --color-on-primary: #fff7f0;
+  --color-on-secondary: #fff7f0;
+  --color-outline: #9c948b;
+  --color-outline-variant: #d9d0c2;
+  --color-error: #c74620;
+  --color-error-container: #f9c9ae;
+  --color-on-error-container: #8a3216;
+  --color-tertiary: #e4552b;
+  --color-on-tertiary-container: #8a3216;
+  --font-family-display-lg: "EB Garamond", Georgia, serif;
+  --font-family-headline-lg: "EB Garamond", Georgia, serif;
+  --font-family-headline-md: "EB Garamond", Georgia, serif;
+  --font-family-headline-sm: "EB Garamond", Georgia, serif;
+  --font-family-body-md: "EB Garamond", Georgia, serif;
+  --font-family-body-lg: "EB Garamond", Georgia, serif;
+  --font-family-body-sm: "EB Garamond", Georgia, serif;
+  --font-family-label-md: "Courier Prime", "Courier New", monospace;
+  --font-family-label-sm: "Courier Prime", "Courier New", monospace;
+  --font-family-serif: "EB Garamond", Georgia, serif;
+  --font-sans: "EB Garamond", Georgia, serif;
+  --font-serif: "EB Garamond", Georgia, serif;
   --spacing-xs: 8px;
   --spacing-sm: 16px;
   --spacing-md: 24px;
@@ -50,30 +63,30 @@
   --spacing-xl: 48px;
 
 
-  --color-inverse-on-surface: #f0f0f6;
-  --color-inverse-primary: #abcdcc;
-  --color-inverse-surface: #2e3035;
-  --color-on-error: #ffffff;
-  --color-on-primary-container: #83a4a3;
-  --color-on-primary-fixed: #002020;
-  --color-on-primary-fixed-variant: #2d4c4c;
-  --color-on-secondary-container: #416b5c;
-  --color-on-secondary-fixed: #002118;
-  --color-on-secondary-fixed-variant: #254e41;
-  --color-on-tertiary: #ffffff;
-  --color-on-tertiary-fixed: #251a00;
-  --color-on-tertiary-fixed-variant: #5a4300;
-  --color-primary-fixed: #c7e9e8;
-  --color-primary-fixed-dim: #abcdcc;
-  --color-secondary-fixed: #bfecda;
-  --color-secondary-fixed-dim: #a4d0bf;
-  --color-surface-bright: #f9f9fe;
-  --color-surface-container-high: #e8e8ed;
-  --color-surface-dim: #121414;
-  --color-surface-tint: #446464;
-  --color-tertiary-container: #443200;
-  --color-tertiary-fixed: #ffdf9a;
-  --color-tertiary-fixed-dim: #eec151;
+  --color-inverse-on-surface: #faf7f1;
+  --color-inverse-primary: #f9c9ae;
+  --color-inverse-surface: #2b2926;
+  --color-on-error: #fff7f0;
+  --color-on-primary-container: #2b2926;
+  --color-on-primary-fixed: #2b2926;
+  --color-on-primary-fixed-variant: #6f6862;
+  --color-on-secondary-container: #8a3216;
+  --color-on-secondary-fixed: #8a3216;
+  --color-on-secondary-fixed-variant: #c74620;
+  --color-on-tertiary: #fff7f0;
+  --color-on-tertiary-fixed: #8a3216;
+  --color-on-tertiary-fixed-variant: #c74620;
+  --color-primary-fixed: #f3ede3;
+  --color-primary-fixed-dim: #e8dfd1;
+  --color-secondary-fixed: #fbdcc7;
+  --color-secondary-fixed-dim: #f9c9ae;
+  --color-surface-bright: #fffdf9;
+  --color-surface-container-high: #e8dfd1;
+  --color-surface-dim: #e8dfd1;
+  --color-surface-tint: #e4552b;
+  --color-tertiary-container: #f9c9ae;
+  --color-tertiary-fixed: #fbdcc7;
+  --color-tertiary-fixed-dim: #f9c9ae;
 
   /* ------------------------------------------------------------------
    * Scoped-palette token NAMES.
@@ -85,15 +98,15 @@
    * (white on white). Declaring the names here is what makes the classes
    * exist; the scopes still decide what they look like.
    * ------------------------------------------------------------------ */
-  --color-black: #000000;
-  --color-brand-lavender: #9dd75b;
-  --color-brand-teal: #3d6658;
+  --color-black: #2b2926;
+  --color-brand-lavender: #e4552b;
+  --color-brand-teal: #6f6862;
   --text-headline-lg-mobile: 28px;
   --text-headline-lg-mobile--line-height: 36px;
   --text-label-lg: 15px;
   --text-label-lg--line-height: 20px;
-  --font-headline-lg-mobile: "Montserrat", sans-serif;
-  --font-label-lg: "Inter", sans-serif;
+  --font-headline-lg-mobile: "EB Garamond", Georgia, serif;
+  --font-label-lg: "Courier Prime", "Courier New", monospace;
 
   /* Admin-surface layout tokens. Same rule as the teacher block below, and
      the same bug: these were moved into .admin-scope with the palette, which
@@ -110,11 +123,11 @@
      declaration there is no `font-title-md` utility at all, so those card
      headings were rendering at body size (16px instead of 18px) -- which
      reads as "the spacing is off" long before anyone suspects the font. */
-  --font-headline-lg: "Manrope", sans-serif;
-  --font-headline-sm: "Manrope", sans-serif;
-  --font-body-lg: "Inter", sans-serif;
-  --font-title-md: "Manrope", sans-serif;
-  --font-body-sm: "Inter", sans-serif;
+  --font-headline-lg: "EB Garamond", Georgia, serif;
+  --font-headline-sm: "EB Garamond", Georgia, serif;
+  --font-body-lg: "EB Garamond", Georgia, serif;
+  --font-title-md: "EB Garamond", Georgia, serif;
+  --font-body-sm: "EB Garamond", Georgia, serif;
   --text-title-md: 18px;
   --text-title-md--line-height: 26px;
 
@@ -147,6 +160,25 @@
   --text-label-md--line-height: 16px;
   --text-label-sm: 11px;
   --text-label-sm--line-height: 14px;
+  --color-on-inverse-surface: #faf7f1;
+  --color-paper: #faf7f1;
+  --color-paper-2: #f3ede3;
+  --color-paper-3: #e8dfd1;
+  --color-card: #fffdf9;
+  --color-ink: #2b2926;
+  --color-ink-soft: #6f6862;
+  --color-ink-faint: #9c948b;
+  --color-orange: #e4552b;
+  --color-orange-2: #c74620;
+  --color-peach: #f9c9ae;
+  --color-peach-2: #fbdcc7;
+  --color-sky: #afd0ea;
+  --color-lime: #c7d652;
+  --font-mono: "Courier Prime", "Courier New", monospace;
+  --font-headline-md: "EB Garamond", Georgia, serif;
+  --font-body-md: "EB Garamond", Georgia, serif;
+  --font-label-md: "Courier Prime", "Courier New", monospace;
+  --font-label-sm: "Courier Prime", "Courier New", monospace;
 }
 
 
@@ -201,6 +233,37 @@
  * ------------------------------------------------------------------------- */
 
 :root { color-scheme: light; }
+
+/* The landing page's own variable names, aliased onto the tokens above.
+ * Landing.css is 1,600 lines written against --paper / --ink / --orange;
+ * aliasing keeps it working without a second palette to maintain. */
+:root {
+  --paper: var(--color-paper);
+  --paper-2: var(--color-paper-2);
+  --paper-3: var(--color-paper-3);
+  --card: var(--color-card);
+  --ink: var(--color-ink);
+  --ink-soft: var(--color-ink-soft);
+  --ink-faint: var(--color-ink-faint);
+  --orange: var(--color-orange);
+  --orange-2: var(--color-orange-2);
+  --peach: var(--color-peach);
+  --peach-2: var(--color-peach-2);
+  --sky: var(--color-sky);
+  --lime: var(--color-lime);
+  --line: rgba(43, 41, 38, 0.16);
+  --lift: 0 10px 22px -14px rgba(43, 41, 38, 0.28);
+  --lift-sm: 0 6px 14px -10px rgba(43, 41, 38, 0.24);
+  --font-serif: "EB Garamond", Georgia, "Times New Roman", serif;
+  --font-mono: "Courier Prime", "Courier New", ui-monospace, monospace;
+}
+
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-serif);
+}
+
 html.text-lg-mode { font-size: 18px; }
 html.text-xl-mode { font-size: 21px; }
 html.high-contrast { filter: contrast(1.35); }
@@ -229,35 +292,6 @@ a:focus-visible, button:focus-visible, input:focus-visible { outline: 2px solid 
  * ------------------------------------------------------------------------- */
 
 .admin-scope {
-  --color-surface: #121414;
-  --color-surface-dim: #121414;
-  --color-surface-bright: #38393a;
-  --color-surface-variant: #1e2020;
-  --color-surface-container-lowest: #0c0f0f;
-  --color-surface-container-low: #1a1c1c;
-  --color-surface-container: #1e2020;
-  --color-surface-container-high: #282a2b;
-  --color-surface-container-highest: #333535;
-  --color-on-surface: #e2e2e2;
-  --color-on-surface-variant: #c3c7ca;
-  --color-outline: #8d9194;
-  --color-outline-variant: #43474a;
-  --color-primary: #bbc9d1;
-  --color-on-primary: #253239;
-  --color-primary-container: #243138;
-  --color-on-primary-container: #8b99a1;
-  --color-secondary: #b0c9e9;
-  --color-on-secondary: #18324c;
-  --color-secondary-container: #304863;
-  --color-on-secondary-container: #9fb7d7;
-  --color-tertiary: #9dd75b;
-  --color-on-tertiary: #1e3700;
-  --color-tertiary-container: #1e3600;
-  --color-on-tertiary-container: #70a62f;
-  --color-error: #ffb4ab;
-  --color-on-error: #690005;
-  --color-background: #121414;
-  --color-on-background: #e2e2e2;
 
   --font-sans: 'Hanken Grotesk', system-ui, sans-serif;
   --font-serif: 'Newsreader', serif;
@@ -298,38 +332,39 @@ a:focus-visible, button:focus-visible, input:focus-visible { outline: 2px solid 
  * ------------------------------------------------------------------------- */
 
 .ns-glass-card {
-  background: rgba(18, 20, 20, 0.7);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: var(--color-card);
+  border: 1px solid var(--color-outline-variant);
+  box-shadow: 0 6px 14px -10px rgba(43, 41, 38, 0.24);
 }
 
 .ns-glass-panel {
-  background: rgba(36, 49, 56, 0.4);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  background: var(--color-card);
+  border: 1px solid var(--color-outline-variant);
+  box-shadow: 0 6px 14px -10px rgba(43, 41, 38, 0.24);
 }
 
 .ns-ai-accent-glow {
-  box-shadow: 0 0 20px rgba(122, 177, 57, 0.3);
+  box-shadow: 0 10px 22px -14px rgba(43, 41, 38, 0.28);
 }
 
 .ns-btn-primary {
-  background: linear-gradient(135deg, #1e3600, #2e4f00);
-  border: 1px solid rgba(157, 215, 91, 0.2);
-  color: #b8f473;
+  background: var(--color-ink);
+  border: 1px solid var(--color-ink);
+  color: #fff7f0;
+  font-family: var(--font-mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 .ns-btn-primary:hover {
-  background: linear-gradient(135deg, #2e4f00, #1e3600);
-  box-shadow: 0 0 15px rgba(157, 215, 91, 0.2);
+  background: var(--color-ink);
+  transform: translateY(-2px);
 }
 
 .ns-custom-scrollbar::-webkit-scrollbar { width: 8px; height: 8px; }
-.ns-custom-scrollbar::-webkit-scrollbar-track { background: rgba(255, 255, 255, 0.02); border-radius: 4px; }
-.ns-custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.1); border-radius: 4px; }
-.ns-custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.2); }
+.ns-custom-scrollbar::-webkit-scrollbar-track { background: rgba(43,41,38,0.04); border-radius: 4px; }
+.ns-custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(43,41,38,0.18); border-radius: 4px; }
+.ns-custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(43,41,38,0.3); }
 
 /* ---------------------------------------------------------------------------
  * Teacher-scope tokens (111d770's converted Stitch screens).
@@ -345,49 +380,6 @@ a:focus-visible, button:focus-visible, input:focus-visible { outline: 2px solid 
  * here too so the teacher screens have one home.
  * ------------------------------------------------------------------------- */
 .teacher-scope {
-  --color-on-error: #ffffff;
-  --color-tertiary: #2a1e00;
-  --color-on-primary-container: #83a4a3;
-  --color-on-surface: #1a1c20;
-  --color-on-tertiary-fixed: #251a00;
-  --color-tertiary-fixed: #ffdf9a;
-  --color-surface-tint: #446464;
-  --color-error: #ba1a1a;
-  --color-surface: #f9f9fe;
-  --color-on-tertiary: #ffffff;
-  --color-inverse-on-surface: #f0f0f6;
-  --color-on-secondary-fixed: #002118;
-  --color-surface-bright: #f9f9fe;
-  --color-primary-fixed: #c7e9e8;
-  --color-secondary: #3d6658;
-  --color-on-background: #1a1c20;
-  --color-inverse-primary: #abcdcc;
-  --color-inverse-surface: #2e3035;
-  --color-surface-container-high: #e8e8ed;
-  --color-on-secondary-fixed-variant: #254e41;
-  --color-surface-container-lowest: #ffffff;
-  --color-on-primary-fixed-variant: #2d4c4c;
-  --color-on-primary-fixed: #002020;
-  --color-primary: #012425;
-  --color-primary-container: #1a3a3a;
-  --color-on-secondary-container: #416b5c;
-  --color-on-primary: #ffffff;
-  --color-error-container: #ffdad6;
-  --color-surface-container-low: #f3f3f9;
-  --color-tertiary-container: #443200;
-  --color-on-tertiary-container: #c1982b;
-  --color-tertiary-fixed-dim: #eec151;
-  --color-on-error-container: #93000a;
-  --color-secondary-fixed: #bfecda;
-  --color-surface-container-highest: #e2e2e7;
-  --color-on-tertiary-fixed-variant: #5a4300;
-  --color-secondary-fixed-dim: #a4d0bf;
-  --color-surface-container: #ededf3;
-  --color-primary-fixed-dim: #abcdcc;
-  --color-on-surface-variant: #414848;
-  --color-secondary-container: #bce9d8;
-  --color-outline-variant: #c1c8c7;
-  --color-surface-variant: #e2e2e7;
 
   --radius-lg: 0.5rem;
   --radius-xl: 0.75rem;
@@ -407,4 +399,57 @@ a:focus-visible, button:focus-visible, input:focus-visible { outline: 2px solid 
 
 @keyframes dash {
   to { stroke-dashoffset: -100; }
+}
+
+
+/* ---------------------------------------------------------------------------
+ * Paper-desk components, matching the landing page's .btn and .card so a
+ * button looks the same wherever it appears in the app.
+ * ------------------------------------------------------------------------- */
+
+.btn-ink,
+.btn-ghost {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.7em;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 0.9em 1.6em;
+  border-radius: 10px;
+  text-decoration: none;
+  transition: transform 0.25s ease, background-color 0.2s ease;
+}
+
+.btn-ink {
+  color: #fff7f0;
+  background: var(--color-ink);
+  box-shadow: 0 10px 22px -14px rgba(43, 41, 38, 0.28);
+  border: 1px solid var(--color-ink);
+}
+
+.btn-ghost {
+  background: transparent;
+  color: var(--color-ink);
+  border: 1px solid var(--color-ink);
+}
+
+.btn-ink:hover:not(:disabled),
+.btn-ghost:hover:not(:disabled) {
+  transform: translateY(-2px);
+}
+
+.btn-ink:disabled,
+.btn-ghost:disabled {
+  transform: none;
+  cursor: not-allowed;
+}
+
+/* the landing page's paper card */
+.paper-card {
+  background: var(--color-card);
+  border: 1px solid var(--color-outline-variant);
+  box-shadow: 0 6px 14px -10px rgba(43, 41, 38, 0.24);
 }

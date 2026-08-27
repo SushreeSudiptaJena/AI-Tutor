@@ -74,10 +74,10 @@ export default function SuggestedReteachHighContrast() {
   const assigned = (units ?? []).filter((u) => u.status === "assigned");
 
   const Unit = ({ u }: { u: ReteachUnitDto }) => (
-    <article className="bg-surface-container-lowest text-[#1A1A1A] p-8 rounded-2xl shadow-[0_4px_40px_rgba(0,0,0,0.05)] flex flex-col gap-4">
+    <article className="bg-surface-container-lowest text-ink p-8 rounded-2xl shadow-[0_4px_40px_rgba(0,0,0,0.05)] flex flex-col gap-4">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <span className="font-label-sm text-label-sm uppercase tracking-widest text-[#1A1A1A]/60">
+          <span className="font-label-sm text-label-sm uppercase tracking-widest text-ink/60">
             {u.target === "misconception" ? "Misconception reteach" : "Prerequisite reteach"}
           </span>
           <h3 className="font-title-md text-title-md leading-snug mt-1">{u.title || u.label}</h3>
@@ -86,7 +86,7 @@ export default function SuggestedReteachHighContrast() {
           <button
             onClick={() => approve(u.id)}
             disabled={busyId === u.id}
-            className="shrink-0 bg-primary text-[#FFFFFF] px-5 py-2.5 rounded-lg font-title-md text-title-md hover:bg-primary/90 disabled:opacity-50 transition-colors flex items-center gap-2"
+            className="shrink-0 bg-primary text-on-primary px-5 py-2.5 rounded-lg font-title-md text-title-md hover:bg-primary/90 disabled:opacity-50 transition-colors flex items-center gap-2"
           >
             <span className="material-symbols-outlined text-[18px]">publish</span>
             {busyId === u.id ? "Approving…" : "Approve & assign"}
@@ -97,23 +97,23 @@ export default function SuggestedReteachHighContrast() {
           </span>
         )}
       </div>
-      <p className="font-label-sm text-label-sm text-[#1A1A1A]/70">{u.label}</p>
-      <p className="font-body-md text-body-md line-clamp-4 text-[#1A1A1A]/90 whitespace-pre-line">{u.body}</p>
+      <p className="font-label-sm text-label-sm text-ink/70">{u.label}</p>
+      <p className="font-body-md text-body-md line-clamp-4 text-ink/90 whitespace-pre-line">{u.body}</p>
     </article>
   );
 
   return (
     <TeacherChrome active="suggested-reteach">
-      <header className="flex flex-col md:flex-row justify-between items-end gap-6 relative z-10 border-b border-[#FFFFFF]/20 pb-8">
+      <header className="flex flex-col md:flex-row justify-between items-end gap-6 relative z-10 border-b border-ink/15 pb-8">
         <div className="flex flex-col max-w-2xl">
-          <span className="font-label-sm text-label-sm uppercase tracking-[0.2em] text-[#FFFFFF] mb-4 flex items-center gap-2">
+          <span className="font-label-sm text-label-sm uppercase tracking-[0.2em] text-ink mb-4 flex items-center gap-2">
             <span className="material-symbols-outlined text-[16px] text-secondary">psychology</span>
             Targeted Intervention
           </span>
-          <h1 className="font-display-lg text-display-lg text-[#FFFFFF] m-0 leading-tight">
+          <h1 className="font-display-lg text-display-lg text-ink m-0 leading-tight">
             Suggested Reteach
           </h1>
-          <p className="font-body-lg text-body-lg text-[#FFFFFF] mt-4 max-w-[36rem]">
+          <p className="font-body-lg text-body-lg text-ink mt-4 max-w-[36rem]">
             Units drafted from the class's own evidence — the misconception heatmap and the gap map.
             Nothing reaches a student until you approve it.
           </p>
@@ -121,7 +121,7 @@ export default function SuggestedReteachHighContrast() {
         <button
           onClick={draftTop}
           disabled={drafting}
-          className="bg-secondary text-[#1A1A1A] px-6 py-3 rounded-lg font-title-md text-title-md hover:bg-secondary-fixed transition-colors shadow-sm flex items-center gap-2 disabled:opacity-60"
+          className="bg-secondary text-ink px-6 py-3 rounded-lg font-title-md text-title-md hover:bg-secondary-fixed transition-colors shadow-sm flex items-center gap-2 disabled:opacity-60"
         >
           <span className="material-symbols-outlined">auto_awesome</span>
           {drafting ? "Drafting…" : "Draft top 3 + top 3"}
@@ -129,22 +129,22 @@ export default function SuggestedReteachHighContrast() {
       </header>
 
       {error && (
-        <p role="alert" className="bg-error/20 text-[#FFFFFF] px-6 py-4 rounded-xl">
+        <p role="alert" className="bg-error/20 text-ink px-6 py-4 rounded-xl">
           {error}
         </p>
       )}
       {draftNote && !error && (
-        <p className="border border-secondary/40 bg-secondary/10 text-[#FFFFFF] px-6 py-4 rounded-xl">
+        <p className="border border-secondary/40 bg-secondary/10 text-ink px-6 py-4 rounded-xl">
           {draftNote}
         </p>
       )}
 
       <section className="relative z-10">
-        <h2 className="font-headline-lg text-headline-lg text-[#FFFFFF] mb-6">
+        <h2 className="font-headline-lg text-headline-lg text-ink mb-6">
           Drafts awaiting approval ({drafts.length})
         </h2>
         {drafts.length === 0 ? (
-          <p className="font-body-lg text-body-lg text-[#FFFFFF]/70 mb-10">
+          <p className="font-body-lg text-body-lg text-ink-soft mb-10">
             No drafts. Press "Draft top 3 + top 3" to generate them from the current heatmap and gap
             map.
           </p>
@@ -156,11 +156,11 @@ export default function SuggestedReteachHighContrast() {
           </div>
         )}
 
-        <h2 className="font-headline-lg text-headline-lg text-[#FFFFFF] mb-6">
+        <h2 className="font-headline-lg text-headline-lg text-ink mb-6">
           Assigned to the class ({assigned.length})
         </h2>
         {assigned.length === 0 ? (
-          <p className="font-body-lg text-body-lg text-[#FFFFFF]/70">
+          <p className="font-body-lg text-body-lg text-ink-soft">
             Nothing assigned yet. Approved units appear in every affected student's Assignments
             panel.
           </p>

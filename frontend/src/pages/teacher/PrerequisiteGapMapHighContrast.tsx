@@ -26,44 +26,44 @@ export default function PrerequisiteGapMapHighContrast() {
 
   return (
     <TeacherChrome active="gap-map">
-      <header className="flex flex-col md:flex-row justify-between items-end gap-6 relative z-10 border-b border-[#FFFFFF]/20 pb-8">
+      <header className="flex flex-col md:flex-row justify-between items-end gap-6 relative z-10 border-b border-ink/15 pb-8">
         <div className="flex flex-col max-w-2xl">
-          <span className="font-label-sm text-label-sm uppercase tracking-[0.2em] text-[#FFFFFF] mb-4 flex items-center gap-2">
+          <span className="font-label-sm text-label-sm uppercase tracking-[0.2em] text-ink mb-4 flex items-center gap-2">
             <span className="material-symbols-outlined text-[16px] text-secondary">map</span>
             Prerequisite Coverage
           </span>
-          <h1 className="font-display-lg text-display-lg text-[#FFFFFF] m-0 leading-tight">
+          <h1 className="font-display-lg text-display-lg text-ink m-0 leading-tight">
             Prerequisite Gap Map
           </h1>
-          <p className="font-body-lg text-body-lg text-[#FFFFFF] mt-4 max-w-[36rem]">
+          <p className="font-body-lg text-body-lg text-ink mt-4 max-w-[36rem]">
             What this class is missing from earlier courses, ranked by how many students carry the
             gap. Each row names the course it should have been learned in.
           </p>
         </div>
         <div className="flex flex-col text-right">
-          <span className="font-title-md text-title-md text-[#FFFFFF]">
+          <span className="font-title-md text-title-md text-ink">
             {items ? `${items.length} concepts` : "…"}
           </span>
-          <span className="font-label-sm text-label-sm text-[#FFFFFF]">open gaps across the class</span>
+          <span className="font-label-sm text-label-sm text-ink">open gaps across the class</span>
         </div>
       </header>
 
       {error && (
-        <p role="alert" className="bg-error/20 text-[#FFFFFF] px-6 py-4 rounded-xl">
+        <p role="alert" className="bg-error/20 text-ink px-6 py-4 rounded-xl">
           {error}
         </p>
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 relative z-10">
         {items?.length === 0 && !error && (
-          <p className="font-body-lg text-body-lg text-[#FFFFFF]/70">
+          <p className="font-body-lg text-body-lg text-ink-soft">
             No open prerequisite gaps — the class diagnostic came back clean.
           </p>
         )}
         {(items ?? []).map((g) => (
           <article
             key={g.concept}
-            className="bg-tertiary-fixed text-[#1A1A1A] p-8 rounded-2xl shadow-[0_4px_40px_rgba(0,0,0,0.05)] flex flex-col gap-4"
+            className="bg-tertiary-fixed text-ink p-8 rounded-2xl shadow-[0_4px_40px_rgba(0,0,0,0.05)] flex flex-col gap-4"
           >
             <div className="flex items-start justify-between gap-4">
               <h3 className="font-title-md text-title-md leading-snug">{g.concept}</h3>
@@ -71,7 +71,7 @@ export default function PrerequisiteGapMapHighContrast() {
                 {Math.round(g.share * 100)}% of class
               </span>
             </div>
-            <p className="font-body-md text-body-md text-[#1A1A1A]/80 flex items-center gap-2">
+            <p className="font-body-md text-body-md text-ink/80 flex items-center gap-2">
               <span className="material-symbols-outlined text-[18px]">history_edu</span>
               From <strong>{g.prerequisite_course}</strong>
             </p>
@@ -80,7 +80,7 @@ export default function PrerequisiteGapMapHighContrast() {
                 <span className="font-semibold uppercase">Students missing</span>
                 <span>{g.students_missing}</span>
               </div>
-              <div className="w-full bg-[#1A1A1A]/10 h-3 rounded-full overflow-hidden">
+              <div className="w-full bg-ink/10 h-3 rounded-full overflow-hidden">
                 <div
                   className="bg-primary h-full rounded-full"
                   style={{ width: `${(g.students_missing / max) * 100}%` }}

@@ -18,11 +18,11 @@ export default function ForgotPassword() {
   }
 
   return (
-    <div className="admin-scope min-h-screen bg-gray-100 text-gray-900 flex items-center justify-center p-4">
-      <div className="bg-white rounded-3xl w-full max-w-[28rem] p-8 md:p-12 shadow-2xl">
+    <div className="admin-scope min-h-screen bg-paper text-ink flex items-center justify-center p-4">
+      <div className="bg-card rounded-3xl w-full max-w-[28rem] p-8 md:p-12 shadow-2xl">
         <Link
           to="/login"
-          className="inline-flex items-center text-gray-500 hover:text-gray-800 transition-colors mb-8"
+          className="inline-flex items-center text-ink-soft hover:text-ink transition-colors mb-8"
         >
           <span className="material-symbols-outlined text-[18px] mr-1">
             arrow_back
@@ -30,33 +30,33 @@ export default function ForgotPassword() {
           Back
         </Link>
 
-        <span className="text-gray-500 uppercase tracking-wider text-xs font-semibold">
+        <span className="text-ink-soft uppercase tracking-wider text-xs font-semibold">
           Account recovery
         </span>
-        <h1 className="text-[32px] font-bold text-gray-900 mt-2 mb-4 leading-tight">
+        <h1 className="text-[32px] font-bold text-ink mt-2 mb-4 leading-tight">
           Forgot your password?
         </h1>
 
         {sent ? (
           <div>
-            <p className="text-gray-700 mb-3">
+            <p className="text-ink-soft mb-3">
               If an account exists for{" "}
               <span className="font-medium">{email}</span>, a password reset
               link has been sent to it.
             </p>
-            <p className="text-gray-500 text-sm">
+            <p className="text-ink-soft text-sm">
               Check your inbox and spam folder. The link expires in 24 hours.
             </p>
             <Link
               to="/login"
-              className="inline-block w-full text-center bg-[#7AB139] hover:bg-[#689a2f] text-white font-semibold py-3 rounded-lg transition-colors mt-8"
+              className="inline-block w-full text-center bg-ink hover:bg-ink/90 text-white font-semibold py-3 rounded-lg transition-colors mt-8"
             >
               Back to login
             </Link>
           </div>
         ) : (
           <>
-            <p className="text-gray-500 mb-8">
+            <p className="text-ink-soft mb-8">
               Enter the email you registered with and we'll send you a reset
               link.
             </p>
@@ -72,21 +72,21 @@ export default function ForgotPassword() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="Email"
-                  className="w-full px-4 py-3 rounded-lg border border-gray-200 bg-white focus:outline-none focus:ring-2 focus:ring-[#7AB139] focus:border-transparent text-gray-900 placeholder-gray-400 transition-shadow"
+                  className="w-full px-4 py-3 rounded-lg border border-outline-variant bg-card focus:outline-none focus:ring-2 focus:ring-orange focus:border-transparent text-ink placeholder-ink-faint transition-shadow"
                 />
               </div>
 
               <button
                 type="submit"
-                className="w-full bg-[#7AB139] hover:bg-[#689a2f] text-white font-semibold py-3 rounded-lg transition-colors mt-2 shadow-sm"
+                className="w-full bg-ink hover:bg-ink/90 text-white font-semibold py-3 rounded-lg transition-colors mt-2 shadow-sm"
               >
                 Send reset link
               </button>
             </form>
 
-            <p className="text-center text-gray-500 text-sm mt-8">
+            <p className="text-center text-ink-soft text-sm mt-8">
               Remembered it?{" "}
-              <Link to="/login" className="text-[#7AB139] hover:underline font-medium">
+              <Link to="/login" className="text-orange hover:underline font-medium">
                 Log in
               </Link>
             </p>
