@@ -64,7 +64,7 @@ export default function MisconceptionHeatmapHighContrast() {
           <h1 className="font-display-lg text-display-lg text-[#FFFFFF] m-0 leading-tight">
             Misconception Heatmap
           </h1>
-          <p className="font-body-lg text-body-lg text-[#FFFFFF] mt-4 max-w-xl">
+          <p className="font-body-lg text-body-lg text-[#FFFFFF] mt-4 max-w-[36rem]">
             Only diagnoses a student CONFIRMED as their own reasoning are counted. Updates live as the class practises.
           </p>
         </div>

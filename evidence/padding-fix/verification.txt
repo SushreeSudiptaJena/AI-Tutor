@@ -1,0 +1,64 @@
+Padding / design-token repair — 2026-08-27
+Owner: "the padding is very off on almost all pages within each login and all."
+
+ROOT CAUSE (one bug, many symptoms)
+Tailwind v4 generates a utility ONLY for a token declared in a build-time
+@theme block. A token declared in a plain class (.admin-scope /
+.teacher-scope) still resolves as a CSS variable -- so it looks defined in
+devtools -- but `p-card-inner-padding` and `bg-inverse-surface` are never
+emitted at all. No build error, no missing class in the DOM: the element
+simply has no padding, or no background.
+
+The palette-bleed fix (session 021) moved the admin and teacher palettes into
+scope classes. That was right for the COLOURS' values, but it took the token
+NAMES with it, and every utility built from those names silently stopped
+existing.
+
+MEASURED, BEFORE -> AFTER (computed styles, live DOM)
+  admin  p-card-inner-padding      0      -> 24px
+  admin  py-container-padding      0      -> 32px
+  onboarding px-container-padding  0      -> 48px 32px
+  onboarding py-section-gap        0      -> 48px 32px
+  onboarding p-card-inner-padding  0      -> 24px
+  teacher font-title-md            16px   -> 18px  (card headings were body size)
+  teacher bg-inverse-surface       (none) -> the console's dark background
+  teacher bg-tertiary-fixed        (none) -> the cream stat cards
+Before, the teacher console rendered white-on-white with its content pushed
+into a void; the admin cards had no inner padding at all.
+
+WHAT WAS FIXED
+1. Declared in @theme (names there, values still overridden per scope):
+   --spacing-unit, --spacing-card-inner-padding, --spacing-container-padding,
+   --spacing-section-gap
+   24 colour tokens: inverse-surface, inverse-on-surface, inverse-primary,
+   tertiary-fixed(-dim), primary-fixed(-dim), secondary-fixed(-dim),
+   surface-bright, surface-container-high, surface-dim, surface-tint,
+   tertiary-container, on-tertiary, on-error, on-primary-container,
+   on-secondary-container, and the on-*-fixed(-variant) set
+   type: --font-headline-lg/-sm, --font-body-lg/-sm, --font-title-md,
+   --text-title-md(+lh), --text-headline-lg-mobile(+lh), --text-label-lg(+lh)
+   never-defined-anywhere: --color-brand-teal, --color-brand-lavender,
+   --color-black (the converted Stitch screens referenced them)
+2. max-w-xl resolved to var(--spacing-xl) = 48px, which wrapped the teacher
+   pages' intro paragraphs ONE WORD PER LINE -- the same trap the repo
+   already documented for max-w-sm/md. Replaced with max-w-[36rem] in 16
+   places across 15 files.
+3. Onboarding step 1's teacher note reused the student card's icon; it now
+   has its own.
+
+THE GUARD (so this cannot recur silently a fourth time)
+frontend/scripts/check-utilities.mjs cross-references every token class used
+in src against the built CSS and fails if one was never generated. It is
+wired into `npm run build`, so the build now refuses to pass with a dead
+class. It understands escaped variants (.md\:p-x, .hover\:bg-x) and opacity
+modifiers (.bg-x\/20), which is what makes it quiet enough to keep.
+  current: "utilities ok: 228 token classes, all generated"
+It caught one more real dead class on its first run (font-body-sm), now fixed.
+
+This bug class has now hit three times: max-w-sm (session 018), the teacher
+sidebar width (021), and this. The header of the script records all three.
+
+SCREENSHOTS (this directory)
+  before-*  the broken state       final-/fixed-/done-*  after each stage
+  done-admin-dashboard, done-admin-subjects, done-teacher, done-onboarding1,
+  done-onboarding2, done-signup, done-login, done-adminlogin, done-landing

@@ -71,7 +71,7 @@ export default function UncertaintyFlagsHighContrast() {
           <h1 className="font-display-lg text-display-lg text-[#FFFFFF] m-0 leading-tight">
             Uncertainty Flags
           </h1>
-          <p className="font-body-lg text-body-lg text-[#FFFFFF] mt-4 max-w-xl">
+          <p className="font-body-lg text-body-lg text-[#FFFFFF] mt-4 max-w-[36rem]">
             Every question the tutor could not ground in the approved material, and therefore refused
             to answer. Anonymous by design — what the class needs, not who asked.
           </p>

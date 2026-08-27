@@ -49,6 +49,75 @@
   --spacing-lg: 32px;
   --spacing-xl: 48px;
 
+
+  --color-inverse-on-surface: #f0f0f6;
+  --color-inverse-primary: #abcdcc;
+  --color-inverse-surface: #2e3035;
+  --color-on-error: #ffffff;
+  --color-on-primary-container: #83a4a3;
+  --color-on-primary-fixed: #002020;
+  --color-on-primary-fixed-variant: #2d4c4c;
+  --color-on-secondary-container: #416b5c;
+  --color-on-secondary-fixed: #002118;
+  --color-on-secondary-fixed-variant: #254e41;
+  --color-on-tertiary: #ffffff;
+  --color-on-tertiary-fixed: #251a00;
+  --color-on-tertiary-fixed-variant: #5a4300;
+  --color-primary-fixed: #c7e9e8;
+  --color-primary-fixed-dim: #abcdcc;
+  --color-secondary-fixed: #bfecda;
+  --color-secondary-fixed-dim: #a4d0bf;
+  --color-surface-bright: #f9f9fe;
+  --color-surface-container-high: #e8e8ed;
+  --color-surface-dim: #121414;
+  --color-surface-tint: #446464;
+  --color-tertiary-container: #443200;
+  --color-tertiary-fixed: #ffdf9a;
+  --color-tertiary-fixed-dim: #eec151;
+
+  /* ------------------------------------------------------------------
+   * Scoped-palette token NAMES.
+   *
+   * .admin-scope and .teacher-scope below carry the real values for their
+   * surfaces, but a token that exists ONLY in a plain class generates no
+   * utility: `bg-inverse-surface` was never emitted, so the teacher
+   * console's whole dark background and its cream cards painted nothing
+   * (white on white). Declaring the names here is what makes the classes
+   * exist; the scopes still decide what they look like.
+   * ------------------------------------------------------------------ */
+  --color-black: #000000;
+  --color-brand-lavender: #9dd75b;
+  --color-brand-teal: #3d6658;
+  --text-headline-lg-mobile: 28px;
+  --text-headline-lg-mobile--line-height: 36px;
+  --text-label-lg: 15px;
+  --text-label-lg--line-height: 20px;
+  --font-headline-lg-mobile: "Montserrat", sans-serif;
+  --font-label-lg: "Inter", sans-serif;
+
+  /* Admin-surface layout tokens. Same rule as the teacher block below, and
+     the same bug: these were moved into .admin-scope with the palette, which
+     silently stopped generating p-card-inner-padding / py-container-padding /
+     space-y-section-gap. The admin console and the onboarding welcome steps
+     rendered with ZERO padding as a result. Names here, values overridable
+     per scope. */
+  --spacing-unit: 8px;
+  --spacing-card-inner-padding: 24px;
+  --spacing-container-padding: 32px;
+  --spacing-section-gap: 48px;
+
+  /* Type tokens the admin and teacher screens ask for by name. Without the
+     declaration there is no `font-title-md` utility at all, so those card
+     headings were rendering at body size (16px instead of 18px) -- which
+     reads as "the spacing is off" long before anyone suspects the font. */
+  --font-headline-lg: "Manrope", sans-serif;
+  --font-headline-sm: "Manrope", sans-serif;
+  --font-body-lg: "Inter", sans-serif;
+  --font-title-md: "Manrope", sans-serif;
+  --font-body-sm: "Inter", sans-serif;
+  --text-title-md: 18px;
+  --text-title-md--line-height: 26px;
+
   /* Teacher-screen layout tokens (111d770). These MUST live in a build-time
      @theme, not under .teacher-scope below: w-sidebar-width / p-margin-desktop
      are generated as utilities only from @theme, and a plain-class var does
@@ -324,7 +393,10 @@ a:focus-visible, button:focus-visible, input:focus-visible { outline: 2px solid 
   --radius-xl: 0.75rem;
 
   --font-headline-md: "Montserrat", sans-serif;
+  --font-headline-lg: "Montserrat", sans-serif;
+  --font-title-md: "Montserrat", sans-serif;
   --font-body-md: "Inter", sans-serif;
+  --font-body-lg: "Inter", sans-serif;
 }
 
 .font-headline-md { font-family: "Montserrat", sans-serif; font-size: 24px; line-height: 32px; font-weight: 600; }

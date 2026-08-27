@@ -113,7 +113,7 @@ export default function SuggestedReteachHighContrast() {
           <h1 className="font-display-lg text-display-lg text-[#FFFFFF] m-0 leading-tight">
             Suggested Reteach
           </h1>
-          <p className="font-body-lg text-body-lg text-[#FFFFFF] mt-4 max-w-xl">
+          <p className="font-body-lg text-body-lg text-[#FFFFFF] mt-4 max-w-[36rem]">
             Units drafted from the class's own evidence — the misconception heatmap and the gap map.
             Nothing reaches a student until you approve it.
           </p>

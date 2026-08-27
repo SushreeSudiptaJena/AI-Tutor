@@ -60,7 +60,7 @@ export default function ReasoningPathBreakdownHighContrast() {
           <h1 className="font-display-lg text-display-lg text-[#FFFFFF] m-0 leading-tight">
             Reasoning Path Breakdown
           </h1>
-          <p className="font-body-lg text-body-lg text-[#FFFFFF] mt-4 max-w-xl">
+          <p className="font-body-lg text-body-lg text-[#FFFFFF] mt-4 max-w-[36rem]">
             Behind one kind of problem: the wrong mental models students confirmed as their own,
             each with a real answer a real student gave. Anonymous — what was thought, not who.
           </p>

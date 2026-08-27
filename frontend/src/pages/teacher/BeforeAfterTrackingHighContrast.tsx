@@ -103,7 +103,7 @@ export default function BeforeAfterTrackingHighContrast() {
           <h1 className="font-display-lg text-display-lg text-[#FFFFFF] m-0 leading-tight">
             Before / After Tracking
           </h1>
-          <p className="font-body-lg text-body-lg text-[#FFFFFF] mt-4 max-w-xl">
+          <p className="font-body-lg text-body-lg text-[#FFFFFF] mt-4 max-w-[36rem]">
             Confirmed occurrences of a misconception either side of its reteach. The delta is shown
             whatever its sign — including "it made no difference".
           </p>

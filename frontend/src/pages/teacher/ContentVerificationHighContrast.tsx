@@ -81,7 +81,7 @@ export default function ContentVerificationHighContrast() {
           <h1 className="font-display-lg text-display-lg text-[#FFFFFF] m-0 leading-tight">
             Content Verification
           </h1>
-          <p className="font-body-lg text-body-lg text-[#FFFFFF] mt-4 max-w-xl">
+          <p className="font-body-lg text-body-lg text-[#FFFFFF] mt-4 max-w-[36rem]">
             Material the AI found outside the approved corpus, waiting for a human decision.
             Nothing here reaches a student until you approve it.
           </p>

@@ -108,7 +108,7 @@ export default function Onboarding1() {
                   className="material-symbols-outlined text-3xl"
                   style={{ fontVariationSettings: "'FILL' 1" }}
                 >
-                  school
+                  co_present
                 </span>
               </div>
 

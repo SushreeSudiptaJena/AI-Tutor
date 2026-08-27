@@ -131,7 +131,7 @@ export default function TeacherChrome({
         <header className="fixed top-0 left-sidebar-width right-0 h-20 bg-inverse-surface/90 backdrop-blur-md z-40 px-margin-desktop flex items-center justify-between shadow-sm">
           {/* teacher-009: the subject this console is showing. Replaces a
               decorative search box that had no endpoint behind it. */}
-          <div className="flex-1 max-w-xl flex items-center gap-3">
+          <div className="flex-1 max-w-[36rem] flex items-center gap-3">
             {subjects.length === 0 ? (
               <span className="font-label-sm text-label-sm text-[#FFFFFF]/70">
                 No subjects assigned yet — your admin assigns them.

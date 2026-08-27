@@ -35,7 +35,7 @@ export default function PrerequisiteGapMapHighContrast() {
           <h1 className="font-display-lg text-display-lg text-[#FFFFFF] m-0 leading-tight">
             Prerequisite Gap Map
           </h1>
-          <p className="font-body-lg text-body-lg text-[#FFFFFF] mt-4 max-w-xl">
+          <p className="font-body-lg text-body-lg text-[#FFFFFF] mt-4 max-w-[36rem]">
             What this class is missing from earlier courses, ranked by how many students carry the
             gap. Each row names the course it should have been learned in.
           </p>

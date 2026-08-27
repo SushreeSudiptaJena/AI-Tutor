@@ -76,7 +76,7 @@ export default function DashboardOverviewHighContrast() {
           <h1 className="font-display-lg text-display-lg text-[#FFFFFF] m-0 leading-tight">
             Class Overview
           </h1>
-          <p className="font-body-lg text-body-lg text-[#FFFFFF] mt-4 max-w-xl">
+          <p className="font-body-lg text-body-lg text-[#FFFFFF] mt-4 max-w-[36rem]">
             Live aggregates from your class's own practice — confirmed misconceptions, prerequisite
             gaps, and the questions the tutor could not ground in the material.
           </p>
