@@ -124,7 +124,7 @@ export default function TeacherChrome({
           <div className="w-10 h-10 rounded-lg bg-secondary flex items-center justify-center rotate-45">
             <span className="material-symbols-outlined text-on-secondary -rotate-45">landscape</span>
           </div>
-          <span className="font-headline-lg text-headline-lg text-on-primary tracking-tight">ASCENT</span>
+          <span className="font-headline-lg text-headline-lg text-on-primary tracking-tight">Kyōdo</span>
         </div>
         <nav className="flex-1 px-4 flex flex-col gap-1">
           {NAV_TOP.map(link)}
