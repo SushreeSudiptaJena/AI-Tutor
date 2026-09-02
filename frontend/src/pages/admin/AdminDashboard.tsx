@@ -7,7 +7,6 @@ import {
   createCourse,
   deleteMaterial,
   getBatches,
-  getLanguages,
   getMe,
   listAuditLog,
   listCourses,
@@ -17,7 +16,6 @@ import {
   logout,
   markNotificationsRead,
   updateCourseTerm,
-  updatePreferences,
   uploadMaterial,
 } from "@/lib/api";
 import type {
@@ -1382,27 +1380,6 @@ function SettingsView({
   onUserChanged: (u: User) => void;
 }) {
   const doLogout = useLogout();
-  const [langs, setLangs] = useState<{ code: string; label: string }[]>([]);
-  const [langError, setLangError] = useState<string | null>(null);
-  const [savingLang, setSavingLang] = useState(false);
-
-  useEffect(() => {
-    getLanguages()
-      .then((r) => setLangs(r.items))
-      .catch((err) => setLangError(errorText(err)));
-  }, []);
-
-  async function changeLanguage(code: string) {
-    setLangError(null);
-    setSavingLang(true);
-    try {
-      onUserChanged(await updatePreferences(code));
-    } catch (err) {
-      setLangError(errorText(err));
-    } finally {
-      setSavingLang(false);
-    }
-  }
 
   return (
     <div className="flex-1 overflow-y-auto p-gutter md:p-section-gap ns-custom-scrollbar">
@@ -1413,35 +1390,6 @@ function SettingsView({
             Your preferences for how the tutor talks to you.
           </p>
         </div>
-
-        <section className="ns-glass-panel rounded-xl p-card-inner-padding">
-          <h2 className="font-headline-sm text-headline-sm text-on-surface mb-4 flex items-center gap-2">
-            <Icon name="translate" className="text-tertiary" />
-            Language
-          </h2>
-          <p className="font-body-md text-body-md text-on-surface-variant mb-4">
-            Your preferred language for explanations (i18n-001). Questions are
-            answered in the language you pick.
-          </p>
-          <div className="flex items-center gap-4 flex-wrap">
-            <select
-              value={user?.preferred_language ?? "en"}
-              disabled={savingLang || !user}
-              onChange={(e) => changeLanguage(e.target.value)}
-              className="bg-surface-container-low border border-outline-variant/30 rounded-lg px-4 py-2.5 font-body-md text-body-md text-on-surface focus:border-tertiary focus:ring-1 focus:ring-tertiary outline-none disabled:opacity-60"
-            >
-              {langs.map((l) => (
-                <option key={l.code} value={l.code}>{l.label}</option>
-              ))}
-            </select>
-            {savingLang && (
-              <span className="font-label-sm text-label-sm text-on-surface-variant">Saving…</span>
-            )}
-          </div>
-          {langError && (
-            <p role="alert" className="font-label-sm text-label-sm text-error mt-2">{langError}</p>
-          )}
-        </section>
 
 
         <section className="ns-glass-panel rounded-xl p-card-inner-padding">
