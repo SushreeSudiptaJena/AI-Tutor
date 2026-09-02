@@ -159,8 +159,11 @@ function subjectTone(subject?: MySubject | null) {
 function SubjectBadge({ subject, className = "" }: { subject: MySubject | null; className?: string }) {
   if (!subject) return null;
   return (
-    <span className={`inline-flex items-center rounded-full border px-sm py-xs text-label-sm font-bold ${subjectTone(subject)} ${className}`}>
-      {subject.code} <span className="ml-xs hidden sm:inline">· {subject.title}</span>
+    <span
+      className={`inline-flex items-center rounded-full border px-sm py-xs text-label-sm font-bold ${subjectTone(subject)} ${className}`}
+    >
+      {subject.code}
+      <span className="ml-xs hidden sm:inline">· {subject.title}</span>
     </span>
   );
 }
@@ -971,45 +974,67 @@ function GapsView({ openLesson, askTutor }: { openLesson: (g: Gap) => void; askT
         empty={!gaps?.length}
         emptyText="No gaps detected. Take the diagnostic to check your prerequisites."
       >
+        <div className={`mb-sm rounded-xl border-l-4 px-md py-sm ${subjectTone(subject)}`}>
+          <div className="flex flex-wrap items-center gap-sm">
+            <span className="text-label-sm font-bold uppercase tracking-wider">Current subject</span>
+            <SubjectBadge subject={subject} className="bg-white/70" />
+          </div>
+          <p className="mt-xs text-body-sm text-on-surface-variant">Your prerequisite gaps are shown for this subject.</p>
+        </div>
+
         <ul className="space-y-sm">
           {(gaps ?? []).map((g) => (
             <li
               key={g.id}
-              className="rounded-xl border border-outline-variant/20 bg-surface-container-lowest p-md shadow-sm"
+              className={`rounded-xl border border-outline-variant/20 border-l-4 bg-surface-container-lowest p-md shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md ${subjectTone(subject)}`}
             >
               <div className="flex items-start justify-between gap-sm">
-                <div>
+                <div className="min-w-0">
+                  <div className="mb-xs flex flex-wrap items-center gap-xs">
+                    <span className="rounded-full bg-white/80 px-sm py-1 text-label-sm font-bold shadow-sm">
+                      {subject?.code ?? "Subject"}
+                    </span>
+                    <span className={`rounded-full px-sm py-xs text-label-sm font-bold ${STATUS_STYLES[g.status]}`}>
+                      {g.status}
+                    </span>
+                  </div>
                   <p className="text-body-md font-semibold text-on-surface">{g.concept}</p>
-                  <p className="mt-xs text-label-sm text-on-surface-variant">
+                  <p className="mt-xs text-label-sm leading-relaxed text-on-surface-variant">
                     A prerequisite from {g.prerequisite_course} · detected by{" "}
                     {g.detected_from.replace("_", " ")}
                   </p>
                 </div>
-                <span className={`rounded-full px-sm py-xs text-label-sm font-bold ${STATUS_STYLES[g.status]}`}>
-                  {g.status}
-                </span>
               </div>
 
               {g.suggested_prompts.length > 0 && (
                 <button
                   type="button"
                   onClick={() => askTutor(g.suggested_prompts[0])}
-                  className="mt-sm flex w-full items-center gap-sm rounded-lg border border-mustard/40 bg-mustard/10 px-sm py-sm text-left transition-all hover:-translate-y-0.5 hover:border-mustard hover:bg-mustard/20"
+                  className="mt-md group flex w-full items-center gap-md rounded-xl border-2 border-mustard/50 bg-mustard/10 p-md text-left shadow-sm transition-all duration-200 hover:-translate-y-1 hover:border-mustard hover:bg-mustard/20 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-mustard/40"
                 >
-                  <Sparkles className="h-5 w-5 shrink-0 text-mustard" aria-hidden />
-                  <span>
-                    <span className="block text-label-sm font-bold uppercase tracking-wider text-forest-green">Try asking your tutor</span>
-                    <span className="mt-1 block text-body-sm font-semibold text-on-surface">{g.suggested_prompts[0]}</span>
+                  <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-mustard/20 transition-transform duration-200 group-hover:scale-110">
+                    <Sparkles className="h-5 w-5 text-mustard" aria-hidden />
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="flex items-center gap-xs text-label-md font-bold uppercase tracking-wider text-forest-green">
+                      Ask your AI Tutor
+                      <span className="text-mustard transition-transform group-hover:translate-x-1">→</span>
+                    </span>
+                    <span className="mt-1 block text-body-sm font-medium leading-relaxed text-on-surface">
+                      {g.suggested_prompts[0]}
+                    </span>
+                    <span className="mt-1 block text-label-sm text-on-surface-variant">
+                      Click to start a personalised explanation
+                    </span>
                   </span>
                 </button>
               )}
 
-              {/* The gap's lesson, one click away -- this is the path the
-                  diagnostic result is supposed to open onto. */}
+              {/* Keep the single lesson action. */}
               <button
                 type="button"
                 onClick={() => openLesson(g)}
-                className="mt-sm flex items-center gap-xs rounded-lg bg-forest-green px-md py-xs text-label-md font-bold text-white transition-colors hover:bg-forest-light"
+                className="mt-md flex items-center gap-xs rounded-lg bg-forest-green px-md py-sm text-label-md font-bold text-white transition-all hover:-translate-y-0.5 hover:bg-forest-light hover:shadow-sm focus:outline-none focus:ring-2 focus:ring-forest-green/30"
               >
                 <GraduationCap className="h-4 w-4" />
                 Open lesson
@@ -1076,25 +1101,36 @@ function LessonsView({
       >
         <div className="grid grid-cols-1 gap-lg lg:grid-cols-12">
           <div className="lg:col-span-4">
-            <p className="mb-sm text-label-sm font-bold tracking-wider text-on-surface-variant uppercase">
-              Your gaps
-            </p>
+            <div className={`mb-sm rounded-xl border-l-4 px-md py-sm ${subjectTone(subject)}`}>
+              <p className="text-label-sm font-bold uppercase tracking-wider">Learning in</p>
+              <div className="mt-xs flex items-center gap-sm">
+                <SubjectBadge subject={subject} className="bg-white/70" />
+                <span className="text-body-sm text-on-surface-variant">Select a gap to open its lesson</span>
+              </div>
+            </div>
             <ul className="space-y-xs">
               {(gaps ?? []).map((g) => (
                 <li key={g.id}>
                   <button
                     type="button"
                     onClick={() => onSelect(g)}
-                    className={`w-full border-l-4 p-sm text-left text-body-sm transition-colors ${
+                    className={`w-full rounded-xl border-l-4 p-md text-left text-body-sm transition-all duration-200 ${
                       selected?.id === g.id
-                        ? `${subjectTone(subject)} bg-sage-light text-on-surface`
-                        : "border-outline-variant/30 border-l-mustard bg-card text-on-surface hover:border-forest-green/50"
+                        ? `${subjectTone(subject)} shadow-sm ring-2 ring-forest-green/20`
+                        : `${subjectTone(subject)} bg-card hover:-translate-y-0.5 hover:shadow-sm`
                     }`}
                   >
-                    <span className="font-semibold">{g.concept}</span>
-                    <span className={`ml-xs rounded-full px-xs py-1 text-label-sm ${STATUS_STYLES[g.status]}`}>
-                      {g.status}
-                    </span>
+                    <div className="flex items-start justify-between gap-sm">
+                      <span className="min-w-0">
+                        <span className="block text-label-sm font-bold uppercase tracking-wider opacity-80">
+                          {subject?.code ?? "Subject"}
+                        </span>
+                        <span className="mt-1 block font-semibold">{g.concept}</span>
+                      </span>
+                      <span className={`shrink-0 rounded-full px-xs py-1 text-label-sm ${STATUS_STYLES[g.status]}`}>
+                        {g.status}
+                      </span>
+                    </div>
                   </button>
                 </li>
               ))}
@@ -1104,11 +1140,18 @@ function LessonsView({
           <div className="lg:col-span-8">
             {selected && (
               <>
-                <h2 className="mb-sm text-headline-md font-bold text-on-surface">
-                  {selected.concept}
-                </h2>
+                <div className={`mb-md rounded-xl border-l-4 px-md py-sm ${subjectTone(subject)}`}>
+                  <p className="text-label-sm font-bold uppercase tracking-wider">Lesson · {subject?.code ?? "Current subject"}</p>
+                  <h2 className="mt-1 text-headline-md font-bold text-on-surface">
+                    {selected.concept}
+                  </h2>
+                </div>
                 {loading && <p className="text-body-md text-on-surface-variant">Writing your lesson…</p>}
-                {lesson && <div className="lesson-answer"><TutorCard response={lesson} /></div>}
+                {lesson && (
+                  <div className="lesson-answer">
+                    <TutorCard response={lesson} />
+                  </div>
+                )}
               </>
             )}
           </div>
