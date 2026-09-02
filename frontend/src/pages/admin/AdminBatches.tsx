@@ -488,12 +488,29 @@ export function NewBatchModal({
 /* Batches tab                                                               */
 /* ------------------------------------------------------------------------ */
 
-export function BatchesView({ goToTab }: { goToTab: (t: AdminTabKey) => void }) {
+export function BatchesView({
+  goToTab,
+  courses,
+}: {
+  goToTab: (t: AdminTabKey) => void;
+  /** Loaded once by AdminDashboard and handed down. Fetching it again here
+   *  would be a second round trip to a remote database for a list that is
+   *  already in memory -- see perf-001. */
+  courses: Course[];
+}) {
   // the subjects tab's key is historical: "structure" predates the rename to
   // "Subjects & Materials"
   const [batches, setBatches] = useState<BatchDto[] | null>(null);
   // admin-010: which cohort's subject list is open
   const [openSubjects, setOpenSubjects] = useState<number | null>(null);
+  // admin-012. Three axes a cohort actually has: department, major, and the
+  // subjects it takes. The first two options are derived from the batches
+  // THEMSELVES rather than from /admin/departments -- a department with no
+  // cohort in it can then never be picked, so no choice in this bar can
+  // produce an empty list by itself.
+  const [deptFilter, setDeptFilter] = useState<number | "all">("all");
+  const [majorFilter, setMajorFilter] = useState<string>("all");
+  const [subjectFilter, setSubjectFilter] = useState<number | "all">("all");
   const [error, setError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<number | null>(null);
   const fileFor = useRef<HTMLInputElement | null>(null);
@@ -537,6 +554,50 @@ export function BatchesView({ goToTab }: { goToTab: (t: AdminTabKey) => void }) 
     }
   }
 
+  // --- admin-012: the filter bar ------------------------------------------
+  const all = batches ?? [];
+
+  // Only departments and majors that actually have a cohort. Listing the rest
+  // would let an admin pick an option that can only ever return nothing.
+  const departments = Array.from(
+    new Map(all.map((b) => [b.department.id, b.department])).values(),
+  ).sort((a, b) => a.name.localeCompare(b.name));
+  const majors = Object.keys(MAJOR_LABELS).filter((m) => all.some((b) => b.major === m));
+
+  // Subjects, on the other hand, list ALL of them including the ones no cohort
+  // takes yet. `courses_without_batch` is a number the dashboard already puts
+  // in front of the admin, and picking one of those here answers the question
+  // it raises -- "nothing takes this yet" is a result, not a dead end.
+  const subjects = [...courses].sort((a, b) => a.code.localeCompare(b.code));
+
+  const pickedSubject =
+    subjectFilter === "all" ? null : courses.find((c) => c.id === subjectFilter) ?? null;
+  const subjectBatchIds = new Set(pickedSubject?.batch_ids ?? []);
+
+  const visible = all.filter(
+    (b) =>
+      (deptFilter === "all" || b.department.id === deptFilter) &&
+      (majorFilter === "all" || b.major === majorFilter) &&
+      (subjectFilter === "all" || subjectBatchIds.has(b.id)),
+  );
+
+  // What the visible cohorts teach between them -- the "per department
+  // courses" half of the question. Counted off Course.batch_ids rather than
+  // off each batch's `course_count`, which would double-count a subject two
+  // cohorts share.
+  const visibleIds = new Set(visible.map((b) => b.id));
+  const subjectsHere = courses.filter((c) => c.batch_ids.some((id) => visibleIds.has(id))).length;
+
+  const filtered = deptFilter !== "all" || majorFilter !== "all" || subjectFilter !== "all";
+  const clearFilters = () => {
+    setDeptFilter("all");
+    setMajorFilter("all");
+    setSubjectFilter("all");
+  };
+
+  const selectClass =
+    "px-3 py-2 rounded-lg bg-surface-container-low border border-outline-variant text-on-surface font-label-md text-label-md";
+
   return (
     <div className="flex-1 overflow-y-auto p-gutter md:p-section-gap ns-custom-scrollbar">
       <div className="max-w-6xl mx-auto space-y-section-gap pb-32">
@@ -565,16 +626,116 @@ export function BatchesView({ goToTab }: { goToTab: (t: AdminTabKey) => void }) 
           </p>
         )}
 
+        {/* admin-012. Three dropdowns, because a cohort has exactly three
+            things worth narrowing by. The count line under them is the point
+            of the bar: it says how much of the institution you are looking at
+            and how many subjects those cohorts teach between them. */}
+        {batches && batches.length > 0 && (
+          <section className="ns-glass-panel rounded-xl p-card-inner-padding">
+            <div className="flex flex-wrap items-center gap-3">
+              <span className="font-label-md text-label-md text-on-surface-variant flex items-center gap-2">
+                <Icon name="filter_list" className="text-tertiary" />
+                Filter
+              </span>
+
+              <select
+                value={deptFilter}
+                aria-label="Filter cohorts by department"
+                onChange={(e) =>
+                  setDeptFilter(e.target.value === "all" ? "all" : Number(e.target.value))
+                }
+                className={selectClass}
+              >
+                <option value="all">All departments</option>
+                {departments.map((d) => (
+                  <option key={d.id} value={d.id}>
+                    {d.name}
+                  </option>
+                ))}
+              </select>
+
+              <select
+                value={majorFilter}
+                aria-label="Filter cohorts by major"
+                onChange={(e) => setMajorFilter(e.target.value)}
+                className={selectClass}
+              >
+                <option value="all">All majors</option>
+                {majors.map((m) => (
+                  <option key={m} value={m}>
+                    {MAJOR_LABELS[m]}
+                  </option>
+                ))}
+              </select>
+
+              <select
+                value={subjectFilter}
+                aria-label="Show only cohorts that take this subject"
+                onChange={(e) =>
+                  setSubjectFilter(e.target.value === "all" ? "all" : Number(e.target.value))
+                }
+                className={selectClass}
+              >
+                <option value="all">All subjects</option>
+                {subjects.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.code} — {c.title}
+                    {c.batch_ids.length === 0 ? " (no cohort yet)" : ""}
+                  </option>
+                ))}
+              </select>
+
+              {filtered && (
+                <button
+                  onClick={clearFilters}
+                  className="font-label-md text-label-md text-tertiary hover:underline"
+                >
+                  Clear
+                </button>
+              )}
+            </div>
+
+            <p className="font-label-sm text-label-sm text-on-surface-variant mt-4">
+              Showing {visible.length} of {all.length} cohort{all.length === 1 ? "" : "s"}
+              {visible.length > 0 && (
+                <>
+                  {" · "}
+                  {subjectsHere} subject{subjectsHere === 1 ? "" : "s"} between them
+                </>
+              )}
+              {pickedSubject && (
+                <>
+                  {" · "}
+                  {pickedSubject.batch_ids.length === 0
+                    ? `no cohort takes ${pickedSubject.code} yet`
+                    : `taking ${pickedSubject.code}`}
+                </>
+              )}
+            </p>
+          </section>
+        )}
+
         {!batches ? (
           <p className="font-body-md text-on-surface-variant">Loading…</p>
         ) : batches.length === 0 ? (
           <p className="font-body-md text-on-surface-variant">
             No batches yet — create one from the Dashboard.
           </p>
+        ) : visible.length === 0 ? (
+          /* Deliberately NOT the same sentence as "no batches yet". An empty
+             database and an over-narrow filter look identical on screen and
+             are opposite problems. */
+          <p className="font-body-md text-on-surface-variant">
+            No cohort matches this filter.{" "}
+            <button onClick={clearFilters} className="text-tertiary hover:underline">
+              Clear it
+            </button>{" "}
+            to see all {all.length}.
+          </p>
         ) : (
           <div className="space-y-4">
-            {batches.map((b) => {
-              const candidates = batches.filter(
+            {visible.map((b) => {
+              const candidates = all.filter(
                 (c) =>
                   c.major === b.major &&
                   c.department.id === b.department.id &&

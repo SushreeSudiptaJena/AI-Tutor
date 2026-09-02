@@ -1352,6 +1352,31 @@
       ],
       "evidence": "evidence/frontend-006/verification.txt",
       "notes": "PASSING 2026-09-02 -- the visual pass was the OWNER's, not an automated check, and the record says so on purpose (evidence/frontend-006/verification.txt section H). The Chrome extension was disconnected all session, so the agent never opened either screen; Sushree checked them on the deployed service and confirmed both. Everything else is machine-checked and re-runnable: tsc -b + vite build + check:utilities green, the live bundle /assets/index-Cz64WNDU.js contains /admin/notifications, teacher_first_login, 'Mark all read' and 'Open your profile', and POST /admin/notifications/read was exercised on the live service at 04:19:41Z with the marker sticking. THE CAUSE OF THE DARKENING, for the record: SettingsHighContrast.tsx was the only teacher screen still shipped as the raw Stitch export, so it rendered its OWN <aside> and <header> inside TeacherChrome's -- two shells stacked, the static one painting bg-inverse-surface over the real bg-ink/95. It is now wrapped in TeacherChrome like every other panel. THE BELL'S ONE RULE NOT TO BREAK: the badge is the server's `unread`. Do NOT recompute it from `items` -- that is one page of many, so the badge would sit at the page size forever. The theme toggle was removed at the owner's request; there is no dark palette for this surface, so the switch could only mislabel the one theme that exists. The mockup's two notification toggles were dropped rather than wired: nothing stores that preference, and a switch that forgets is worse than no switch. Name/email/role live only on TeacherProfile now, behind the avatar, where signing out already was. OWNERSHIP: frontend/src/pages/teacher/ is person 3's and pages/admin/ is person 4's. Both were edited at the owner's direction -- tell 3 and 4."
+    },
+    {
+      "id": "admin-012",
+      "priority": 62,
+      "area": "admin",
+      "title": "Filter the cohort list by department, major and subject",
+      "user_visible_behavior": "The Batches tab gains three dropdowns — department, major, and subject. Picking a department shows only that department's cohorts and says how many subjects they teach between them; picking a subject shows only the cohorts that take it, including the honest answer 'no cohort takes this yet'.",
+      "status": "in_progress",
+      "depends_on": [
+        "admin-009",
+        "admin-010"
+      ],
+      "demo_mode": "live",
+      "verification": [
+        "The department and major dropdowns are built from the cohorts themselves, so neither can offer an option that returns nothing.",
+        "The subject dropdown lists every subject, with the ones no cohort takes labelled '(no cohort yet)' — picking one is a question with an answer, not a dead end.",
+        "The three axes compose: department + major narrows further than either alone.",
+        "The count line reports cohorts shown of total, and the number of distinct subjects the visible cohorts teach between them — counted off Course.batch_ids, not summed from course_count, which double-counts a shared subject.",
+        "An over-narrow filter says 'No cohort matches this filter', which is a different sentence from 'No batches yet' — an empty database and an over-narrow filter are opposite problems.",
+        "'Clear' resets all three and is only shown when a filter is active.",
+        "No extra round trip: the course list is the one AdminDashboard already loaded, passed down.",
+        "npm --prefix frontend run build passes, including tsc -b and check:utilities."
+      ],
+      "evidence": "evidence/admin-012/filter-logic-against-live-data.txt",
+      "notes": "IN PROGRESS 2026-09-02. Code complete, build green, and the filter logic was replayed against the LIVE data (4 cohorts, 8 subjects from the deployed service) for every single-axis filter plus combinations -- see the evidence file, which prints the exact count line each choice produces. NOT YET SEEN IN A BROWSER: the Chrome extension would not respond ('connected but... waiting on a permission prompt in the extension side panel'). Same rule as frontend-006 -- a screen is not passing until someone looks at it. WHAT THE LIVE DATA SHOWED THAT READING WOULD NOT: 5 of the 8 subjects have batch_ids=[] (CSE2631, CSW1, DLD, PH000, PH101), so more than half the subject dropdown leads to zero cohorts. That is exactly why those options are labelled '(no cohort yet)' rather than hidden -- the dashboard already puts `courses_without_batch` in front of the admin, and this is where that number becomes a name. Note also that a COMBINATION can be empty even though no single option can (Civil Engineering + BTech = 0), which is what the distinct empty state is for. OWNERSHIP: frontend/src/pages/admin/ is person 4's, edited at the owner's direction -- tell 4."
     }
   ]
 }

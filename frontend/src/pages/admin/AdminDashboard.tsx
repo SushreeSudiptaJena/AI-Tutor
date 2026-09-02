@@ -1457,7 +1457,7 @@ export default function AdminDashboard() {
       <div className="ml-64 flex flex-col min-h-screen">
         <TopBar title={TITLES[activeTab]} user={user} onSelect={setActiveTab} />
         {activeTab === "dashboard" && <DashboardView goToTab={setActiveTab} />}
-        {activeTab === "batches" && <BatchesView goToTab={setActiveTab} />}
+        {activeTab === "batches" && <BatchesView goToTab={setActiveTab} courses={courses} />}
         {activeTab === "upload" && (
           <CurriculumUploadView courses={courses} coursesError={coursesError} />
         )}

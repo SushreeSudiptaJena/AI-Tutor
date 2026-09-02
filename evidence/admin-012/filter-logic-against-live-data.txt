@@ -1,0 +1,60 @@
+=== admin-012: the Batches filter, run against the LIVE data ===
+source: GET /admin/batches + GET /admin/courses on https://ai-tutor-80by.onrender.com
+
+4 cohorts, 8 subjects
+
+  #10  BCA    Electrical Engineering                 2027-2030  1 subject(s)
+  #9   MTech  Civil Engineering                      2027-2029  0 subject(s)
+  #8   MTech  Computer Science & Engineering         2026-2028  1 subject(s)
+  #7   BTech  Computer Science & Engineering         2026-2030  2 subject(s)
+
+  CS-C       Programming with C                             batch_ids=[7, 10]
+  CS555T     Statistical learning 1                         batch_ids=[8]
+  CSE2631    Algorithms Analysis and Design 1               batch_ids=[]
+  CSW1       Computer Science Workshop 1                    batch_ids=[]
+  CSW2       Computer Science Workshop 2                    batch_ids=[7]
+  DLD        Digital Logic Design                           batch_ids=[]
+  PH000      Class 12 Physics                               batch_ids=[]
+  PH101      Mechanics                                      batch_ids=[]
+
+--- what the two derived dropdowns offer (built from the cohorts, so no
+    option in them can return an empty list on its own) ---
+    departments: ['All departments', 'Civil Engineering', 'Computer Science & Engineering', 'Electrical Engineering']
+    majors     : ['All majors', 'BTech', 'BCA', 'MTech']
+
+--- the subject dropdown lists ALL subjects, unclaimed ones labelled ---
+    CS-C — Programming with C
+    CS555T — Statistical learning 1
+    CSE2631 — Algorithms Analysis and Design 1  (no cohort yet)
+    CSW1 — Computer Science Workshop 1  (no cohort yet)
+    CSW2 — Computer Science Workshop 2
+    DLD — Digital Logic Design  (no cohort yet)
+    PH000 — Class 12 Physics  (no cohort yet)
+    PH101 — Mechanics  (no cohort yet)
+
+--- every single-axis filter, and what the count line would read ---
+    no filter                                  -> Showing 4 of 4 cohorts · 3 subjects between them
+    department = Civil Engineering             -> Showing 1 of 4 cohorts · 0 subjects between them
+    department = Computer Science & Engineering -> Showing 2 of 4 cohorts · 3 subjects between them
+    department = Electrical Engineering        -> Showing 1 of 4 cohorts · 1 subject between them
+    major = BTech                              -> Showing 1 of 4 cohorts · 2 subjects between them
+    major = BCA                                -> Showing 1 of 4 cohorts · 1 subject between them
+    major = MTech                              -> Showing 2 of 4 cohorts · 1 subject between them
+    subject = CS-C                             -> Showing 2 of 4 cohorts · 2 subjects between them
+    subject = CS555T                           -> Showing 1 of 4 cohorts · 1 subject between them
+    subject = CSE2631                          -> Showing 0 of 4 cohorts
+                                                  (empty state: 'No cohort matches this filter. Clear it to see all 4.' -- NOT 'No batches yet')
+    subject = CSW1                             -> Showing 0 of 4 cohorts
+                                                  (empty state: 'No cohort matches this filter. Clear it to see all 4.' -- NOT 'No batches yet')
+    subject = CSW2                             -> Showing 1 of 4 cohorts · 2 subjects between them
+    subject = DLD                              -> Showing 0 of 4 cohorts
+                                                  (empty state: 'No cohort matches this filter. Clear it to see all 4.' -- NOT 'No batches yet')
+    subject = PH000                            -> Showing 0 of 4 cohorts
+                                                  (empty state: 'No cohort matches this filter. Clear it to see all 4.' -- NOT 'No batches yet')
+    subject = PH101                            -> Showing 0 of 4 cohorts
+                                                  (empty state: 'No cohort matches this filter. Clear it to see all 4.' -- NOT 'No batches yet')
+
+--- a combination, to show the axes compose ---
+    Civil Engineering + BTech  -> 0 cohort(s)
+    Civil Engineering + BCA    -> 0 cohort(s)
+    Civil Engineering + MTech  -> 1 cohort(s), 0 subject(s) between them
