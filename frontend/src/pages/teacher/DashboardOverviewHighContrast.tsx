@@ -46,22 +46,36 @@ export default function DashboardOverviewHighContrast() {
   }, []);
 
   const top = heat?.items?.[0];
+  // Every tile says what its number MEANS. These are terms this system
+  // invented -- "uncertainty flag" and "misconception share" are not things a
+  // teacher has met before -- and a big number with a jargon label under it
+  // reads as a dashboard being impressive rather than useful.
   const tiles = [
-    { icon: "groups", label: "Class size", value: heat ? String(heat.class_size) : "…" },
+    {
+      icon: "groups",
+      label: "Class size",
+      value: heat ? String(heat.class_size) : "…",
+      hint: "Students taking this subject.",
+    },
     {
       icon: "warning",
       label: "Open uncertainty flags",
       value: flags ? String(flags.length) : "…",
+      hint: "Questions the tutor refused because your course material did not answer them. Each one is a hole in the corpus or a question off-syllabus.",
     },
     {
       icon: "thermostat",
       label: "Top misconception share",
       value: top ? `${Math.round(top.share * 100)}%` : "—",
+      hint: top
+        ? `Share of the class who confirmed “${top.label}”.`
+        : "Share of the class holding the single most common confirmed misconception.",
     },
     {
       icon: "map",
       label: "Open prerequisite gaps",
       value: gaps ? String(gaps.length) : "…",
+      hint: "Concepts students arrived without — traced to the earlier course that should have taught them.",
     },
   ];
 
@@ -100,15 +114,18 @@ export default function DashboardOverviewHighContrast() {
             <span className="font-label-sm text-label-sm uppercase tracking-widest text-ink/60">
               {t.label}
             </span>
+            <span className="font-body-md text-body-md text-ink/70 leading-snug">{t.hint}</span>
           </div>
         ))}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 relative z-10">
         <section className="bg-surface-container-lowest text-ink p-8 rounded-2xl shadow-[0_4px_40px_rgba(0,0,0,0.05)]">
-          <h2 className="font-title-md text-title-md mb-6 pb-4 border-b border-ink/10">
-            Top Learning Gaps
-          </h2>
+          <h2 className="font-title-md text-title-md mb-1">Top Learning Gaps</h2>
+          <p className="font-body-md text-body-md text-ink/70 mb-6 pb-4 border-b border-ink/10">
+            Prerequisites this class never learned, and how many students are missing each one. The
+            course named underneath is where it should have been taught.
+          </p>
           <div className="flex flex-col gap-4">
             {(gaps ?? []).slice(0, 5).map((g) => (
               <div key={g.concept} className="flex items-center justify-between gap-4">
@@ -132,9 +149,11 @@ export default function DashboardOverviewHighContrast() {
         </section>
 
         <section className="bg-surface-container-lowest text-ink p-8 rounded-2xl shadow-[0_4px_40px_rgba(0,0,0,0.05)]">
-          <h2 className="font-title-md text-title-md mb-6 pb-4 border-b border-ink/10">
-            Latest Uncertainty Flags
-          </h2>
+          <h2 className="font-title-md text-title-md mb-1">Latest Uncertainty Flags</h2>
+          <p className="font-body-md text-body-md text-ink/70 mb-6 pb-4 border-b border-ink/10">
+            Questions the tutor would not answer because it could not ground them in your material.
+            The percentage is how well the question matched the course — low means off-syllabus.
+          </p>
           <div className="flex flex-col gap-4">
             {(flags ?? []).slice(0, 4).map((f) => (
               <div key={f.id} className="flex items-start justify-between gap-4">

@@ -12,14 +12,34 @@ import { cached, getHeatmap, invalidateCache, type Heatmap } from "@/lib/api";
 // so the poll only has to catch a change -- it is not what fills the screen.
 const POLL_MS = 20000;
 
-function band(share: number): { label: string; chip: string; bar: string } {
+// Four bands, four colours. MODERATE and LOW used to share bg-surface-variant
+// and bg-outline-variant exactly, so half the scale rendered identically and
+// the chip was the only thing telling them apart -- which defeats the point of
+// a heat map. Red / orange / green / grey reads as a severity ramp without
+// having to consult a legend.
+function band(share: number): {
+  label: string;
+  chip: string;
+  text: string;
+  bar: string;
+} {
   if (share >= 0.3)
-    return { label: "CRITICAL", chip: "bg-error-container", bar: "bg-error" };
+    return { label: "CRITICAL", chip: "bg-error-container", text: "text-error", bar: "bg-error" };
   if (share >= 0.15)
-    return { label: "HIGH", chip: "bg-secondary-container", bar: "bg-secondary" };
+    return { label: "HIGH", chip: "bg-peach", text: "text-orange", bar: "bg-orange" };
   if (share >= 0.05)
-    return { label: "MODERATE", chip: "bg-surface-variant", bar: "bg-outline-variant" };
-  return { label: "LOW", chip: "bg-surface-variant", bar: "bg-outline-variant" };
+    return {
+      label: "MODERATE",
+      chip: "bg-secondary-container",
+      text: "text-secondary",
+      bar: "bg-secondary",
+    };
+  return {
+    label: "LOW",
+    chip: "bg-surface-variant",
+    text: "text-ink-faint",
+    bar: "bg-outline-variant",
+  };
 }
 
 function since(iso: string): string {
@@ -85,9 +105,6 @@ export default function MisconceptionHeatmapHighContrast() {
 
   const items = data?.items ?? [];
   const top = items[0];
-  const critical = items.filter((i) => i.share >= 0.3).length;
-  const moderate = items.filter((i) => i.share >= 0.15 && i.share < 0.3).length;
-  const low = items.filter((i) => i.share < 0.15).length;
   const max = Math.max(...items.map((i) => i.share), 0.01);
 
   return (
@@ -151,32 +168,42 @@ export default function MisconceptionHeatmapHighContrast() {
             )}
           </div>
 
+          {/* The "Overall Impact Distribution" bar chart lived here and is
+              gone at the owner's request. It plotted three counts as three
+              bars whose widths were each count over the SAME total, so the
+              bars did not sum to anything and the chart said nothing the
+              coloured band chips on the list do not already say. */}
+          {/* What replaced it: the key to the colours, which is the one thing
+              the chart was standing in for. */}
           <div className="bg-surface-container-lowest text-ink p-8 rounded-2xl shadow-[0_4px_40px_rgba(0,0,0,0.05)]">
-            <h3 className="font-title-md text-title-md mb-6 pb-4 border-b border-ink/20 text-ink">
-              Overall Impact Distribution
-            </h3>
-            <div className="flex flex-col gap-5">
+            <h3 className="font-title-md text-title-md mb-1">Reading the colours</h3>
+            <p className="font-body-md text-body-md text-ink/70 mb-6 pb-4 border-b border-ink/10">
+              The band is the share of the class who confirmed that misconception — not a guess,
+              their own answer to “is this what you were thinking?”.
+            </p>
+            <ul className="flex flex-col gap-3">
               {[
-                ["Critical Impact (Requires Immediate Reteach)", critical, "bg-error"],
-                ["Moderate Impact (Address in Review)", moderate, "bg-secondary"],
-                ["Low Impact (Monitor)", low, "bg-outline-variant"],
-              ].map(([label, count, color]) => (
-                <div key={label as string} className="flex flex-col gap-1">
-                  <div className="flex justify-between font-label-sm text-label-sm">
-                    <span className="text-ink font-semibold">{label as string}</span>
-                    <span className="text-ink">{count as number}</span>
-                  </div>
-                  <div className="w-full bg-ink/10 h-2 rounded-full overflow-hidden">
-                    <div
-                      className={`${color as string} h-full rounded-full transition-all`}
-                      style={{ width: `${Math.min(100, ((count as number) / Math.max(items.length, 1)) * 100)}%` }}
-                    ></div>
-                  </div>
-                </div>
-              ))}
-            </div>
+                { share: 0.35, when: "30% or more of the class", do: "reteach before moving on" },
+                { share: 0.2, when: "15–29%", do: "worth a worked example in class" },
+                { share: 0.08, when: "5–14%", do: "address in review" },
+                { share: 0.01, when: "under 5%", do: "monitor" },
+              ].map((row) => {
+                const b = band(row.share);
+                return (
+                  <li key={b.label} className="flex items-start gap-3">
+                    <span
+                      className={`${b.chip} ${b.text} font-label-sm text-label-sm px-2 py-1 rounded font-semibold shrink-0 w-24 text-center`}
+                    >
+                      {b.label}
+                    </span>
+                    <span className="font-body-md text-body-md text-ink/80 leading-snug">
+                      {row.when} — {row.do}
+                    </span>
+                  </li>
+                );
+              })}
+            </ul>
           </div>
-
           {/* Was a decorative stock image on a googleusercontent URL that has
               since expired -- a gradient keeps the tile with zero network. */}
           <div className="rounded-2xl overflow-hidden h-48 relative shadow-md">
@@ -213,7 +240,7 @@ export default function MisconceptionHeatmapHighContrast() {
                     <div className={`absolute left-0 top-0 bottom-0 w-1 ${b.bar} opacity-100 group-hover:w-2 transition-all`}></div>
                     <div className="flex-1 flex flex-col gap-2 min-w-0 pr-4">
                       <div className="flex items-center gap-3">
-                        <span className={`${b.chip} text-ink font-label-sm text-label-sm px-2 py-1 rounded font-semibold`}>
+                        <span className={`${b.chip} ${b.text} font-label-sm text-label-sm px-2 py-1 rounded font-semibold`}>
                           {b.label}
                         </span>
                         <h4 className="font-title-md text-title-md truncate text-ink">{it.label}</h4>
