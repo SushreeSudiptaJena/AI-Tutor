@@ -300,6 +300,18 @@ class Chunk(Base):
 # Curriculum map
 # ---------------------------------------------------------------------------
 
+# concept-001. Where a row came from. "seed" is a human decision recorded in
+# backend/data/seed/concepts.json; "derived" was extracted from the corpus by
+# backend/scripts/derive_concepts.py.
+#
+# This column is load-bearing in exactly one place that is easy to miss:
+# seed.py's prune_removed() deletes any concept the seed files no longer
+# define, and every derived concept is by definition not in a seed file.
+# Without a way to tell the two apart, the next `reset_demo_state.py` would
+# silently delete the entire derived syllabus. See prune_removed().
+CONTENT_SOURCES = ("seed", "derived")
+
+
 class Topic(Base):
     __tablename__ = "topics"
 
@@ -307,6 +319,8 @@ class Topic(Base):
     course_id: Mapped[int] = mapped_column(ForeignKey("courses.id"), index=True)
     slug: Mapped[str] = mapped_column(String(80), index=True)
     name: Mapped[str] = mapped_column(String(200))
+    # A derived topic is one chapter of one ingested book.
+    source: Mapped[str] = mapped_column(String(10), default="seed", index=True)
 
     __table_args__ = (UniqueConstraint("course_id", "slug"),)
 
@@ -320,6 +334,21 @@ class Concept(Base):
     name: Mapped[str] = mapped_column(String(200))
     # Which earlier course this concept should have been learned in.
     prerequisite_course_id: Mapped[int | None] = mapped_column(ForeignKey("courses.id"))
+
+    # --- concept-001: provenance, for derived rows -------------------------
+    source: Mapped[str] = mapped_column(String(10), default="seed", index=True)
+    # The material and page range the concept was read out of. Nullable, and
+    # null on every seeded row -- a human wrote those, they came from nowhere
+    # in the corpus. On a derived row these are the whole point: they are what
+    # lets a concept cite the pages that teach it, the same way an answer
+    # cites the pages it was grounded in.
+    material_id: Mapped[int | None] = mapped_column(
+        ForeignKey("materials.id", ondelete="SET NULL")
+    )
+    page_start: Mapped[int | None] = mapped_column(Integer)
+    page_end: Mapped[int | None] = mapped_column(Integer)
+    # One sentence saying what the concept is, written at derivation time.
+    summary: Mapped[str | None] = mapped_column(Text)
 
     topic: Mapped["Topic"] = relationship()
     prerequisite_course: Mapped["Course | None"] = relationship()

@@ -1,0 +1,32 @@
+before:
+    topics.source         MISSING
+    concepts.source         MISSING
+    concepts.material_id    MISSING
+    concepts.page_start     MISSING
+    concepts.page_end       MISSING
+    concepts.summary        MISSING
+    topics     (no source column yet)
+    concepts   (no source column yet)
+
+running:
+    topics.source
+    concepts.source
+    concepts.material_id
+    concepts.page_start
+    concepts.page_end
+    concepts.summary
+    concepts.material_id -> materials
+    index concepts(source)
+    index topics(source)
+
+after:
+    topics.source         VARCHAR(10)    NOT NULL
+    concepts.source         VARCHAR(10)    NOT NULL
+    concepts.material_id    INTEGER        NULL ok
+    concepts.page_start     INTEGER        NULL ok
+    concepts.page_end       INTEGER        NULL ok
+    concepts.summary        TEXT           NULL ok
+    topics     seed=8
+    concepts   seed=24
+
+migration OK

@@ -54,7 +54,18 @@ from ..config import REPO_ROOT
 from ..db import get_db
 from ..deps import admin_only
 from ..services import ingest
-from ..models import AuditLog, Batch, Chunk, Course, Department, Material, ReteachUnit, User
+from ..models import (
+    AuditLog,
+    Batch,
+    Chunk,
+    Concept,
+    Course,
+    Department,
+    Material,
+    ReteachUnit,
+    Topic,
+    User,
+)
 from ..schemas import CourseIn, CourseTermIn, DepartmentIn
 # The one place the verb is spelled. auth.py writes the row, this file reads
 # it; two literals in two files is how a filter silently stops matching.
@@ -918,4 +929,135 @@ def notifications_read(
     return {
         "seen_at": now.isoformat().replace("+00:00", "Z") if now else None,
         "unread": 0,
+    }
+
+
+# ---------------------------------------------------------------------------
+# concept-001 -- browsing a syllabus that is now too big to scroll
+# ---------------------------------------------------------------------------
+
+MAX_CONCEPT_PAGE = 100
+
+
+@router.get("/courses/{course_id}/concepts")
+def course_concepts(
+    course_id: int,
+    limit: int = 50,
+    offset: int = 0,
+    source: str | None = None,
+    q: str | None = None,
+    db: OrmSession = Depends(get_db),
+    user: User = Depends(admin_only),
+) -> dict:
+    """The course's concepts, paginated, with where each one came from.
+
+    Concepts had exactly one origin until `concept-001`: a human writing
+    `backend/data/seed/concepts.json`. Fifteen of them, for a 1,190-page book.
+    `derive_concepts.py` reads the rest out of the corpus, which is the right
+    number and far too many to hand back in one response -- hence the page.
+
+    `source` is the field that makes this browsable rather than merely long.
+    `?source=seed` is the deliberate syllabus somebody signed off; `derived` is
+    what the book actually contains. An admin reviewing the derivation wants
+    the second, and the demo shows the first.
+
+    A derived row carries `material`, `page_start` and `page_end`, so a concept
+    can be checked against the pages it was read out of. That is the same
+    provenance rule the rest of this file exists for: an answer, a citation, a
+    material and the person who uploaded it. A concept now joins that chain.
+    """
+    course = db.get(Course, course_id)
+    if course is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={"code": "not_found", "message": "No such course."},
+        )
+
+    scoped = (
+        select(Concept)
+        .join(Topic, Topic.id == Concept.topic_id)
+        .where(Topic.course_id == course_id)
+    )
+    if source in ("seed", "derived"):
+        scoped = scoped.where(Concept.source == source)
+    if q and q.strip():
+        needle = f"%{q.strip()}%"
+        scoped = scoped.where(Concept.name.ilike(needle))
+
+    total = int(db.scalar(select(func.count()).select_from(scoped.subquery())) or 0)
+    rows = db.scalars(
+        scoped.order_by(Concept.topic_id, Concept.id)
+        .limit(max(1, min(limit, MAX_CONCEPT_PAGE)))
+        .offset(max(0, offset))
+    ).all()
+
+    # Batched, not per row -- the same rule as _audit_titles. A per-concept
+    # lookup of its topic and its material is two network round trips per row.
+    topics = {
+        t.id: t
+        for t in db.scalars(
+            select(Topic).where(Topic.id.in_([r.topic_id for r in rows] or [-1]))
+        ).all()
+    }
+    materials = {
+        m.id: m
+        for m in db.scalars(
+            select(Material).where(
+                Material.id.in_([r.material_id for r in rows if r.material_id] or [-1])
+            )
+        ).all()
+    }
+    prereqs = {
+        c.id: c
+        for c in db.scalars(
+            select(Course).where(
+                Course.id.in_(
+                    [r.prerequisite_course_id for r in rows if r.prerequisite_course_id]
+                    or [-1]
+                )
+            )
+        ).all()
+    }
+
+    counts = {
+        s: int(n)
+        for s, n in db.execute(
+            select(Concept.source, func.count())
+            .join(Topic, Topic.id == Concept.topic_id)
+            .where(Topic.course_id == course_id)
+            .group_by(Concept.source)
+        ).all()
+    }
+
+    return {
+        "items": [
+            {
+                "id": r.id,
+                "slug": r.slug,
+                "name": r.name,
+                "summary": r.summary,
+                "source": r.source,
+                "topic": topics[r.topic_id].name if r.topic_id in topics else None,
+                "topic_id": r.topic_id,
+                "material": (
+                    materials[r.material_id].title
+                    if r.material_id in materials else None
+                ),
+                "material_id": r.material_id,
+                "page_start": r.page_start,
+                "page_end": r.page_end,
+                # The field that decides whether the diagnostic may test it.
+                "prerequisite_course": (
+                    prereqs[r.prerequisite_course_id].code
+                    if r.prerequisite_course_id in prereqs else None
+                ),
+            }
+            for r in rows
+        ],
+        "total": total,
+        "limit": limit,
+        "offset": offset,
+        # So a reviewer sees the split without paging to the end.
+        "by_source": {"seed": counts.get("seed", 0),
+                      "derived": counts.get("derived", 0)},
     }

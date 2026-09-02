@@ -1359,7 +1359,7 @@
       "area": "admin",
       "title": "Filter the cohort list by department, major and subject",
       "user_visible_behavior": "The Batches tab gains three dropdowns — department, major, and subject. Picking a department shows only that department's cohorts and says how many subjects they teach between them; picking a subject shows only the cohorts that take it, including the honest answer 'no cohort takes this yet'.",
-      "status": "in_progress",
+      "status": "blocked",
       "depends_on": [
         "admin-009",
         "admin-010"
@@ -1376,7 +1376,58 @@
         "npm --prefix frontend run build passes, including tsc -b and check:utilities."
       ],
       "evidence": "evidence/admin-012/filter-logic-against-live-data.txt",
-      "notes": "IN PROGRESS 2026-09-02. Code complete, build green, and the filter logic was replayed against the LIVE data (4 cohorts, 8 subjects from the deployed service) for every single-axis filter plus combinations -- see the evidence file, which prints the exact count line each choice produces. NOT YET SEEN IN A BROWSER: the Chrome extension would not respond ('connected but... waiting on a permission prompt in the extension side panel'). Same rule as frontend-006 -- a screen is not passing until someone looks at it. WHAT THE LIVE DATA SHOWED THAT READING WOULD NOT: 5 of the 8 subjects have batch_ids=[] (CSE2631, CSW1, DLD, PH000, PH101), so more than half the subject dropdown leads to zero cohorts. That is exactly why those options are labelled '(no cohort yet)' rather than hidden -- the dashboard already puts `courses_without_batch` in front of the admin, and this is where that number becomes a name. Note also that a COMBINATION can be empty even though no single option can (Civil Engineering + BTech = 0), which is what the distinct empty state is for. OWNERSHIP: frontend/src/pages/admin/ is person 4's, edited at the owner's direction -- tell 4."
+      "notes": "IN PROGRESS 2026-09-02. Code complete, build green, and the filter logic was replayed against the LIVE data (4 cohorts, 8 subjects from the deployed service) for every single-axis filter plus combinations -- see the evidence file, which prints the exact count line each choice produces. NOT YET SEEN IN A BROWSER: the Chrome extension would not respond ('connected but... waiting on a permission prompt in the extension side panel'). Same rule as frontend-006 -- a screen is not passing until someone looks at it. WHAT THE LIVE DATA SHOWED THAT READING WOULD NOT: 5 of the 8 subjects have batch_ids=[] (CSE2631, CSW1, DLD, PH000, PH101), so more than half the subject dropdown leads to zero cohorts. That is exactly why those options are labelled '(no cohort yet)' rather than hidden -- the dashboard already puts `courses_without_batch` in front of the admin, and this is where that number becomes a name. Note also that a COMBINATION can be empty even though no single option can (Civil Engineering + BTech = 0), which is what the distinct empty state is for. OWNERSHIP: frontend/src/pages/admin/ is person 4's, edited at the owner's direction -- tell 4. BLOCKED 2026-09-02 on one thing only, and it is not code: nobody has opened the tab. The Chrome extension would not respond all session, and `concept-001` needed to start, so this moves from in_progress to blocked rather than sitting on the one-feature-at-a-time rule. It is DEPLOYED and live (c53e872) and its logic was replayed against the live data for every option -- see the evidence file. Unblock it by looking at admin -> Batches on https://ai-tutor-80by.onrender.com and saying so."
+    },
+    {
+      "id": "auth-005",
+      "priority": 63,
+      "area": "auth",
+      "title": "The role gate the contract documents is not actually on /student/* or /tutor/*",
+      "user_visible_behavior": "A teacher's token can call POST /tutor/ask and GET /student/gaps and gets 200. The contract says both are student-only and that a mismatched role is a 403.",
+      "status": "not_started",
+      "depends_on": [
+        "auth-001"
+      ],
+      "demo_mode": "live",
+      "verification": [
+        "POST /tutor/ask with a teacher token returns 403, not 200.",
+        "GET /student/* with a teacher or admin token returns 403.",
+        "Every student route keeps working for a student -- the golden path is unaffected.",
+        "docs/api-contract.md line 41 ('A 403 is returned when the role does not match the route prefix. /tutor/* is student-only.') becomes true rather than aspirational."
+      ],
+      "evidence": null,
+      "notes": "FOUND 2026-09-02 while answering a question about what preferred_language drives; NOT fixed in that session's diff, per the working rules. `deps.py` defines `student_only` and NOTHING imports it: student.py uses `current_user` 17 times and tutor.py 3 times, neither uses a role guard. teacher.py is the only router that gates properly (19 x teacher_only), and admin.py/admin_batches.py use admin_only. Confirmed live against the deployed service with Ravi's teacher token: POST /tutor/ask -> 200, GET /student/gaps -> 200. SEVERITY IS LOW, AND THE REASON MATTERS: every student route scopes by `user.id` / `user.course_id`, so a teacher sees their OWN empty gaps, not a student's. This is not a data leak -- it is a gate that was documented and never fitted. Do not 'fix' it by scoping harder; the scoping is already right. WATCH OUT WHEN FIXING: admins may legitimately need to exercise a student route to rehearse the demo, and backend/scripts/smoke_golden_path.py drives the student routes with a student account (fine). Decide deliberately whether admin is allowed through, and write that into the contract line rather than leaving it to `require_role`'s argument list."
+    },
+    {
+      "id": "concept-001",
+      "priority": 64,
+      "area": "ingest",
+      "title": "A course's concepts are read out of its corpus, not only hand-written",
+      "user_visible_behavior": "The syllabus stops being fifteen hand-written lines for a 1,190-page book. derive_concepts.py reads the book a window of consecutive chunks at a time and writes the concepts it teaches, each carrying the material and page range it came from. Everything that enumerates concepts is paginated, and derived prerequisite concepts can carry diagnostic items of their own.",
+      "status": "in_progress",
+      "depends_on": [
+        "ingest-001",
+        "student-002",
+        "student-007",
+        "admin-001"
+      ],
+      "demo_mode": "live",
+      "verification": [
+        "Concept gains source/material_id/page_start/page_end/summary and Topic gains source; all new columns nullable or defaulted, backfilled to 'seed'.",
+        "migrate_derived_concepts.py is idempotent and drops nothing; material_id is ON DELETE SET NULL so deleting a book does not delete the syllabus read out of it.",
+        "seed.py's prune_removed no longer deletes derived concepts or derived topics -- without this the first reset_demo_state.py would erase the whole derived syllabus.",
+        "A window never straddles a chapter, and front matter (contents, preface, index) is skipped entirely.",
+        "The merge is NOT a similarity threshold: measured, restatements of one concept and genuinely different concepts occupy overlapping bands, so a cheap gate feeds a model decision.",
+        "A merge into a seeded concept never rewrites that row; a merge into a derived one widens its page range.",
+        "GET /student/diagnostic paginates and orders SEEDED ITEMS FIRST, so page one is still exactly the eight hand-written questions the golden path answers.",
+        "GET /student/mastery paginates with has_more and NO total -- a total is the denominator for the aggregate score this endpoint refuses to have.",
+        "The syllabus-coverage prompt is capped, because every concept in that list goes into one prompt.",
+        "GET /admin/courses/{id}/concepts is admin-only, paginated, filterable by source, and resolves topic/material/prerequisite names in batched queries.",
+        "Derived prerequisite concepts can be given diagnostic items; a malformed or refused question is dropped rather than stored.",
+        "python -m pytest backend/tests -q passes and ./init.sh still passes."
+      ],
+      "evidence": "evidence/concept-001/dedupe-calibration.txt",
+      "notes": "IN PROGRESS 2026-09-02. Owner chose all three forks explicitly: fully first-class INCLUDING the diagnostic, grouping by consecutive chunks (page-anchored) rather than embedding clusters, and CSW2's Django book as the first corpus. TWO THINGS THE FIRST RUNS FOUND THAT READING WOULD NOT: (1) The first dry run derived 'Django overview / Django architecture / Request-response cycle' from pages 9-15 -- the book's TABLE OF CONTENTS. A contents page reads exactly like a syllabus and has no teaching behind any line, so every concept from it would produce a lesson that immediately refuses. SKIP_CHAPTERS now drops front matter, which is 99 of 1,938 chunks. (2) THE DEDUPE CANNOT BE A THRESHOLD, and that is measured, not assumed: restatements of one concept scored 0.7829-0.8625 while genuinely different concepts scored 0.4757-0.7970. The bands OVERLAP -- 'Django project file structure' vs 'Django project settings' is 0.7970, HIGHER than two real restatements of the virtual-environments concept at 0.7829. No cut-off merges the duplicates without also destroying real syllabus lines. Same shape as ALIGNMENT_REFUSAL_THRESHOLD and it gets the same answer: similarity is a cheap first gate at 0.75 and a model call decides. evidence/concept-001/dedupe-calibration.txt has the full pairwise table. THE GOLDEN PATH IS PROTECTED BY ORDERING, NOT BY RESTRAINT: GET /student/diagnostic sorts items whose concept is source='seed' first, so page one stays exactly the eight hand-written questions however many derived items exist. Do not remove that order_by. AND THE TEST SUITE CAUGHT A REAL DESIGN VIOLATION: the obvious paging field on /student/mastery is `total`, which student-007's anti-score tests rejected on sight -- correctly. A total is a denominator; hand one back and a client counts the solid concepts on the page and divides. `has_more` pages just as well, is not a denominator, and costs one query instead of two (fetch size+1, discard the extra)."
     }
   ]
 }

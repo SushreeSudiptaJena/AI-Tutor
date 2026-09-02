@@ -202,6 +202,7 @@ def seed_map(db: OrmSession, data: dict, courses: dict[str, Course], primary: Co
             row = Topic(course_id=primary.id, slug=t["slug"])
             db.add(row)
         row.name = t["name"]
+        row.source = "seed"
         topics[t["slug"]] = row
     db.flush()
 
@@ -212,6 +213,7 @@ def seed_map(db: OrmSession, data: dict, courses: dict[str, Course], primary: Co
             row = Concept(slug=c["slug"])
             db.add(row)
         row.name = c["name"]
+        row.source = "seed"
         row.topic_id = topics[c["topic"]].id
         pre = c.get("prerequisite_course")
         row.prerequisite_course_id = courses[pre].id if pre else None
@@ -438,6 +440,17 @@ def prune_removed(db: OrmSession, primary: Course, topics, concepts, misc, pract
     `diagnostic_items` are exempt because `seed_items()` already deletes and
     recreates them wholesale, which prunes as a side effect.
 
+    DERIVED CONTENT IS EXEMPT, AND THIS IS NOT OPTIONAL
+    ---------------------------------------------------
+    `concept-001` writes concepts and topics extracted from the corpus by
+    `derive_concepts.py`. Every one of them is, by definition, absent from
+    `concepts.json` -- which is exactly the test this function uses to decide
+    what to delete. Without the `source == "seed"` filter below, the first
+    `reset_demo_state.py` after a derivation run would silently delete the
+    entire derived syllabus, and it would look like the derivation had never
+    happened rather than like a bug. A seed file is the authority on seeded
+    content and on nothing else.
+
     NOTHING WITH DEPENDENTS IS EVER DELETED
     ---------------------------------------
     A concept with a student's gap on it, a misconception behind a confirmed
@@ -454,6 +467,9 @@ def prune_removed(db: OrmSession, primary: Course, topics, concepts, misc, pract
                 select(Concept)
                 .join(Topic, Topic.id == Concept.topic_id)
                 .where(Topic.course_id == primary.id,
+                       # concept-001: a seed file is not the authority on
+                       # anything it did not write. See the docstring.
+                       Concept.source == "seed",
                        Concept.id.not_in([c.id for c in concepts.values()] or [-1]))
             ).all(),
             lambda row: {
@@ -509,6 +525,10 @@ def prune_removed(db: OrmSession, primary: Course, topics, concepts, misc, pract
             db.scalars(
                 select(Topic).where(
                     Topic.course_id == primary.id,
+                    # concept-001: same rule as concepts -- a derived topic is
+                    # one chapter of an ingested book, and no seed file has
+                    # anything to say about it.
+                    Topic.source == "seed",
                     Topic.id.not_in([t.id for t in topics.values()] or [-1]),
                 )
             ).all(),

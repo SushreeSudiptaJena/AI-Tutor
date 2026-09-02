@@ -64,6 +64,11 @@ from ..services import practice, retrieval, syllabus, tutor
 
 router = APIRouter(prefix="/student", tags=["student"])
 
+# concept-001. How many prerequisite concepts may go into one syllabus-coverage
+# prompt. Not a page size -- there is no second page here, because the model
+# has to see the whole list at once to say what the uploaded syllabus covers.
+SYLLABUS_CONCEPT_CAP = 120
+
 
 def _course(db: OrmSession, user: User) -> Course:
     if user.course_id is None:
@@ -218,6 +223,8 @@ def course_summary(
 
 @router.get("/diagnostic")
 def get_diagnostic(
+    limit: int = 25,
+    offset: int = 0,
     db: OrmSession = Depends(get_db),
     user: User = Depends(current_user),
 ) -> dict:
@@ -230,16 +237,39 @@ def get_diagnostic(
 
     `correct_answer` is not in this response. It exists on the row and must
     never reach a client; that is what the explicit field list below is for.
+
+    PAGINATED, AND ORDERED SEEDED-FIRST, SINCE concept-001
+    ------------------------------------------------------
+    Derived concepts can carry diagnostic items too, and a book yields far more
+    prerequisites than a human writes by hand. A diagnostic is a thing a
+    student actually sits down and answers, so "every item for this course" is
+    not a page -- it is an unbounded form.
+
+    The ordering is the load-bearing half, not the limit. Seeded items come
+    first, and within each group by id, so **page one is exactly the eight
+    hand-written questions it has always been, in the same order**. The golden
+    path answers those eight; nothing about it changes. Derived items are page
+    two onwards, which is where a student who wants a deeper check finds them.
+
+    `total` says how many exist, so a client can say "8 of 34" rather than
+    implying the eight are all there is.
     """
     course = _course(db, user)
+
+    scoped = select(DiagnosticItem).where(DiagnosticItem.course_id == course.id)
+    total = int(db.scalar(select(func.count()).select_from(scoped.subquery())) or 0)
+
     items = db.scalars(
-        select(DiagnosticItem)
+        scoped
         # `item.concept.name` below is read for every item. Lazily, that was one
         # network round trip per question -- eight questions, eight round trips,
         # and this endpoint measured 12 queries for 8 items.
         .options(selectinload(DiagnosticItem.concept))
-        .where(DiagnosticItem.course_id == course.id)
-        .order_by(DiagnosticItem.id)
+        .join(Concept, Concept.id == DiagnosticItem.concept_id)
+        # `source != "seed"` sorts False before True, so seeded items lead.
+        .order_by((Concept.source != "seed"), DiagnosticItem.id)
+        .limit(max(1, min(limit, 100)))
+        .offset(max(0, offset))
     ).all()
 
     # student-009 -- replay what this student already picked, so a reload does
@@ -260,6 +290,9 @@ def get_diagnostic(
 
     return {
         "diagnostic_id": course.id,
+        "total": total,
+        "limit": limit,
+        "offset": offset,
         # null until the first submit. "Start" vs "resume" is the frontend's
         # call to make from this -- not a reason to withhold the items.
         "submitted_at": last.isoformat().replace("+00:00", "Z") if last else None,
@@ -477,12 +510,20 @@ def syllabus_upload(
     # Only prerequisites. Current-course concepts are what this course is about
     # to teach; finding them absent from a prior syllabus is expected, not a
     # gap, and reporting them would bury the real gaps in noise.
+    #
+    # CAPPED, AND SEEDED FIRST, SINCE concept-001. Every concept in this list
+    # goes into ONE model prompt, so an uncapped list is an uncapped prompt --
+    # and a book yields far more prerequisites than a human writes by hand.
+    # Past a few hundred the call stops being about the student's syllabus and
+    # starts being about how much text fits. Seeded prerequisites lead because
+    # they are the deliberate ones; the cap only ever bites the derived tail.
     concepts = db.scalars(
         select(Concept)
         .where(Concept.prerequisite_course_id.is_not(None))
         .join(Topic, Topic.id == Concept.topic_id)
         .where(Topic.course_id == course.id)
-        .order_by(Concept.id)
+        .order_by((Concept.source != "seed"), Concept.id)
+        .limit(SYLLABUS_CONCEPT_CAP)
     ).all()
 
     listing = [
@@ -601,6 +642,9 @@ def gap_lesson(
 
 @router.get("/mastery")
 def mastery(
+    limit: int = 60,
+    offset: int = 0,
+    source: str | None = None,
     db: OrmSession = Depends(get_db),
     user: User = Depends(current_user),
 ) -> dict:
@@ -619,6 +663,25 @@ def mastery(
     `untested` is a first-class state, not a gap in the data. A concept nobody
     has been asked about is genuinely unknown, and saying so is more useful
     than implying competence by omission or failure by a zero.
+
+    PAGINATED SINCE concept-001, AND IT HAD TO BE. This used to return every
+    concept of the course, which was fine at 15 hand-written ones and is not
+    at the hundreds `derive_concepts.py` reads out of a 1,190-page book. The
+    page is over CONCEPTS, not topics: paging topics would hand back a card
+    holding forty rows or a card holding one, depending on where the boundary
+    fell. `total` is the concept count, so a client can show "60 of 214".
+
+    `?source=seed` narrows to the hand-written syllabus -- which is what the
+    demo shows, and what every existing screenshot was taken against.
+
+    **`has_more`, NOT a total, and that is the anti-score stance surviving
+    contact with pagination.** The obvious paging field is `total`, and the
+    test suite rejected it on sight -- rightly. Hand back the number of
+    concepts in the course and a client can count the `solid` ones on the page
+    and divide, which is precisely the aggregate this endpoint exists not to
+    have. `has_more` pages just as well and is not a denominator. It is
+    computed by asking for one row more than the page and throwing it away, so
+    it also costs one query rather than two.
     """
     course = _course(db, user)
 
@@ -626,13 +689,25 @@ def mastery(
         select(Topic).where(Topic.course_id == course.id).order_by(Topic.id)
     ).all()
     if not topics:
-        return {"items": []}
+        return {"items": [], "has_more": False, "limit": limit, "offset": offset}
 
-    concepts = db.scalars(
-        select(Concept)
-        .where(Concept.topic_id.in_([t.id for t in topics]))
-        .order_by(Concept.id)
+    topic_ids = [t.id for t in topics]
+    scoped = select(Concept).where(Concept.topic_id.in_(topic_ids))
+    if source in ("seed", "derived"):
+        scoped = scoped.where(Concept.source == source)
+
+    size = max(1, min(limit, 200))
+    # Ordered by (topic, id) rather than by id alone, so a page is a run of
+    # neighbouring concepts inside a topic instead of a slice cutting across
+    # every topic at once. Seeded concepts have the lowest topic ids, so page
+    # one is still the hand-written syllabus.
+    fetched = db.scalars(
+        scoped.order_by(Concept.topic_id, Concept.id)
+        .limit(size + 1)
+        .offset(max(0, offset))
     ).all()
+    more = len(fetched) > size
+    concepts = fetched[:size]
 
     # One query for every state, not one per concept. The N+1 version works
     # fine on a seeded demo course and falls over on a real syllabus.
@@ -659,7 +734,10 @@ def mastery(
             {"topic_id": t.id, "topic": t.name, "concepts": by_topic[t.id]}
             for t in topics
             if by_topic.get(t.id)
-        ]
+        ],
+        "has_more": more,
+        "limit": limit,
+        "offset": offset,
     }
 
 

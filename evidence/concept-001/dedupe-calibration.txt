@@ -1,0 +1,76 @@
+=== concept-001: why the dedupe cannot be a similarity threshold ===
+Measured 2026-09-02 on the first 11 concept names derived from the Django book.
+
+pairwise cosine, highest first (SAME = three names for one concept):
+
+  0.8625  Virtual environments and package isolation       | Python virtual environment for project isolati    SAME
+  0.8389  Python virtual environment for project isolati   | Python virtual environments                       SAME
+  0.7970  Django project file structure                    | Django project settings                         
+  0.7829  Virtual environments and package isolation       | Python virtual environments                       SAME
+  0.7747  Django project and application distinction       | Django project settings                         
+  0.7745  Django development server                        | Django project settings                         
+  0.7488  Django project and application distinction       | Django project file structure                   
+  0.7453  Django project file structure                    | Core Django components: models, templates, vie  
+  0.7215  Django project file structure                    | Django MTV architectural pattern                
+  0.7184  Database migrations in Django                    | Django development server                       
+  0.7176  Core Django components: models, templates, vie   | Django development server                       
+  0.7062  Core Django components: models, templates, vie   | Django project settings                         
+  0.7053  Django project file structure                    | Django development server                       
+  0.6984  Python virtual environment for project isolati   | Django project file structure                   
+  0.6950  Database migrations in Django                    | Django project settings                         
+  0.6928  Python virtual environment for project isolati   | Django project settings                         
+  0.6922  Django MTV architectural pattern                 | Core Django components: models, templates, vie  
+  0.6882  Python virtual environment for project isolati   | Django project and application distinction      
+  0.6856  Python virtual environments                      | Django development server                       
+  0.6835  Django project and application distinction       | Django development server                       
+  0.6738  Django project file structure                    | Database migrations in Django                   
+  0.6736  Core Django components: models, templates, vie   | Database migrations in Django                   
+  0.6726  Django MTV architectural pattern                 | Django project settings                         
+  0.6698  Python virtual environments                      | Django project settings                         
+  0.6637  Django project and application distinction       | Django MTV architectural pattern                
+  0.6602  Python virtual environment for project isolati   | Django development server                       
+  0.6590  Python virtual environments                      | Core Django components: models, templates, vie  
+  0.6583  Django project and application distinction       | Core Django components: models, templates, vie  
+  0.6484  Python virtual environments                      | Django project and application distinction      
+  0.6473  Python virtual environments                      | Django project file structure                   
+  0.6464  Python virtual environments                      | Django MTV architectural pattern                
+  0.6458  Django project and application distinction       | Database migrations in Django                   
+  0.6422  Python virtual environment for project isolati   | Django MTV architectural pattern                
+  0.6384  Python virtual environments                      | Database migrations in Django                   
+  0.6296  Python virtual environment for project isolati   | Core Django components: models, templates, vie  
+  0.6272  Django MTV architectural pattern                 | Django development server                       
+  0.6230  Virtual environments and package isolation       | Core Django components: models, templates, vie  
+  0.6216  Python virtual environment for project isolati   | Database migrations in Django                   
+  0.6201  Django MTV architectural pattern                 | Database migrations in Django                   
+  0.6184  Python virtual environments                      | Installing Python packages with pip             
+  0.6059  Virtual environments and package isolation       | Django project and application distinction      
+  0.5966  Virtual environments and package isolation       | Django project file structure                   
+  0.5899  Python virtual environment for project isolati   | Installing Python packages with pip             
+  0.5887  Database migrations in Django                    | Installing Python packages with pip             
+  0.5879  Virtual environments and package isolation       | Django MTV architectural pattern                
+  0.5879  Django project settings                          | Installing Python packages with pip             
+  0.5663  Virtual environments and package isolation       | Django development server                       
+  0.5658  Virtual environments and package isolation       | Database migrations in Django                   
+  0.5634  Django project file structure                    | Installing Python packages with pip             
+  0.5513  Virtual environments and package isolation       | Django project settings                         
+  0.5491  Virtual environments and package isolation       | Installing Python packages with pip             
+  0.5412  Django development server                        | Installing Python packages with pip             
+  0.5274  Core Django components: models, templates, vie   | Installing Python packages with pip             
+  0.5175  Django project and application distinction       | Installing Python packages with pip             
+  0.4757  Django MTV architectural pattern                 | Installing Python packages with pip             
+
+  restatements of ONE concept : 0.7829 .. 0.8625
+  genuinely different concepts: 0.4757 .. 0.7970
+
+  THE BANDS OVERLAP. 'Django project file structure' vs 'Django project
+  settings' scores 0.7970 -- HIGHER than the 0.7829 between two genuine
+  restatements of the virtual-environments concept. There is no threshold that
+  merges the duplicates without also merging two different concepts.
+
+  This is the same shape as ALIGNMENT_REFUSAL_THRESHOLD, and it gets the same
+  answer the repo already settled on for that: similarity is a cheap FIRST
+  gate, and a model call decides. MERGE_CANDIDATE is set to 0.75 -- below the
+  0.7829 floor of true restatements, so no duplicate is gated out -- and every
+  pair above it is decided by one call to prompts/concepts_same.md.
+
+  Cost of the gate: 6 of 55 pairs here, so the decider runs rarely.

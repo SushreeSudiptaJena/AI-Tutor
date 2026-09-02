@@ -546,6 +546,43 @@ outnumbered every real row put together. `?include_system=true` brings it back,
 and `total` reflects whichever set you asked for. Nothing is deleted; the row is
 still there for anyone who wants it.
 
+### Concepts, and where they came from — `concept-001`
+
+| Method | Path | Notes |
+|---|---|---|
+| `GET` | `/admin/courses/{course_id}/concepts` | `?limit=50&offset=0&source=&q=` (limit max 100) |
+
+```json
+{
+  "items": [
+    { "id": 312, "slug": "django-mtv-architectural-pattern",
+      "name": "Django MTV architectural pattern",
+      "summary": "How Django separates data, presentation and request handling.",
+      "source": "derived", "topic": "Building a Blog Application", "topic_id": 41,
+      "material": "Django 5 By Example (Antonio Mele)", "material_id": 12,
+      "page_start": 47, "page_end": 50, "prerequisite_course": null }
+  ],
+  "total": 214, "limit": 50, "offset": 0,
+  "by_source": { "seed": 15, "derived": 199 }
+}
+```
+
+A concept had exactly one origin until this feature: a human writing
+`backend/data/seed/concepts.json` — fifteen of them, for a 1,190-page book.
+`backend/scripts/derive_concepts.py` reads the rest out of the ingested corpus,
+a window of consecutive chunks at a time, and every derived row carries the
+`material` and page range it was read out of. **A concept now joins the same
+provenance chain as an answer, its citation, the material and the person who
+uploaded it** — you can open the pages a concept was derived from and check it.
+
+`source` is what makes this browsable rather than merely long: `seed` is the
+deliberate syllabus somebody signed off, `derived` is what the book actually
+contains. `by_source` gives the split without paging to the end. `q` matches on
+name.
+
+**Only a concept with a `prerequisite_course` is diagnostic-testable**, seeded
+or derived — that filter predates this feature and is unchanged.
+
 ### Notifications — `admin-011`
 
 The bell in the admin top bar. It has exactly two sources, and both already
@@ -645,7 +682,7 @@ subject**, so the switcher below is what moves the whole student surface.
 
 | Method | Path | Notes |
 |---|---|---|
-| `GET` | `/student/diagnostic` | `{ diagnostic_id, submitted_at, items: [PracticeItem] }` — each item carries `your_answer`. **`student-009`.** |
+| `GET` | `/student/diagnostic` | `?limit=25&offset=0` → `{ diagnostic_id, total, limit, offset, submitted_at, items: [PracticeItem] }` — each item carries `your_answer`. **`student-009`**, paginated by **`concept-001`**. |
 | `POST` | `/student/diagnostic/{diagnostic_id}/submit` | `{ answers: [{ item_id, answer }] }` |
 | `POST` | `/student/syllabus-upload` | `multipart`: `file` — alternative entry for incoming students. **Built `student-008`.** PDF, `.txt` or `.md`; ≤10 MB. Returns the same `{ gaps, message }` body as `submit`. |
 | `GET` | `/student/gaps` | `{ items: [Gap] }` |
@@ -678,6 +715,15 @@ alike to a student.
 > **There is no score, percentage, or grade in this response, by design.** The problem statement asks for a gap list, not a grade. Frontend must not compute one from `answers`.
 
 #### Resuming a diagnostic — `student-009`
+
+> **Seeded items come first, and that ordering is load-bearing (`concept-001`).**
+> Derived concepts can carry diagnostic items too, and a book yields far more
+> prerequisites than a human writes by hand — so this is paginated. The limit is
+> not the important half; the ordering is. Items whose concept is `source: seed`
+> sort first, then by id, so **page one is exactly the eight hand-written
+> questions it has always been, in the same order.** The golden path answers
+> those eight and nothing about it changes. `total` says how many exist so a
+> client does not imply the eight are all there is.
 
 `GET /student/diagnostic` replays what this student already picked, so a reload,
 a dropped connection or coming back tomorrow does not mean answering eight
@@ -718,13 +764,25 @@ questions again:
 
 Returns a `TutorResponse`. `outcome` is normally `answered`; `evidence.alignment_percent` is the badge on the card, and `citations[]` powers **Show Source** — each entry resolves to a real `book_title` + `page_no`.
 
-### Mastery — `student-007`
-`GET /student/mastery`
+### Mastery — `student-007`, paginated by `concept-001`
+`GET /student/mastery?limit=60&offset=0&source=`
 ```json
 { "items": [ { "topic_id": 12, "topic": "Newton's Laws",
-               "concepts": [ { "id": 44, "name": "Free-body diagrams", "state": "shaky" } ] } ] }
+               "concepts": [ { "id": 44, "name": "Free-body diagrams", "state": "shaky" } ] } ],
+  "has_more": true, "limit": 60, "offset": 0 }
 ```
 `state`: `solid` | `shaky` | `untested`. **Built `student-007`.**
+
+**`has_more`, and deliberately no `total`.** The page is over *concepts*, not
+topics — paging topics would hand back a card of forty rows or a card of one,
+depending on where the boundary fell. There is no total because a total is a
+denominator: hand one back and a client can count the `solid` concepts on the
+page and divide, which is exactly the aggregate score this endpoint exists not
+to have. `has_more` pages just as well and is not a denominator.
+
+`?source=seed` narrows to the hand-written syllabus — 15 concepts on CSW2, and
+what the demo shows. `?source=derived` is what `derive_concepts.py` read out of
+the book. Omit it for both.
 
 Written by two things, both already live: `POST /student/diagnostic/{id}/submit`
 and `POST /student/practice/{id}/answer`. A correct practice answer moves a
@@ -1094,6 +1152,7 @@ Every shape above is final enough to mock. Suggested order, matching `feature_li
 
 | When | Change |
 |---|---|
+| 2026-09-02 | **`concept-001` — a course's concepts are now read out of its corpus, not only hand-written.** New `GET /admin/courses/{id}/concepts` (paginated, `?source=`/`?q=`). `GET /student/mastery` gains `has_more`/`limit`/`offset`/`?source=` — **`has_more` and not `total`, because a total is a denominator and this endpoint refuses to have an aggregate score.** `GET /student/diagnostic` gains `total`/`limit`/`offset` and now orders **seeded items first**, so page one stays exactly the eight hand-written questions the golden path answers. `Concept` gains `source`, `material_id`, `page_start`, `page_end`, `summary`; `Topic` gains `source`. **Needs a migration** — run `backend/scripts/migrate_derived_concepts.py` once against the shared database. No existing field changed shape or meaning. |
 | 2026-09-02 | **`admin-011` — the admin notification bell.** New `GET /admin/notifications` and `POST /admin/notifications/read`. Purely a read over `audit_log`: no new table, and every field but `kind`/`unread`/`by_you` is the audit row a client already renders. New audit action **`teacher.first_login`**, written once per teacher account on its first successful login — that is what tells the admin the password they generated and handed over actually worked. `User` gains a nullable `notifications_seen_at`; **run `backend/scripts/migrate_admin_notifications.py`** once against the shared database. No existing endpoint or field changed shape. |
 | 2026-08-25 | **`admin-007` — new material kind `reference`**, quotable like a textbook (it is in `LESSON_KINDS`; `assignment` still is not). Ingestion now accepts `.txt`, `.md` and `.docx` alongside `.pdf`/`.epub`/`.mobi`/`.fb2`, all reflowed to A4/11pt for stable page numbers. Upload and ingestion now read one shared list, fixing a real disagreement: `.txt`/`.md` were accepted on upload and then refused by the ingester, leaving files stored, pending and un-ingestable forever. **Links are deliberately not materials** — they go to `sourced_content` (`teacher-007`). Adds a `python-docx` dependency. |
 | 2026-08-25 | **`admin-006` — `DELETE /admin/materials/{id}`.** Archiving remains the normal path; this is the escape hatch for an upload mistake. Never-ingested material deletes freely; ingested material is `409 mid_term` while its course's `term_start`/`term_end` window contains today. There is deliberately **no** "refuse if cited" check — nothing in the schema persists a `chunk_id`, so no such check could be accurate. The source file is left on disk. |

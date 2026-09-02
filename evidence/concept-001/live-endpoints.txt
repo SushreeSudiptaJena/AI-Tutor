@@ -1,0 +1,111 @@
+=== concept-001 live verification -- 2026-09-02T05:23:58Z ===
+NOTE: the derivation pass is STILL RUNNING. These numbers are a snapshot
+      mid-run, which is itself the point: the endpoints must behave the
+      same at 40 concepts and at 400.
+
+--- 1. GET /admin/courses/5/concepts -- the split, without paging to the end ---
+  total: 46  by_source: {'seed': 15, 'derived': 31}  limit: 4
+    [seed   ] Python classes and objects                     Python foundations           (no pages -- hand-written)
+    [seed   ] Class inheritance in Python                    Python foundations           (no pages -- hand-written)
+    [seed   ] Virtual environments and package isolation     Python foundations           (no pages -- hand-written)
+    [seed   ] The HTTP request and response cycle            How the web works            (no pages -- hand-written)
+
+--- 2. ?source=derived -- what the book actually contains ---
+  total derived: 31
+    Django project and application distinction           p43-65  Django 5 By Example (Antonio
+      A Django project is the overall configuration while an application is a reusable component withi
+    Core Django components: models, templates, views,    p43-46  Django 5 By Example (Antonio
+      Django uses models, templates, views, and URLs as its main building blocks to handle data, prese
+    Installing Python packages with pip                  p47-50  Django 5 By Example (Antonio
+      pip is the package manager used to install Python modules, such as Django, into the active envir
+    Django MTV architectural pattern                     p47-50  Django 5 By Example (Antonio
+      The MTV pattern separates concerns into Model, Template, and View components, analogous to MVC.
+    Django project file structure                        p56-59  Django 5 By Example (Antonio
+      The Django project file structure defines the directories and files created by startproject, suc
+
+--- 3. THE GOLDEN PATH: the diagnostic's page one is untouched ---
+  total: 8  limit: 25  offset: 0  items on page one: 8
+     289  Virtual environments and package isolation     You activate a virtual environment and run `pip fr
+     290  Class inheritance in Python                    A subclass defines its own `__init__()` and never 
+     291  The HTTP request and response cycle            A user loads a page and then submits a form on it.
+     292  HTTP methods, GET and POST                     A form creates a new blog post when it is submitte
+     293  URL paths and routing                          A URL configuration lists `path('<slug:slug>/', po
+     294  Primary keys and foreign keys                  Which column makes the best primary key for a user
+     295  One-to-many relationships                      One author writes many posts. Which table carries 
+     296  Filtering and querying records                 A query filters a table by a condition that happen
+
+--- 4. GET /student/mastery -- has_more, and deliberately NO total ---
+  response keys: ['has_more', 'items', 'limit', 'offset']
+  has_more: True  limit: 5  offset: 0
+  no denominator in the response -- the anti-score stance survives pagination
+    Python foundations           Python classes and objects                     untested
+    Python foundations           Class inheritance in Python                    shaky
+    Python foundations           Virtual environments and package isolation     solid
+    How the web works            The HTTP request and response cycle            solid
+    How the web works            HTTP methods, GET and POST                     solid
+
+--- 5. page two is a different set of concepts, not the same one again ---
+" offset 0: "/usr/bin/bash: line 77: -H: command not found
+Traceback (most recent call last):
+  File "<string>", line 3, in <module>
+    d=json.load(sys.stdin)
+  File "C:\Python314\Lib\json\__init__.py", line 298, in load
+    return loads(fp.read(),
+        cls=cls, object_hook=object_hook,
+        parse_float=parse_float, parse_int=parse_int,
+        parse_constant=parse_constant, object_pairs_hook=object_pairs_hook, **kw)
+  File "C:\Python314\Lib\json\__init__.py", line 352, in loads
+    return _default_decoder.decode(s)
+           ~~~~~~~~~~~~~~~~~~~~~~~^^^
+  File "C:\Python314\Lib\json\decoder.py", line 345, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+               ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Python314\Lib\json\decoder.py", line 363, in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+" offset 5: "/usr/bin/bash: line 77: -H: command not found
+Traceback (most recent call last):
+  File "<string>", line 3, in <module>
+    d=json.load(sys.stdin)
+  File "C:\Python314\Lib\json\__init__.py", line 298, in load
+    return loads(fp.read(),
+        cls=cls, object_hook=object_hook,
+        parse_float=parse_float, parse_int=parse_int,
+        parse_constant=parse_constant, object_pairs_hook=object_pairs_hook, **kw)
+  File "C:\Python314\Lib\json\__init__.py", line 352, in loads
+    return _default_decoder.decode(s)
+           ~~~~~~~~~~~~~~~~~~~~~~~^^^
+  File "C:\Python314\Lib\json\decoder.py", line 345, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+               ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Python314\Lib\json\decoder.py", line 363, in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+" offset 10: "/usr/bin/bash: line 77: -H: command not found
+Traceback (most recent call last):
+  File "<string>", line 3, in <module>
+    d=json.load(sys.stdin)
+  File "C:\Python314\Lib\json\__init__.py", line 298, in load
+    return loads(fp.read(),
+        cls=cls, object_hook=object_hook,
+        parse_float=parse_float, parse_int=parse_int,
+        parse_constant=parse_constant, object_pairs_hook=object_pairs_hook, **kw)
+  File "C:\Python314\Lib\json\__init__.py", line 352, in loads
+    return _default_decoder.decode(s)
+           ~~~~~~~~~~~~~~~~~~~~~~~^^^
+  File "C:\Python314\Lib\json\decoder.py", line 345, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+               ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Python314\Lib\json\decoder.py", line 363, in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+
+--- 6. ?source=seed is the hand-written syllabus the demo shows ---
+  source=seed: 15 concepts across 5 topics, has_more=False
+  source=derived: 31 concepts across 1 topics, has_more=False
+
+--- 5. paging walks forward: each page is different concepts, not the same ones ---
+  offset 0   has_more=True  Python classes and obj | Class inheritance in P | Virtual environments a | The HTTP request and r | HTTP methods, GET and 
+  offset 5   has_more=True  HTML forms and input f | URL paths and routing | Primary keys and forei | One-to-many relationsh | Filtering and querying
+  offset 10  has_more=True  QuerySets and lazy eva | Custom model managers | Views and the request  | Template inheritance | Django forms and valid
+  offset 15  has_more=True  Django project and app | Core Django components | Installing Python pack | Django MTV architectur | Django project file st
