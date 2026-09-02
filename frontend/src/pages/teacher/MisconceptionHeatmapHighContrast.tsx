@@ -7,6 +7,7 @@
 import { useEffect, useState } from "react";
 import TeacherChrome from "./TeacherChrome";
 import { cached, getHeatmap, invalidateCache, type Heatmap } from "@/lib/api";
+import { setHandoff } from "./handoff";
 
 // Slower than the original 5s. The first paint comes from the session cache,
 // so the poll only has to catch a change -- it is not what fills the screen.
@@ -217,7 +218,12 @@ export default function MisconceptionHeatmapHighContrast() {
         <div className="lg:col-span-8 flex flex-col">
           <div className="bg-tertiary-fixed text-ink rounded-2xl shadow-[0_8px_60px_rgba(0,0,0,0.08)] overflow-hidden flex flex-col h-full">
             <div className="px-8 py-6 border-b border-tertiary-fixed-dim bg-tertiary-fixed-dim/20 flex items-center justify-between">
-              <h2 className="font-headline-lg text-headline-lg text-ink">Identified Mental Models</h2>
+              <div className="flex flex-col">
+                <h2 className="font-headline-lg text-headline-lg text-ink">Identified Mental Models</h2>
+                <p className="font-body-md text-body-md text-ink/70">
+                  Open one to see the reasoning behind it — real answers students gave.
+                </p>
+              </div>
               <div className="flex items-center gap-3 bg-surface-container-lowest/50 px-4 py-2 rounded-full border border-outline-variant/30">
                 <span className="material-symbols-outlined text-outline text-[18px]">filter_list</span>
                 <span className="font-label-sm text-label-sm text-ink">Sort by: Confirmed students (desc)</span>
@@ -233,9 +239,19 @@ export default function MisconceptionHeatmapHighContrast() {
               {items.map((it) => {
                 const b = band(it.share);
                 return (
-                  <div
+                  // Clicking a row opens the reasoning behind it. The row is
+                  // the natural place for that link: a teacher reading "18
+                  // students confirmed this" immediately wants to know what
+                  // they were thinking, and that is exactly the next panel.
+                  // data-path is what TeacherDashboard's delegated click
+                  // handler navigates on; the handoff carries WHICH one.
+                  <button
                     key={it.misconception_id}
-                    className="px-8 py-6 hover:bg-tertiary-fixed-dim/10 transition-colors group relative flex flex-col md:flex-row gap-6 items-start md:items-center"
+                    type="button"
+                    data-path="reasoning-path-breakdown"
+                    onClick={() => setHandoff("reasoning-path-breakdown", it.problem_type)}
+                    aria-label={`See the reasoning behind ${it.label}`}
+                    className="w-full text-left px-8 py-6 hover:bg-tertiary-fixed-dim/10 transition-colors group relative flex flex-col md:flex-row gap-6 items-start md:items-center cursor-pointer"
                   >
                     <div className={`absolute left-0 top-0 bottom-0 w-1 ${b.bar} opacity-100 group-hover:w-2 transition-all`}></div>
                     <div className="flex-1 flex flex-col gap-2 min-w-0 pr-4">
@@ -260,8 +276,11 @@ export default function MisconceptionHeatmapHighContrast() {
                       <div className="w-24 h-2 bg-ink/10 rounded-full overflow-hidden hidden md:block">
                         <div className={`${b.bar} h-full rounded-full`} style={{ width: `${(it.share / max) * 100}%` }}></div>
                       </div>
+                      <span className="material-symbols-outlined text-ink/40 group-hover:text-ink transition-colors">
+                        chevron_right
+                      </span>
                     </div>
-                  </div>
+                  </button>
                 );
               })}
             </div>

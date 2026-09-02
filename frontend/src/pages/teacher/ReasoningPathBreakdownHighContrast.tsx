@@ -14,6 +14,7 @@ import {
   type Heatmap,
   type ReasoningPathItem,
 } from "@/lib/api";
+import { takeHandoff } from "./handoff";
 
 export default function ReasoningPathBreakdownHighContrast() {
   const [heat, setHeat] = useState<Heatmap | null>(null);
@@ -27,7 +28,16 @@ export default function ReasoningPathBreakdownHighContrast() {
       .then((h) => {
         if (!alive) return;
         setHeat(h);
-        setSelected((cur) => cur ?? h.items[0]?.problem_type ?? null);
+        // A click on a heatmap row asked for THAT misconception's reasoning.
+        // Honoured only if the type is still in the live heatmap -- a stale
+        // handoff must not select something that no longer exists and leave
+        // the panel empty with no way back.
+        const asked = takeHandoff("reasoning-path-breakdown");
+        const available = new Set(h.items.map((i) => i.problem_type));
+        setSelected(
+          (cur) =>
+            cur ?? (asked && available.has(asked) ? asked : h.items[0]?.problem_type ?? null),
+        );
       })
       .catch(() => alive && setError("Could not load the problem types."));
     return () => {
