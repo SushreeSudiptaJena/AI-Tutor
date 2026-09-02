@@ -1,0 +1,40 @@
+=== concept-001: the prerequisite second read ===
+
+WHY THIS EXISTS. A wrong `prerequisite: true` is the expensive error: it becomes
+a question in a prerequisite diagnostic, the student gets it wrong, and the
+system tells them they have a gap from a course they already passed and sends a
+remedial lesson for material THIS course is about to teach. A wrong `false`
+costs one question out of many. So every `true` from the derivation gets a
+second, adversarial read, and a failure of that read returns False.
+
+WHAT THE FIRST TWO ATTEMPTS GOT WRONG, both found by running it:
+
+  1. The derivation was sending `subject = course.title` = "Computer Science
+     Workshop 2". The whole `false` rule is phrased "specific to {{subject}}",
+     so the model was being asked whether a concept is specific to a course
+     CODE. It now sends the BOOK's title, which names the technology.
+
+  2. The second read returned False for absolutely everything -- including
+     Python class inheritance, which is one of the hand-written prerequisites
+     this very course tests. That looked like a model refusing to say yes. It
+     was not: `prompts.render(name, **values)` takes `name` as its first
+     POSITIONAL parameter, and this prompt had a `{{name}}` placeholder, so
+     every call raised TypeError, was swallowed by the except, and returned
+     False. The placeholder is `{{concept}}` now, and the render moved OUTSIDE
+     the try -- a silent except around a call that can fail for programming
+     reasons hides the bug it is meant to survive.
+
+verdicts (the first four are the framework-specific traps, the rest are
+genuine prerequisites that a too-strict prompt was rejecting):
+
+  OK   expected=False got=False  Installing Django using pip
+  OK   expected=False got=False  Defining model field choices with TextChoices
+  OK   expected=False got=False  Django MTV architectural pattern
+  OK   expected=False got=False  Django project file structure
+  OK   expected=True  got=True   Class inheritance and method overriding
+  OK   expected=True  got=True   HTTP request methods
+  OK   expected=True  got=True   Installing packages with pip
+  OK   expected=True  got=True   Primary keys in a relational table
+  OK   expected=True  got=True   Python virtual environments
+
+  9/9 correct

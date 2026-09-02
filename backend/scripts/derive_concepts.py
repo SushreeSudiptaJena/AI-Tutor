@@ -146,6 +146,12 @@ SAME_SCHEMA = {
     "required": ["duplicate_of"],
 }
 
+PREREQ_SCHEMA = {
+    "type": "object",
+    "properties": {"prerequisite": {"type": "boolean"}},
+    "required": ["prerequisite"],
+}
+
 ITEM_SCHEMA = {
     "type": "object",
     "properties": {
@@ -201,6 +207,43 @@ def cosine(a: list[float], b: list[float]) -> float:
     na = sum(x * x for x in a) ** 0.5
     nb = sum(x * x for x in b) ** 0.5
     return dot / (na * nb) if na and nb else 0.0
+
+
+def confirm_prerequisite(name: str, summary: str | None, book: str,
+                         prerequisite_course: str) -> bool:
+    """A second, adversarial read of the rare `prerequisite: true` answers.
+
+    The first pass is noisy in one direction, and the two errors do not cost the
+    same. A wrong `true` becomes a question in a prerequisite diagnostic: the
+    student answers it wrong, and the system tells them they have a gap from a
+    course they already passed and sends a remedial lesson for material THIS
+    course is about to teach. That is the system being confidently wrong about
+    a student to their face. A wrong `false` costs one question out of many.
+
+    So this runs only on the `true` answers -- two of thirty-one in the first
+    chapter, so it is nearly free -- and **a failure returns False**. Defaulting
+    to the expensive error because a provider timed out would be the wrong way
+    round.
+    """
+    # Rendered OUTSIDE the try on purpose. The first version of this had the
+    # render inside it, and `prompts.render(name, **values)` takes `name` as its
+    # first POSITIONAL parameter -- so a `{{name}}` placeholder collided with it
+    # and every single call raised TypeError, was swallowed here, and returned
+    # False. The feature looked like a model that always said no. A silent
+    # except around a call that can fail for programming reasons hides the bug
+    # it is meant to survive; only the provider call belongs inside one.
+    prompt = prompts.render(
+        "prerequisite_check",
+        concept=name,
+        summary=summary or "",
+        book=book,
+        prerequisite_course=prerequisite_course,
+    )
+    try:
+        result = complete(prompt, json_schema=PREREQ_SCHEMA, max_tokens=80)
+        return bool(json.loads(result.text).get("prerequisite"))
+    except (AllProvidersFailed, json.JSONDecodeError, KeyError):
+        return False
 
 
 def duplicate_of(
@@ -318,7 +361,7 @@ def derive(
     taken_slugs = {c.slug for c in existing}
 
     topics: dict[str, Topic] = {}
-    added = merged = empty = failed = gated = 0
+    added = merged = empty = failed = gated = checked = overturned = 0
     seen_windows = 0
 
     current_chapter: str | None = None
@@ -356,7 +399,11 @@ def derive(
                     prerequisite_course=(
                         prereq.title if prereq else "an earlier programming course"
                     ),
-                    subject=course.title,
+                    # The BOOK, not the course title. The run that produced
+                    # the first false positives sent "Computer Science Workshop
+                    # 2", which says nothing about the technology the `false`
+                    # rule is phrased against.
+                    subject=material.title,
                 ),
                 json_schema=DERIVE_SCHEMA,
                 max_tokens=900,
@@ -379,6 +426,13 @@ def derive(
                 continue
             summary = str(item.get("summary", "")).strip() or None
             is_prereq = bool(item.get("prerequisite")) and prereq is not None
+            if is_prereq:
+                checked += 1
+                is_prereq = confirm_prerequisite(
+                    name, summary, material.title, prereq.title
+                )
+                if not is_prereq:
+                    overturned += 1
 
             vector = embed.embed_document(name)
             near = sorted(
@@ -446,6 +500,8 @@ def derive(
     log(f"  concepts added     {added}")
     log(f"  merged as dupes    {merged}")
     log(f"  decider calls      {gated}   (names the 0.75 gate flagged)")
+    log(f"  prereq claims      {checked}, of which {overturned} overturned on "
+        f"a second read")
     log(f"  windows with none  {empty}")
     log(f"  windows failed     {failed}")
     if dry_run:

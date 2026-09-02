@@ -357,7 +357,7 @@ def test_the_prerequisite_question_names_the_prior_course_and_the_subject():
 
 def test_the_derivation_supplies_both_placeholders(derive):
     source = _src(derive.derive)
-    assert "prerequisite_course=" in source and "subject=course.title" in source
+    assert "prerequisite_course=" in source and "subject=material.title" in source
 
 
 # ---------------------------------------------------------------------------
@@ -387,3 +387,60 @@ def test_a_reset_only_drops_topics_that_are_now_empty(derive):
     concept is orphaned."""
     source = _src(derive.reset_derived)
     assert "Concept.topic_id == t.id" in source
+
+
+# ---------------------------------------------------------------------------
+# The second read on prerequisite claims
+# ---------------------------------------------------------------------------
+
+def test_no_prompt_uses_a_placeholder_that_collides_with_render():
+    """`prompts.render(name, **values)` takes `name` as its first POSITIONAL
+    parameter. A prompt with a `{{name}}` placeholder makes every render raise
+    TypeError -- which, inside a try/except, becomes a silent wrong answer.
+    That is exactly what happened to the prerequisite check: it returned False
+    for every concept including Python class inheritance, and looked like a
+    model problem for two rounds of prompt rewriting."""
+    import inspect as _inspect
+
+    from app import prompts as prompts_mod
+
+    reserved = set(_inspect.signature(prompts_mod.render).parameters) - {"values"}
+    prompt_dir = Path(__file__).resolve().parents[2] / "prompts"
+    for path in prompt_dir.glob("*.md"):
+        used = set(prompts_mod.PLACEHOLDER.findall(path.read_text(encoding="utf-8")))
+        clash = used & reserved
+        assert not clash, f"{path.name} uses {clash}, which collides with render()"
+
+
+def test_the_second_read_defaults_to_rejecting_the_claim(derive):
+    """The two errors do not cost the same. A wrong `true` tells a student they
+    have a gap from a course they passed; a wrong `false` costs one question."""
+    source = _src(derive.confirm_prerequisite)
+    tail = source[source.index("except ("):]
+    assert "return False" in tail
+
+
+def test_the_render_is_outside_the_try(derive):
+    """A silent except around a call that can fail for programming reasons
+    hides the bug it is meant to survive."""
+    source = _src(derive.confirm_prerequisite)
+    assert source.index("prompts.render(") < source.index("try:")
+    # ...and TypeError is no longer swallowed. Checked on the except clause
+    # itself, since the comment above it necessarily names the bug.
+    clause = source[source.index("except ("):source.index("except (") + 120]
+    assert "TypeError" not in clause, "a TypeError here is a bug, not a provider failure"
+
+
+def test_every_prerequisite_claim_gets_the_second_read(derive):
+    source = _src(derive.derive)
+    assert "confirm_prerequisite(" in source
+    assert "overturned" in source, "the run must report how many it overturned"
+
+
+def test_the_subject_handed_to_the_model_is_the_book_not_the_course_code(derive):
+    """The false rule is phrased "specific to {{subject}}". Sending the course
+    title asked whether a concept is specific to "Computer Science Workshop 2",
+    which is a course code and says nothing about the technology."""
+    source = _src(derive.derive)
+    assert "subject=material.title" in source
+    assert "subject=course.title" not in source
