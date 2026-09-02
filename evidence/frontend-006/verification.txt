@@ -60,3 +60,26 @@
 
     The only <aside>/<header> a teacher now sees on Settings is TeacherChrome's,
     which is the same one every other panel renders.
+
+=== H. the visual pass -- confirmed by the owner, not by an automated check ===
+
+    2026-09-02. The Chrome extension was disconnected for this session, so the
+    two screens were never opened by the agent. The owner (Sushree) checked
+    them on the deployed service and confirmed both:
+
+      * the admin notification bell, and
+      * teacher Settings -- one navbar, undarkened, no theme toggle, no
+        account fields.
+
+    Recorded as owner confirmation, which is what it is. Everything ABOVE this
+    line is a machine check and re-runnable; this section is not. If the two
+    screens ever need re-verifying, they need eyes again, not a re-run.
+
+    Corroborating machine evidence from the live service the owner looked at
+    (evidence/admin-011/live-service.txt, commit 859233a):
+      * /assets/index-Cz64WNDU.js contains /admin/notifications,
+        teacher_first_login, "Mark all read" and "Open your profile", so the
+        shipped bundle is this code;
+      * POST /admin/notifications/read was exercised on the live service at
+        2026-09-02T04:19:41Z -- the read marker stuck, so the bell's one
+        mutating path worked in a real browser.
