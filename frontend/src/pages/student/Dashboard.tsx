@@ -447,9 +447,7 @@ function HomeView({
                       from {g.prerequisite_course} · detected by {g.detected_from.replace("_", " ")}
                     </p>
                   </div>
-                  <span className={`rounded-full px-sm py-xs text-label-sm font-bold ${STATUS_STYLES[g.status]}`}>
-                    {g.status}
-                  </span>
+                 
                 </li>
               ))}
               {gaps !== null && gaps.length === 0 && (
