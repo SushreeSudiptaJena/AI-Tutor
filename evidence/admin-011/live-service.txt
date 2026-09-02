@@ -1,0 +1,21 @@
+=== admin-011 + frontend-006 on the LIVE service -- 2026-09-02T04:22:54Z ===
+url: https://ai-tutor-80by.onrender.com   commit: 859233a
+
+--- the bell, live ---
+unread: 0  total: 107  seen_at: 2026-09-02T04:19:41.800857Z
+  [ ] teacher_first_login  Ravi Menon signed in for the first time (assigned to CS-C, CSE2631, CSW2, DLD)
+  [ ] audit                ravi@example.edu approved and assigned the reteach unit “Reteach: URL paths 
+  [ ] audit                ravi@example.edu drafted a reteach unit for “Reteach: URL paths and routing�
+
+--- the gate, live ---
+  teacher token : 403
+  no token      : 401
+
+--- the shipped bundle is the new one ---
+  /assets/index-Cz64WNDU.js
+    /admin/notifications     1
+    teacher_first_login      1
+    Mark all read            1
+    Open your profile        1
+
+note: nothing was marked read -- the badge is left as the admin will find it.
