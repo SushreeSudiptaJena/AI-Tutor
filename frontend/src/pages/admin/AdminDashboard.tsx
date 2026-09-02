@@ -13,7 +13,9 @@ import {
   listCourses,
   listDepartments,
   listMaterials,
+  listNotifications,
   logout,
+  markNotificationsRead,
   updateCourseTerm,
   updatePreferences,
   uploadMaterial,
@@ -21,6 +23,7 @@ import {
 import type {
   AuditRow,
   BatchDto,
+  NotificationRow,
   Course,
   Department,
   Material,
@@ -204,6 +207,142 @@ function Sidebar({ active, onSelect }: { active: TabKey; onSelect: (k: TabKey) =
   );
 }
 
+/**
+ * admin-011 -- the bell.
+ *
+ * It was a button with no handler for three sessions, which is worse than no
+ * bell: an affordance that does nothing teaches people the header is
+ * decorative. Both of its sources are audit rows, so this renders `summary`
+ * exactly as the Audit Log panel does and switches its icon on `kind` --
+ * never on the text of the sentence.
+ *
+ * The badge is the server's `unread`, which is counted over the whole table
+ * and deliberately excludes acts the signed-in admin performed themselves.
+ * Do not recompute it from `items`: this list is one page of many, and a
+ * badge that counts the page is a badge that says "8" forever.
+ */
+function NotificationBell({ onSelect }: { onSelect: (k: TabKey) => void }) {
+  const [open, setOpen] = useState(false);
+  const [rows, setRows] = useState<NotificationRow[]>([]);
+  const [unread, setUnread] = useState(0);
+  const [total, setTotal] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  function load() {
+    setLoading(true);
+    setError(null);
+    listNotifications(8)
+      .then((r) => {
+        setRows(r.items);
+        setUnread(r.unread);
+        setTotal(r.total);
+      })
+      .catch((err) => setError(errorText(err)))
+      .finally(() => setLoading(false));
+  }
+
+  useEffect(load, []);
+
+  async function markRead() {
+    // Optimistic, then reconciled: the server owns the marker, but a badge
+    // that lingers after you click "mark read" reads as a failed click.
+    setUnread(0);
+    setRows((prev) => prev.map((r) => ({ ...r, unread: false })));
+    try {
+      await markNotificationsRead();
+    } catch {
+      load();
+    }
+  }
+
+  return (
+    <div className="relative">
+      <button
+        onClick={() => {
+          const next = !open;
+          setOpen(next);
+          if (next) load(); // opening is the one moment the count must be true
+        }}
+        aria-label={`Notifications (${unread} unread)`}
+        aria-expanded={open}
+        className="relative text-on-surface-variant hover:text-tertiary transition-colors"
+      >
+        <Icon name="notifications" />
+        {unread > 0 && (
+          <span className="absolute -top-1.5 -right-1.5 min-w-[16px] h-4 px-1 bg-error text-on-surface rounded-full font-label-sm text-[10px] leading-none flex items-center justify-center">
+            {unread > 99 ? "99+" : unread}
+          </span>
+        )}
+      </button>
+
+      {open && (
+        <div className="absolute right-0 mt-3 w-[24rem] max-w-[calc(100vw-2rem)] ns-glass-panel rounded-xl p-4 z-50 shadow-xl">
+          <div className="flex items-center justify-between gap-4 mb-3">
+            <p className="font-label-sm text-label-sm uppercase tracking-widest text-on-surface-variant">
+              Notifications
+            </p>
+            {unread > 0 && (
+              <button
+                onClick={markRead}
+                className="font-label-sm text-label-sm text-tertiary hover:underline"
+              >
+                Mark all read
+              </button>
+            )}
+          </div>
+
+          <Panel
+            loading={loading}
+            error={error}
+            empty={!rows.length}
+            emptyText="Nothing has changed yet."
+          >
+            <ul className="divide-y divide-outline-variant/10 max-h-[20rem] overflow-y-auto -mx-1 px-1">
+              {rows.map((r) => (
+                <li key={r.id} className="py-2.5 flex items-start gap-3">
+                  <Icon
+                    name={r.kind === "teacher_first_login" ? "how_to_reg" : "history_edu"}
+                    className={`text-[18px] shrink-0 mt-0.5 ${
+                      r.unread ? "text-tertiary" : "text-on-surface-variant/60"
+                    }`}
+                  />
+                  <div className="min-w-0">
+                    <p
+                      className={`font-body-md text-body-md ${
+                        r.unread ? "text-on-surface" : "text-on-surface-variant"
+                      }`}
+                    >
+                      {r.summary}
+                    </p>
+                    <p className="font-label-sm text-label-sm text-on-surface-variant mt-0.5">
+                      {new Date(r.at).toLocaleString()}
+                      {/* Your own acts are listed but never counted. Saying so
+                          is what stops "why is this here and not in the badge". */}
+                      {r.by_you && " · by you"}
+                    </p>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </Panel>
+
+          <button
+            onClick={() => {
+              setOpen(false);
+              onSelect("audit");
+            }}
+            className="mt-3 font-label-md text-label-md text-tertiary hover:underline"
+          >
+            Open the audit log{total > rows.length ? ` (${total.toLocaleString()} entries)` : ""} →
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+
 function TopBar({
   title,
   user,
@@ -224,9 +363,7 @@ function TopBar({
         </div>
         <div className="w-px h-6 bg-outline-variant/30" />
         <div className="flex items-center gap-4">
-          <button className="text-on-surface-variant hover:text-tertiary transition-colors">
-            <Icon name="notifications" />
-          </button>
+          <NotificationBell onSelect={onSelect} />
           <div className="flex items-center gap-3 ml-2">
             {/* The signed-in admin, not a stand-in name. Clicking it opens
                 the profile -- this was the dead spot in the original mockup. */}

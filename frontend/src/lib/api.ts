@@ -354,6 +354,32 @@ export const listAuditLog = (opts: {
   return api<{ items: AuditRow[]; total: number }>(`/admin/audit-log?${q}`);
 };
 
+/**
+ * admin-011. The bell. Both sources are audit rows, so a NotificationRow is
+ * an AuditRow plus three derived fields -- render `summary` with whatever the
+ * audit log already uses and switch icons on `kind`, never on the sentence.
+ */
+export type NotificationRow = AuditRow & {
+  kind: "audit" | "teacher_first_login";
+  /** Newer than your last read AND not something you did yourself. */
+  unread: boolean;
+  by_you: boolean;
+};
+
+export const listNotifications = (limit = 20, offset = 0) =>
+  api<{
+    items: NotificationRow[];
+    /** Counted over the whole table, not this page, and never your own acts. */
+    unread: number;
+    seen_at: string | null;
+    total: number;
+  }>(`/admin/notifications?limit=${limit}&offset=${offset}`);
+
+export const markNotificationsRead = () =>
+  api<{ seen_at: string; unread: number }>("/admin/notifications/read", {
+    method: "POST",
+  });
+
 // --- admin: course management (admin-008 UI over admin-002/admin-005) ---
 
 /** POST /admin/courses -- prerequisite_course_ids is required by the contract,

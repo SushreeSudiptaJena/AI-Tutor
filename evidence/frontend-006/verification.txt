@@ -1,0 +1,62 @@
+=== frontend-006 verification -- 2026-09-02T04:15:19Z ===
+
+--- A. teacher Settings no longer paints a second shell ---
+  renders its own <aside>       : 1
+  renders its own <header> chrome: 0
+  bg-inverse-surface (the darkener): 0
+  wrapped in TeacherChrome        : 1
+  (for comparison, the other panels:)
+    DashboardOverviewHighContrast      aside=0 TeacherChrome=3
+    MisconceptionHeatmapHighContrast   aside=0 TeacherChrome=3
+    TeacherProfile                     aside=0 TeacherChrome=3
+
+--- B. the theme toggle is gone ---
+  theme-toggle-btn / theme-icon / 'Application Theme': 0
+
+--- C. profile information is out of Settings ---
+  'Account Information' heading   : 1
+  hardcoded persona / email       : 1
+  editable name/email inputs      : 0
+  points at the avatar's profile  : 1
+  the facts now live only in TeacherProfile.tsx:
+    50:    ["Name", me?.full_name ?? "…"],
+    51:    ["Email", me?.email ?? "…"],
+    52:    ["Role", "Educator"],
+
+--- D. what Settings keeps is live, not a mockup ---
+  32:  getLanguages,
+  34:  invalidateCache,
+  35:  updatePreferences,
+  56:    getLanguages()
+  69:      const updated = await updatePreferences(code);
+  73:      invalidateCache("me");
+
+--- E. the admin bell is wired ---
+  a button with no handler        : 0
+  16:  listNotifications,
+  18:  markNotificationsRead,
+  224:function NotificationBell({ onSelect }: { onSelect: (k: TabKey) => void }) {
+  235:    listNotifications(8)
+  253:      await markNotificationsRead();
+  366:          <NotificationBell onSelect={onSelect} />
+
+--- F. the built bundle really calls the new endpoints ---
+  /admin/notifications         in dist: 1
+  /admin/notifications/read    in dist: 1
+  teacher_first_login          in dist: 1
+
+--- G. build ---
+  tsc -b + vite build + check:utilities all green (191 token classes, all generated)
+
+--- A'/C' the three counts of 1 above are the file's own docstring, not markup.
+    Re-run against the CODE only (everything after the leading /** ... */):
+      <aside                           0
+      <header chrome                   0
+      bg-inverse-surface               0
+      'Account Information'            0
+      'Sarah Ascent' / district.edu    0
+      theme toggle                     0
+      TeacherChrome wrapper            1
+
+    The only <aside>/<header> a teacher now sees on Settings is TeacherChrome's,
+    which is the same one every other panel renders.
