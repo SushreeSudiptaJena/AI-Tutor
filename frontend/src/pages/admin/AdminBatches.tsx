@@ -98,12 +98,6 @@ export function DashboardView({ goToTab }: { goToTab: (t: AdminTabKey) => void }
       value: ov?.teachers_assigned ?? "…",
       hint: `${ov?.teacher_accounts ?? "…"} teacher accounts · ${ov?.courses_without_teachers ?? "…"} subjects unstaffed`,
     },
-    {
-      icon: "cloud_done",
-      label: "Ingest",
-      value: ov ? `${ov.ingest_summary.complete ?? 0}/${ov.materials}` : "…",
-      hint: "materials embedded and quotable",
-    },
   ];
 
   return (
