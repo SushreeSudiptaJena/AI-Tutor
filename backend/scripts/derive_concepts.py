@@ -362,6 +362,7 @@ def derive(
 
     topics: dict[str, Topic] = {}
     added = merged = empty = failed = gated = checked = overturned = 0
+    mocked = 0
     seen_windows = 0
 
     current_chapter: str | None = None
@@ -406,8 +407,22 @@ def derive(
                     subject=material.title,
                 ),
                 json_schema=DERIVE_SCHEMA,
-                max_tokens=900,
+                # 900 was enough for groq and NOT for glm-coding, which spends
+                # tokens reasoning before it answers and failed with "empty
+                # response after reasoning tokens". That made the last real
+                # provider in the chain unusable exactly when the free tiers
+                # were rate-limited and it was the only one left.
+                max_tokens=4000,
             )
+            # THE MOCK PROVIDER MUST NEVER WRITE A CONCEPT. When every real
+            # vendor is rate-limited the chain ends at `mock`, which answers
+            # with a placeholder -- and that answer was both written to the
+            # database as syllabus and CACHED, so every later run replayed the
+            # junk offline. models.py already says the mock must never assert
+            # subject matter; this is that rule applied to derivation.
+            if result.provider == "mock":
+                mocked += 1
+                continue
             parsed = json.loads(result.text).get("concepts") or []
         except (AllProvidersFailed, json.JSONDecodeError, TypeError, KeyError) as exc:
             # One bad window must not cost the other 241. The corpus is not
@@ -504,6 +519,9 @@ def derive(
         f"a second read")
     log(f"  windows with none  {empty}")
     log(f"  windows failed     {failed}")
+    if mocked:
+        log(f"  windows MOCKED     {mocked}   <- every real provider was rate-"
+            f"limited; re-run when quota resets, nothing was written for these")
     if dry_run:
         log("\n  --dry-run: nothing was written.")
     return 0

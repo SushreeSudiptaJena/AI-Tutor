@@ -444,3 +444,22 @@ def test_the_subject_handed_to_the_model_is_the_book_not_the_course_code(derive)
     source = _src(derive.derive)
     assert "subject=material.title" in source
     assert "subject=course.title" not in source
+
+
+def test_the_mock_provider_can_never_write_a_concept(derive):
+    """When every real vendor is rate-limited the chain ends at `mock`, which
+    answers with a placeholder. That answer was being written to the database
+    as syllabus AND cached, so later runs replayed the junk offline. models.py
+    already forbids the mock asserting subject matter."""
+    source = _src(derive.derive)
+    assert 'result.provider == "mock"' in source
+    guard = source[source.index('result.provider == "mock"'):]
+    assert "continue" in guard[:200]
+
+
+def test_the_derive_call_leaves_room_for_reasoning_tokens(derive):
+    """900 was enough for groq and not for glm-coding, which failed with
+    'empty response after reasoning tokens' -- making the last real provider
+    unusable exactly when the free tiers were rate-limited."""
+    source = _src(derive.derive)
+    assert "max_tokens=4000" in source
