@@ -1,4 +1,4 @@
-@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=EB+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500;1,600&family=Courier+Prime:ital,wght@0,400;0,700;1,400&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&family=EB+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500;1,600&family=Courier+Prime:ital,wght@0,400;0,700;1,400&display=swap");
 @import url("https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0");
 @import "tailwindcss";
 
@@ -48,17 +48,17 @@
   --color-on-error-container: #8a3216;
   --color-tertiary: #e4552b;
   --color-on-tertiary-container: #8a3216;
-  --font-family-display-lg: "Inter", "Helvetica Neue", Arial, sans-serif;
-  --font-family-headline-lg: "Inter", "Helvetica Neue", Arial, sans-serif;
-  --font-family-headline-md: "Inter", "Helvetica Neue", Arial, sans-serif;
-  --font-family-headline-sm: "Inter", "Helvetica Neue", Arial, sans-serif;
-  --font-family-body-md: "Inter", "Helvetica Neue", Arial, sans-serif;
-  --font-family-body-lg: "Inter", "Helvetica Neue", Arial, sans-serif;
-  --font-family-body-sm: "Inter", "Helvetica Neue", Arial, sans-serif;
+  --font-family-display-lg: "Manrope", "Inter", "Helvetica Neue", Arial, sans-serif;
+  --font-family-headline-lg: "Manrope", "Inter", "Helvetica Neue", Arial, sans-serif;
+  --font-family-headline-md: "Manrope", "Inter", "Helvetica Neue", Arial, sans-serif;
+  --font-family-headline-sm: "Manrope", "Inter", "Helvetica Neue", Arial, sans-serif;
+  --font-family-body-md: "Manrope", "Inter", "Helvetica Neue", Arial, sans-serif;
+  --font-family-body-lg: "Manrope", "Inter", "Helvetica Neue", Arial, sans-serif;
+  --font-family-body-sm: "Manrope", "Inter", "Helvetica Neue", Arial, sans-serif;
   --font-family-label-md: "Courier Prime", "Courier New", monospace;
   --font-family-label-sm: "Courier Prime", "Courier New", monospace;
   --font-family-serif: "EB Garamond", Georgia, serif;
-  --font-sans: "Inter", "Helvetica Neue", Arial, sans-serif;
+  --font-sans: "Manrope", "Inter", "Helvetica Neue", Arial, sans-serif;
   --font-serif: "EB Garamond", Georgia, serif;
   --spacing-xs: 8px;
   --spacing-sm: 16px;
@@ -109,7 +109,7 @@
   --text-headline-lg-mobile--line-height: 36px;
   --text-label-lg: 15px;
   --text-label-lg--line-height: 20px;
-  --font-headline-lg-mobile: "Inter", "Helvetica Neue", Arial, sans-serif;
+  --font-headline-lg-mobile: "Manrope", "Inter", "Helvetica Neue", Arial, sans-serif;
   --font-label-lg: "Courier Prime", "Courier New", monospace;
 
   /* Admin-surface layout tokens. Same rule as the teacher block below, and
@@ -127,11 +127,11 @@
      declaration there is no `font-title-md` utility at all, so those card
      headings were rendering at body size (16px instead of 18px) -- which
      reads as "the spacing is off" long before anyone suspects the font. */
-  --font-headline-lg: "Inter", "Helvetica Neue", Arial, sans-serif;
-  --font-headline-sm: "Inter", "Helvetica Neue", Arial, sans-serif;
-  --font-body-lg: "Inter", "Helvetica Neue", Arial, sans-serif;
-  --font-title-md: "Inter", "Helvetica Neue", Arial, sans-serif;
-  --font-body-sm: "Inter", "Helvetica Neue", Arial, sans-serif;
+  --font-headline-lg: "Manrope", "Inter", "Helvetica Neue", Arial, sans-serif;
+  --font-headline-sm: "Manrope", "Inter", "Helvetica Neue", Arial, sans-serif;
+  --font-body-lg: "Manrope", "Inter", "Helvetica Neue", Arial, sans-serif;
+  --font-title-md: "Manrope", "Inter", "Helvetica Neue", Arial, sans-serif;
+  --font-body-sm: "Manrope", "Inter", "Helvetica Neue", Arial, sans-serif;
   --text-title-md: 18px;
   --text-title-md--line-height: 26px;
 
@@ -258,7 +258,7 @@
   --line: rgba(43, 41, 38, 0.16);
   --lift: 0 10px 22px -14px rgba(43, 41, 38, 0.28);
   --lift-sm: 0 6px 14px -10px rgba(43, 41, 38, 0.24);
-  --font-sans: "Inter", "Helvetica Neue", Arial, sans-serif;
+  --font-sans: "Manrope", "Inter", "Helvetica Neue", Arial, sans-serif;
   --font-serif: "EB Garamond", Georgia, "Times New Roman", serif;
   --font-mono: "Courier Prime", "Courier New", ui-monospace, monospace;
 }
@@ -303,6 +303,12 @@ a:focus-visible, button:focus-visible, input:focus-visible { outline: 2px solid 
 
 .admin-scope {
 
+  --font-sans: "Manrope", "Inter", "Helvetica Neue", Arial, sans-serif;
+  --font-headline-lg: "Manrope", "Inter", "Helvetica Neue", Arial, sans-serif;
+  --font-headline-sm: "Manrope", "Inter", "Helvetica Neue", Arial, sans-serif;
+  --font-body-lg: "Manrope", "Inter", "Helvetica Neue", Arial, sans-serif;
+  --font-title-md: "Manrope", "Inter", "Helvetica Neue", Arial, sans-serif;
+  --font-body-sm: "Manrope", "Inter", "Helvetica Neue", Arial, sans-serif;
 
   --spacing-unit: 8px;
   --spacing-card-inner-padding: 24px;
