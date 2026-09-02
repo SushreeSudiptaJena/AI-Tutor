@@ -13,7 +13,6 @@ import {
   LayoutDashboard,
   MessageCircle,
   Play,
-  Search,
   Settings as SettingsIcon,
   XCircle,
 } from "lucide-react";
@@ -689,19 +688,26 @@ function MyCourseView() {
  * ------------------------------------------------------------------------- */
 function DiagnosticView({ goto }: { goto: (s: Section) => void }) {
   const [diag, setDiag] = useState<DiagnosticDto | null>(null);
+  const [courseSummary, setCourseSummary] = useState<any>(null);
   const [answers, setAnswers] = useState<Record<number, string>>({});
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const [result, setResult] = useState<{ message: string; count: number } | null>(null);
+  const [result, setResult] = useState<{ message: string; count: number; gaps: Gap[] } | null>(null);
+  const [startQuiz, setStartQuiz] = useState(false);
 
   useEffect(() => {
-    cached("diagnostic", getDiagnostic)
-      .then((d) => {
+    Promise.all([
+      cached("diagnostic", getDiagnostic),
+      cached("course_summary", getCourseSummary)
+    ])
+      .then(([d, cs]) => {
         setDiag(d);
-        // Resume: pre-select exactly what the student already picked.
+        setCourseSummary(cs);
         const prior: Record<number, string> = {};
         for (const it of d.items) if (it.your_answer) prior[it.id] = it.your_answer;
         setAnswers(prior);
+        // If already submitted, show results
+        if (d.submitted_at) setStartQuiz(true);
       })
       .catch((err) => setError(errorText(err)));
   }, []);
@@ -716,14 +722,126 @@ function DiagnosticView({ goto }: { goto: (s: Section) => void }) {
         answer,
       }));
       const r = await submitDiagnostic(diag.diagnostic_id, payload);
-      // perf-002: the submit changes what every read key below returns.
       invalidateCache("diagnostic", "gaps", "mastery");
-      setResult({ message: r.message, count: r.gaps.filter((g) => g.status === "open").length });
+      setResult({ 
+        message: r.message, 
+        count: r.gaps.filter((g) => g.status === "open").length,
+        gaps: r.gaps
+      });
     } catch (err) {
       setError(errorText(err));
     } finally {
       setBusy(false);
     }
+  }
+
+  if (!startQuiz && diag && !result) {
+    // Show prerequisites before quiz
+    return (
+      <div className="p-lg">
+        <h1 className="mb-xs text-headline-lg font-bold text-on-background">
+          Prerequisite Check for {courseSummary?.title || "Your Course"}
+        </h1>
+        <p className="mb-lg text-body-md text-on-surface-variant">
+          Before you dive into this course, let's verify you have the foundational knowledge you'll need.
+        </p>
+
+        <div className="mb-lg rounded-xl border border-secondary/40 bg-secondary/10 p-md">
+          <p className="mb-md text-body-md font-semibold text-on-surface">
+            This course requires solid knowledge of:
+          </p>
+          <ul className="space-y-xs">
+            {diag.items.slice(0, 5).map((item) => (
+              <li key={item.id} className="flex items-start gap-sm text-body-sm text-on-surface">
+                <span className="text-secondary">•</span>
+                <span><strong>{item.concept || "General concept"}</strong> — {item.prompt.substring(0, 80)}...</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        <button
+          onClick={() => setStartQuiz(true)}
+          className="rounded-lg bg-forest-green px-lg py-sm text-body-md font-bold text-white hover:bg-forest-light"
+        >
+          Start Diagnostic Quiz
+        </button>
+      </div>
+    );
+  }
+
+  if (result) {
+    // Show diagnostic report with gaps mapped to Gaps page
+    const openGaps = result.gaps.filter((g) => g.status === "open");
+    const improvingGaps = result.gaps.filter((g) => g.status === "improving");
+    const closedGaps = result.gaps.filter((g) => g.status === "closed");
+
+    return (
+      <div className="p-lg">
+        <h1 className="mb-xs text-headline-lg font-bold text-on-background">Your Diagnostic Results</h1>
+        <p className="mb-md text-body-md text-on-surface-variant">{result.message}</p>
+
+        {openGaps.length > 0 && (
+          <div className="mb-lg rounded-xl border border-error/30 bg-error/5 p-md">
+            <h2 className="mb-sm flex items-center gap-sm text-headline-md font-semibold text-on-surface">
+              <AlertTriangle className="h-5 w-5 text-error" />
+              {openGaps.length} Gap{openGaps.length !== 1 ? "s" : ""} Found
+            </h2>
+            <p className="mb-md text-body-sm text-on-surface-variant">
+              These prerequisites need attention before starting this course:
+            </p>
+            <ul className="space-y-xs">
+              {openGaps.map((g) => (
+                <li key={g.id} className="flex items-center justify-between rounded-lg bg-card p-sm">
+                  <span className="text-body-sm text-on-surface">
+                    <strong>{g.concept}</strong> — from {g.prerequisite_course}
+                  </span>
+                  <button
+                    onClick={() => {
+                      setResult(null);
+                      goto("My Gaps");
+                    }}
+                    className="text-label-sm font-bold text-forest-green hover:underline"
+                  >
+                    Fix gap →
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {closedGaps.length > 0 && (
+          <div className="mb-lg rounded-xl border border-secondary/30 bg-secondary/5 p-md">
+            <h2 className="mb-sm flex items-center gap-sm text-headline-md font-semibold text-on-surface">
+              <CheckCircle className="h-5 w-5 text-secondary" />
+              {closedGaps.length} Skill{closedGaps.length !== 1 ? "s" : ""} Already Strong
+            </h2>
+            <p className="text-body-sm text-on-surface-variant">You're well-prepared in these areas.</p>
+          </div>
+        )}
+
+        <div className="flex gap-sm">
+          <button
+            className="rounded-lg bg-forest-green px-lg py-sm text-label-md font-bold text-white hover:bg-forest-light"
+            onClick={() => {
+              setResult(null);
+              goto("My Gaps");
+            }}
+            type="button"
+          >
+            Review My Gaps
+          </button>
+          <button
+            className="rounded-lg border border-outline-variant px-lg py-sm text-label-md font-bold text-on-surface hover:bg-surface-container"
+            onClick={() => setResult(null)}
+            type="button"
+          >
+            Review Answers
+          </button>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -733,28 +851,6 @@ function DiagnosticView({ goto }: { goto: (s: Section) => void }) {
         No score, no grade — this only finds the prerequisites you might want to revisit before
         they cause trouble.
       </p>
-
-      {result && (
-        <div className="mb-md rounded-xl border border-secondary/40 bg-secondary/10 p-md">
-          <p className="text-body-md font-semibold text-on-surface">{result.message}</p>
-          <div className="mt-sm flex gap-sm">
-            <button
-              className="rounded-lg bg-forest-green px-md py-xs text-label-md font-bold text-white hover:bg-forest-light"
-              onClick={() => goto("My Gaps")}
-              type="button"
-            >
-              See my gaps
-            </button>
-            <button
-              className="rounded-lg border border-outline-variant px-md py-xs text-label-md font-bold text-on-surface hover:bg-surface-container"
-              onClick={() => setResult(null)}
-              type="button"
-            >
-              Review answers
-            </button>
-          </div>
-        </div>
-      )}
 
       <States loading={!diag && !error} error={error} empty={!diag?.items.length} emptyText="No diagnostic available for your course.">
         {diag && (
@@ -1633,16 +1729,7 @@ export default function Dashboard() {
       {/* Main application area */}
       <div className="w-full pl-[240px]">
         {/* Top header */}
-        <header className="fixed left-[240px] right-0 top-0 z-40 flex h-16 items-center justify-between border-b border-outline-variant bg-surface/80 px-lg backdrop-blur-xl">
-          <div className="flex w-96 items-center rounded-full bg-surface-container px-md py-xs">
-            <Search className="mr-xs h-5 w-5 text-on-surface-variant" />
-            <input
-              type="text"
-              placeholder="Search lessons, gaps..."
-              className="w-full border-none bg-transparent text-body-sm outline-none"
-            />
-          </div>
-
+        <header className="fixed left-[240px] right-0 top-0 z-40 flex h-16 items-center justify-end border-b border-outline-variant bg-surface/80 px-lg backdrop-blur-xl">
           <button
             type="button"
             onClick={() => setActiveSection("Profile")}
