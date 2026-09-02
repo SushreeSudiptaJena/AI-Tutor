@@ -56,6 +56,9 @@ from ..deps import admin_only
 from ..services import ingest
 from ..models import AuditLog, Batch, Chunk, Course, Department, Material, ReteachUnit, User
 from ..schemas import CourseIn, CourseTermIn, DepartmentIn
+# The one place the verb is spelled. auth.py writes the row, this file reads
+# it; two literals in two files is how a filter silently stops matching.
+from .auth import FIRST_LOGIN_ACTION
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
@@ -658,6 +661,15 @@ def _audit_summary(row, actor_email: str | None, titles: dict[str, str]) -> str:
 
     detail = row.detail if isinstance(row.detail, dict) else {}
 
+    if row.action == FIRST_LOGIN_ACTION:
+        # "signed in" takes no object, and the actor IS the subject. Running
+        # this through the generic path below produces "priya@x.edu signed in
+        # for the first time “Priya Sharma” (since removed)", which reads as
+        # a bug rather than as a sentence.
+        codes = [str(c) for c in (detail.get("courses") or [])]
+        where = f" (assigned to {', '.join(codes)})" if codes else ""
+        return f"{detail.get('name') or who} signed in for the first time{where}"
+
     if name:
         what = f"“{name}”"
     elif target.startswith("course:"):
@@ -763,4 +775,147 @@ def audit_log(
             for r in rows
         ],
         "total": total,
+    }
+
+
+# ---------------------------------------------------------------------------
+# admin-011 -- the notification bell
+# ---------------------------------------------------------------------------
+
+# There is no notifications table, and there should not be one. Every event
+# worth a notification here is already an audit row written by the act itself,
+# so a second store would be a copy that can disagree with the original -- and
+# the one it would disagree with is the one an admin trusts. This endpoint is a
+# read over `audit_log` with two derived fields on top.
+#
+# The two sources, both audit rows:
+#   * governance changes -- uploads, deletions, course and cohort edits,
+#     teacher assignment, reteach approvals; and
+#   * `teacher.first_login`, written once per teacher by auth.py, which is how
+#     an admin learns the password they generated and handed over worked.
+
+MAX_NOTIFICATIONS = 100
+
+
+def _notifications_base():
+    """Rows eligible to be a notification.
+
+    `seed.run` is excluded for the same reason `admin-004` hides it from the
+    audit log -- it is a developer script's output -- and there is deliberately
+    no `?include_system=` here: a notification about a re-seed is not a
+    notification. The audit log remains the place to see everything.
+    """
+    return select(AuditLog).where(AuditLog.action.notin_(SYSTEM_ACTIONS))
+
+
+@router.get("/notifications")
+def notifications(
+    limit: int = 20,
+    offset: int = 0,
+    db: OrmSession = Depends(get_db),
+    user: User = Depends(admin_only),
+) -> dict:
+    """What the admin has not seen yet, newest first.
+
+    Every field but `kind`, `unread` and `by_you` is the audit row unchanged,
+    `summary` included -- a client that already renders the audit log renders
+    this with no second formatter.
+
+    **`unread` deliberately does not count the admin's own actions.** An admin
+    who uploads a textbook does not need to be told they uploaded a textbook,
+    and counting it leaves the badge permanently lit, which is a badge that
+    means nothing. The row is still listed -- it is history -- it just does not
+    ring. The count is over the whole table, not over this page: a bell that
+    says "3" because you asked for 3 rows is lying.
+    """
+    limit = max(1, min(limit, MAX_NOTIFICATIONS))
+    offset = max(0, offset)
+
+    seen_at = user.notifications_seen_at
+
+    total = int(db.scalar(
+        select(func.count()).select_from(_notifications_base().subquery())
+    ) or 0)
+
+    # `is_distinct_from` rather than `!=`: a row with a null actor (a system
+    # write with nobody attached) is not "mine", and `actor_id != 3` is NULL --
+    # therefore false -- for exactly those rows, which would silently drop them
+    # from the count.
+    unread_stmt = (
+        select(func.count())
+        .select_from(AuditLog)
+        .where(AuditLog.action.notin_(SYSTEM_ACTIONS),
+               AuditLog.actor_id.is_distinct_from(user.id))
+    )
+    if seen_at is not None:
+        unread_stmt = unread_stmt.where(AuditLog.at > seen_at)
+    unread_count = int(db.scalar(unread_stmt) or 0)
+
+    rows = db.scalars(
+        _notifications_base()
+        .order_by(AuditLog.at.desc(), AuditLog.id.desc())
+        .limit(limit)
+        .offset(offset)
+    ).all()
+
+    actors = {
+        u.id: u.email
+        for u in db.scalars(
+            select(User).where(User.id.in_([r.actor_id for r in rows if r.actor_id]
+                                           or [-1]))
+        ).all()
+    }
+    titles = _audit_titles(db, rows)
+
+    def _is_unread(r) -> bool:
+        if r.actor_id == user.id:
+            return False
+        if seen_at is None:
+            return True
+        return bool(r.at and r.at > seen_at)
+
+    return {
+        "items": [
+            {
+                "id": r.id,
+                # Switch icons on this, not on string-matching `summary`.
+                "kind": ("teacher_first_login"
+                         if r.action == FIRST_LOGIN_ACTION else "audit"),
+                "actor_email": actors.get(r.actor_id),
+                "action": r.action,
+                "target": r.target,
+                "at": r.at.isoformat().replace("+00:00", "Z") if r.at else None,
+                "detail": r.detail,
+                "summary": _audit_summary(r, actors.get(r.actor_id), titles),
+                "unread": _is_unread(r),
+                "by_you": r.actor_id == user.id,
+            }
+            for r in rows
+        ],
+        "unread": unread_count,
+        "seen_at": (seen_at.isoformat().replace("+00:00", "Z")
+                    if seen_at else None),
+        "total": total,
+    }
+
+
+@router.post("/notifications/read")
+def notifications_read(
+    db: OrmSession = Depends(get_db),
+    user: User = Depends(admin_only),
+) -> dict:
+    """Dismiss the bell: everything up to now counts as seen.
+
+    The marker is read from the DATABASE clock, not this process's clock. Every
+    `audit_log.at` is a `server_default=func.now()` stamp, so a marker taken
+    from a laptop running a few seconds fast would mark rows read that had not
+    been written yet -- and they would never ring. One extra round trip, on an
+    action that happens when a human clicks a bell.
+    """
+    now = db.scalar(select(func.now()))
+    user.notifications_seen_at = now
+    db.flush()
+    return {
+        "seen_at": now.isoformat().replace("+00:00", "Z") if now else None,
+        "unread": 0,
     }

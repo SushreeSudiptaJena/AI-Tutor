@@ -1,0 +1,10 @@
+before:
+    notifications_seen_at    MISSING
+
+running:
+    add notifications_seen_at
+
+after:
+    notifications_seen_at    TIMESTAMP                  NULL ok
+
+migration OK

@@ -1,0 +1,134 @@
+=== admin-011 live verification -- 2026-09-02T04:01:12Z ===
+backend: local uvicorn on :8021 against the shared Neon database
+
+--- 1. admin logs in ---
+token issued for admin@example.edu / role admin
+
+--- 2. GET /admin/notifications BEFORE any teacher has logged in ---
+{
+    "items": [
+        {
+            "id": 146,
+            "kind": "audit",
+            "actor_email": "ravi@example.edu",
+            "action": "reteach.approve",
+            "target": "reteach:62",
+            "at": "2026-09-01T19:57:06.561325Z",
+            "detail": {
+                "title": "Reteach: URL paths and routing"
+            },
+            "summary": "ravi@example.edu approved and assigned the reteach unit \u00e2\u20ac\u0153Reteach: URL paths and routing\u00e2\u20ac\udc9d",
+            "unread": true,
+            "by_you": false
+        },
+        {
+            "id": 145,
+            "kind": "audit",
+            "actor_email": "ravi@example.edu",
+            "action": "reteach.suggest",
+            "target": "reteach:62",
+            "at": "2026-09-01T19:55:59.509608Z",
+            "detail": {
+                "concept": "url-routing"
+            },
+            "summary": "ravi@example.edu drafted a reteach unit for \u00e2\u20ac\u0153Reteach: URL paths and routing\u00e2\u20ac\udc9d",
+            "unread": true,
+            "by_you": false
+        },
+        {
+            "id": 144,
+            "kind": "audit",
+            "actor_email": "ravi@example.edu",
+            "action": "reteach.suggest",
+            "target": "reteach:61",
+            "at": "2026-09-01T19:55:59.509608Z",
+            "detail": {
+                "concept": "virtual-environments"
+            },
+            "summary": "ravi@example.edu drafted a reteach unit for \u00e2\u20ac\u0153Introducing Python Virtual Environments\u00e2\u20ac\udc9d",
+            "unread": true,
+            "by_you": false
+        }
+    ],
+    "unread": 52,
+    "seen_at": null,
+    "total": 106
+}
+
+--- 3. the assigned teacher logs in for the first time ---
+logged in: ravi@example.edu / role teacher
+
+--- 4. the admin's bell now carries it, at the top, unread ---
+unread: 53  total: 107  seen_at: None
+{
+  "id": 147,
+  "kind": "teacher_first_login",
+  "actor_email": "ravi@example.edu",
+  "action": "teacher.first_login",
+  "target": "user:2",
+  "at": "2026-09-02T04:01:28.255737Z",
+  "detail": {
+    "email": "ravi@example.edu",
+    "name": "Ravi Menon",
+    "courses": [
+      "CS-C",
+      "CSE2631",
+      "CSW2",
+      "DLD"
+    ]
+  },
+  "summary": "Ravi Menon signed in for the first time (assigned to CS-C, CSE2631, CSW2, DLD)",
+  "unread": true,
+  "by_you": false
+}
+{
+  "id": 146,
+  "kind": "audit",
+  "actor_email": "ravi@example.edu",
+  "action": "reteach.approve",
+  "target": "reteach:62",
+  "at": "2026-09-01T19:57:06.561325Z",
+  "detail": {
+    "title": "Reteach: URL paths and routing"
+  },
+  "summary": "ravi@example.edu approved and assigned the reteach unit “Reteach: URL paths and routing”",
+  "unread": true,
+  "by_you": false
+}
+
+--- 5. the same teacher logs in AGAIN -- it must not fire twice ---
+teacher.first_login rows after TWO logins: 1
+  Ravi Menon signed in for the first time (assigned to CS-C, CSE2631, CSW2, DLD)
+
+--- 6. a STUDENT login records nothing: this is not a login log ---
+first_login rows after a student login: 1
+
+--- 7. the bell is admin-only ---
+teacher token -> GET /admin/notifications : 403
+no token      -> GET /admin/notifications : 401
+
+--- 8. POST /admin/notifications/read ---
+{
+    "seen_at": "2026-09-02T04:01:49.907117Z",
+    "unread": 0
+}
+
+--- 9. and the badge is now clear, per row as well as in total ---
+unread: 0  total: 107  seen_at: 2026-09-02T04:01:49.907117Z
+  False False | Ravi Menon signed in for the first time (assigned to CS-C, CSE2631, CS
+  False False | ravi@example.edu approved and assigned the reteach unit “Reteach: UR
+  False False | ravi@example.edu drafted a reteach unit for “Reteach: URL paths and 
+
+--- 10. why unread (52) was smaller than total (106): your own acts are listed, not rung ---
+    notifiable rows        107
+    ...performed by me     54   (listed, by_you=true, never counted)
+    ...performed by others 53   <- this is what the badge counts when seen_at is null
+    seed.run rows excluded 36   (visible in the audit log with ?include_system=true)
+
+--- 11. clear the read marker: the badge must come back, not stay clear ---
+    notifications_seen_at was: 2026-09-02 04:01:49.907117+00:00
+    reset to NULL (its state before this run, so the demo opens with a live badge)
+    unread: 53  seen_at: None
+    top: teacher_first_login | Ravi Menon signed in for the first time (assigned to CS-C, CSE2631, CSW2, DLD)
+
+=== end ===

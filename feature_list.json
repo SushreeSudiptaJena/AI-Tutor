@@ -1256,6 +1256,73 @@
       ],
       "evidence": "evidence/tutor-003/verification.txt",
       "notes": "The point people get wrong: this is NOT conversational memory, and it is deliberately not. Nothing is carried into the answer prompt. One extra LLM call resolves the pronoun into a standalone question and the existing pipeline then runs completely unchanged.\n\nThat ordering -- rewrite BEFORE guardrail/retrieval/evidence -- is the whole design and must not be moved. All three of those measure the question text. Stuffing history into the answer prompt instead would change what the alignment score describes and what the graded-work guardrail inspects; a follow-up that resolves into 'write my assignment' has to still be caught. Resolve first and all three keep measuring exactly what they measure today.\n\nThree cost/safety properties worth keeping: _needs_context() is a pure string test so a self-contained question costs nothing (not even a query); every failure returns the original so the worst case is today's behaviour; and history comes from the existing tutor_messages rows, so there is NO schema change to apply to the deployed database.\n\nMAX_GROWTH_CHARS guards the one failure that actually changes the answer -- a rewrite that invents subject matter the student never asked about. Length is a blunt proxy but it is the right direction: filling in a noun is short, hallucinating a topic is long.\n\nFrontend has NOT been updated. resolved_question is additive and optional, so the chat works today without it, but the UI should render 'answering: <resolved>' so a wrong rewrite is visible rather than silent. frontend/src/pages/student/Dashboard.tsx is person 2's file -- tell them.\n\nCLOSED 2026-08-27 on the live service. The numbers that matter: a follow-up now scores 81-86% alignment, like the question it MEANS, because the evidence check is handed the resolved text. Latency for the rewrite is inside the normal answer time (9.3s unrewritten vs 10.5s rewritten, cold cache), so the extra call is not what a student notices."
+    },
+    {
+      "id": "student-011",
+      "priority": 58,
+      "area": "student",
+      "title": "Diagnostic shows how many times it has been taken, and when",
+      "user_visible_behavior": "After submitting the diagnostic, the page shows the student how many times they have taken it and the date/time of the most recent submission, instead of giving no acknowledgement that a previous attempt exists.",
+      "status": "not_started",
+      "depends_on": [
+        "student-009"
+      ],
+      "demo_mode": "live",
+      "notes": "Requested by the owner 2026-08-31; explicitly deferred, do not implement until asked. HALF OF THIS ALREADY EXISTS: GET /student/diagnostic already returns `submitted_at` (max of the student's DiagnosticResponse.at), so 'last taken' is frontend work only. THE COUNT DOES NOT EXIST AND CANNOT BE DERIVED: DiagnosticResponse is deliberately one row per (user, item), overwritten on re-submit -- models.py calls it out as 'not an attempt log'. Counting retakes therefore needs a schema change (a submission row, or a counter column), which is the part to decide before building. Weigh against the no-surveillance stance in models.py: a retake count is the student's own progress shown only to them, so it does not breach that rule, but it must not become teacher-visible.",
+      "verification": [
+        "Submitting the diagnostic a second time shows a count of 2 and the newer timestamp.",
+        "A student who has never submitted sees no count and no date, not 'taken 0 times'.",
+        "The retake count is not exposed on any teacher route."
+      ],
+      "evidence": null
+    },
+    {
+      "id": "frontend-005",
+      "priority": 59,
+      "area": "frontend",
+      "title": "Practice tab shows a loading state instead of a blank screen",
+      "user_visible_behavior": "While practice is being generated the student sees a loading indicator, so a slow generation reads as 'working' rather than as a broken page.",
+      "status": "not_started",
+      "depends_on": [
+        "student-005"
+      ],
+      "demo_mode": "live",
+      "notes": "Requested by the owner 2026-08-31; explicitly deferred, do not implement until asked. Frontend-only -- POST /student/practice/generate already returns the finished set; nothing on the backend changes. Worth doing because the wait is genuinely long on a cache miss: generation is a real model call, so an unrehearsed concept is seconds of blank screen. The same gap likely exists anywhere else a model call blocks first paint (gap lesson, Ask Tutor first send) -- check those while in here.",
+      "verification": [
+        "Generating practice for a concept with a cold cache shows the loading state for the whole wait, then the items.",
+        "An error during generation shows an error state, not a permanent spinner."
+      ],
+      "evidence": null
+    },
+    {
+      "id": "admin-011",
+      "priority": 60,
+      "area": "admin",
+      "title": "The admin notification bell: curriculum changes, and the teacher handoff that worked",
+      "user_visible_behavior": "The bell in the admin top bar carries a real count. It lists every governance change from the audit log as the same readable sentence the audit page shows, and -- the thing an admin could not find out any other way -- it says when a teacher they issued a password to signed in for the first time. Opening the bell clears the badge; the admin's own uploads never light it.",
+      "status": "passing",
+      "depends_on": [
+        "admin-003",
+        "admin-004",
+        "admin-009",
+        "auth-001"
+      ],
+      "demo_mode": "live",
+      "verification": [
+        "GET /admin/notifications returns audit rows newest first with `summary`, `kind`, `unread` and `by_you`; every machine field (action, target, detail) is the audit row unchanged.",
+        "There is no notifications table: the endpoint reads audit_log and nothing else.",
+        "A teacher's first successful login writes exactly ONE teacher.first_login audit row, and a second login writes none.",
+        "A student login and an admin login write no such row -- this is not a login log, and no last-login column exists anywhere.",
+        "The first-login summary reads as a sentence naming the person and the subjects they were assigned to, with no prefixed id and no '(since removed)'.",
+        "`unread` is counted over the whole table, excludes rows the signed-in admin performed themselves, and counts everything when notifications_seen_at is null.",
+        "POST /admin/notifications/read returns unread 0 and takes its timestamp from the database clock; a later GET reports 0 both in total and per row.",
+        "seed.run never appears, and there is no ?include_system= escape hatch.",
+        "A teacher token gets 403 and an anonymous request 401.",
+        "backend/scripts/migrate_admin_notifications.py adds the nullable column to the shared database, is idempotent, and drops nothing.",
+        "python -m pytest backend/tests -q passes and ./init.sh still passes."
+      ],
+      "evidence": "evidence/admin-011/live-verification.txt",
+      "notes": "PASSING 2026-09-02. GET /admin/notifications + POST /admin/notifications/read. NO notifications table, deliberately: every event worth a notification here is already an audit row written by the act itself, and a second store is a copy that can disagree with the one an admin trusts. Every field but kind/unread/by_you is the audit row, `summary` included, so the client renders it with the formatter admin-004 already gave it. THE COUNT DELIBERATELY IGNORES YOUR OWN ACTIONS: live, the admin had performed 54 of the 107 notifiable rows, so counting them would have left the badge permanently lit -- a badge that means nothing. Own rows are still LISTED (by_you=true); they just do not ring. The second source is a new audit action `teacher.first_login`, written by auth.py on the first successful login of a TEACHER account and never again -- a teacher account is only born when an admin generates a password and hands it over (admin-009), and whether that handoff worked is the one thing the admin cannot otherwise find out. It is NOT a login log and must not become one: there is no last-login column (models.py forbids one and a test enforces it), the existence of the row IS the record, and students and admins are never recorded. The write sits in a savepoint AFTER the token is issued -- without it a failed INSERT poisons the session and takes the fresh token with it, locking a teacher out of the demo over a bell. detail.courses is captured at login time so a later unassign cannot rewrite history the admin already read. Verified live against Neon: Ravi Menon's first login rang at the top of the bell reading 'Ravi Menon signed in for the first time (assigned to CS-C, CSE2631, CSW2, DLD)'; a second login and a student login added nothing; teacher token 403, anonymous 401; read cleared 53 -> 0 and clearing the marker brought it back. Needs backend/scripts/migrate_admin_notifications.py once per database (nullable notifications_seen_at on users; applied to the shared Neon DB on 2026-09-02). DEMO NOTE: Ravi's first login has now fired for good. To show that beat live, assign a NEW teacher from the admin console, read out the one-time password, log in as them, and refresh the bell. FRONTEND NOT WIRED: the bell in AdminDashboard.tsx TopBar is still a button with no handler."
     }
   ]
 }

@@ -526,7 +526,7 @@ Audit log (`admin-003`):
   "target": "material:4", "at": "2026-08-23T09:00:00Z", "detail": { "version": 2 },
   "summary": "admin@example.edu uploaded “Django 5 By Example” (version 2)" }
 ```
-Actions: `material.upload` · `material.archive` · `material.ingest` · `course.create` · `reteach.suggest` · `reteach.edit` · `reteach.approve` · `sourced_content.approve` · `sourced_content.reject`.
+Actions: `material.upload` · `material.archive` · `material.ingest` · `material.delete` · `course.create` · `course.set_term` · `course.teacher.add` · `course.teacher.remove` · `department.create` · `batch.create` · `batch.curriculum` · `batch.course.add` · `batch.course.remove` · `reteach.suggest` · `reteach.edit` · `reteach.approve` · `sourced_content.approve` · `sourced_content.reject` · `teacher.first_login`.
 
 #### `summary`, and why the machine fields stay — `admin-004`
 
@@ -545,6 +545,68 @@ developer script, not curriculum governance — and on a rehearsal day it
 outnumbered every real row put together. `?include_system=true` brings it back,
 and `total` reflects whichever set you asked for. Nothing is deleted; the row is
 still there for anyone who wants it.
+
+### Notifications — `admin-011`
+
+The bell in the admin top bar. It has exactly two sources, and both already
+exist as rows in `audit_log` — there is no second table and no second feed to
+keep in sync.
+
+| Method | Path | Notes |
+|---|---|---|
+| `GET` | `/admin/notifications` | `?limit=&offset=` (default 20, max 100) |
+| `POST` | `/admin/notifications/read` | marks everything up to now as seen → `{ seen_at, unread: 0 }` |
+
+```json
+{
+  "items": [
+    { "id": 91, "kind": "teacher_first_login", "action": "teacher.first_login",
+      "target": "user:12", "actor_email": "priya@example.edu",
+      "at": "2026-09-02T06:12:00Z", "unread": true, "by_you": false,
+      "detail": { "email": "priya@example.edu", "name": "Priya Sharma", "courses": ["CSW2"] },
+      "summary": "Priya Sharma signed in for the first time (assigned to CSW2)" },
+    { "id": 88, "kind": "audit", "action": "material.upload",
+      "target": "material:4", "actor_email": "admin@example.edu",
+      "at": "2026-09-01T09:00:00Z", "unread": false, "by_you": true,
+      "detail": { "version": 2 },
+      "summary": "admin@example.edu uploaded “Django 5 By Example” (version 2)" }
+  ],
+  "unread": 1,
+  "seen_at": "2026-09-01T18:40:00Z",
+  "total": 42
+}
+```
+
+**Every field except `kind`, `unread` and `by_you` is the audit row itself**,
+including `summary`, so a client that already renders the audit log renders this
+with no new formatter. `kind` is `teacher_first_login` or `audit`; switch icons
+on it, not on string-matching `summary`.
+
+**`unread` is not "everything since you last looked".** It counts rows the
+signed-in admin did **not** perform themselves (`by_you: false`) and that are
+newer than `seen_at`. Counting your own uploads would leave the badge
+permanently lit, which is a badge that means nothing. `seen_at` is `null` until
+the admin has opened the bell once, and then everything unread-by-that-rule
+counts.
+
+`seed.run` is excluded here for the same reason it is hidden in the audit log,
+and there is no `?include_system=` escape hatch — a notification about a
+developer script is not a notification.
+
+**`teacher.first_login` is written once per teacher, ever.** A teacher account
+is born only when an admin assigns one to a subject (`POST
+/admin/courses/{id}/teachers`) and is handed a generated password that is shown
+exactly once. This row is the admin's only way to learn that the handoff
+actually worked. It is deliberately **not** a login log: it is written on the
+first successful login of a `teacher` account and never again, there is no
+column recording it (its existence in `audit_log` *is* the record), and no login
+by a student or an admin is recorded anywhere. `detail.courses` lists the
+subject codes that teacher was assigned to at that moment.
+
+`User` gains one nullable column, `notifications_seen_at`, written only by
+`POST /admin/notifications/read`. **Needs a migration** — `create_all()` does not
+alter an existing table, so run `backend/scripts/migrate_admin_notifications.py`
+once against the shared database.
 
 ---
 
@@ -1032,6 +1094,7 @@ Every shape above is final enough to mock. Suggested order, matching `feature_li
 
 | When | Change |
 |---|---|
+| 2026-09-02 | **`admin-011` — the admin notification bell.** New `GET /admin/notifications` and `POST /admin/notifications/read`. Purely a read over `audit_log`: no new table, and every field but `kind`/`unread`/`by_you` is the audit row a client already renders. New audit action **`teacher.first_login`**, written once per teacher account on its first successful login — that is what tells the admin the password they generated and handed over actually worked. `User` gains a nullable `notifications_seen_at`; **run `backend/scripts/migrate_admin_notifications.py`** once against the shared database. No existing endpoint or field changed shape. |
 | 2026-08-25 | **`admin-007` — new material kind `reference`**, quotable like a textbook (it is in `LESSON_KINDS`; `assignment` still is not). Ingestion now accepts `.txt`, `.md` and `.docx` alongside `.pdf`/`.epub`/`.mobi`/`.fb2`, all reflowed to A4/11pt for stable page numbers. Upload and ingestion now read one shared list, fixing a real disagreement: `.txt`/`.md` were accepted on upload and then refused by the ingester, leaving files stored, pending and un-ingestable forever. **Links are deliberately not materials** — they go to `sourced_content` (`teacher-007`). Adds a `python-docx` dependency. |
 | 2026-08-25 | **`admin-006` — `DELETE /admin/materials/{id}`.** Archiving remains the normal path; this is the escape hatch for an upload mistake. Never-ingested material deletes freely; ingested material is `409 mid_term` while its course's `term_start`/`term_end` window contains today. There is deliberately **no** "refuse if cited" check — nothing in the schema persists a `chunk_id`, so no such check could be accurate. The source file is left on disk. |
 | 2026-08-25 | **`admin-005` — a course now knows its semester, its admission batches and its term dates.** `Course` gains `semester`, `admission_batches`, `term_start`, `term_end`, all nullable so existing courses are unaffected; new `PUT /admin/courses/{id}/term`. The dates are load-bearing: `admin-006` reads them to refuse deleting ingested material mid-term. **Needs a migration** — `create_all()` does not alter an existing table, so run `backend/scripts/migrate_course_terms.py` once against the shared database. |

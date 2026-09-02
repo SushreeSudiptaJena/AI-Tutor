@@ -217,6 +217,14 @@ class User(Base):
     # no batch_id: a teacher is not admitted to a cohort.
     batch_id: Mapped[int | None] = mapped_column(ForeignKey("batches.id"), index=True)
     created_at: Mapped[datetime] = _now()
+    # admin-011. When this admin last opened the notification bell, and nothing
+    # else. This is NOT the last-seen column the module docstring forbids: it is
+    # written only when an admin explicitly dismisses their own bell, it is read
+    # by exactly one endpoint, it is never shown on any dashboard, and it says
+    # nothing about a student. Null until the bell is opened once.
+    notifications_seen_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True)
+    )
 
     course: Mapped["Course | None"] = relationship()
 
