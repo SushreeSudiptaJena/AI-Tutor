@@ -1784,8 +1784,8 @@ export default function Dashboard() {
       {/* Sidebar */}
       <aside className="fixed left-0 top-0 z-50 flex h-full w-[240px] flex-col bg-forest-green">
         <div className="mb-md mt-sm p-lg">
-          <span className="font-mono text-3xl font-bold tracking-widest text-white uppercase">
-            JOURNEY
+          <span className="font-mono text-3xl font-bold tracking-wide text-white">
+            Kyōdo
           </span>
         </div>
 
