@@ -447,7 +447,9 @@ function HomeView({
                       from {g.prerequisite_course} · detected by {g.detected_from.replace("_", " ")}
                     </p>
                   </div>
-                 
+                  <span className={`rounded-full px-sm py-xs text-label-sm font-bold ${STATUS_STYLES[g.status]}`}>
+                    {g.status}
+                  </span>
                 </li>
               ))}
               {gaps !== null && gaps.length === 0 && (
@@ -1783,7 +1785,7 @@ export default function Dashboard() {
       <aside className="fixed left-0 top-0 z-50 flex h-full w-[240px] flex-col bg-forest-green">
         <div className="mb-md mt-sm p-lg">
           <span className="font-mono text-3xl font-bold tracking-widest text-white uppercase">
-            Kyōdo
+            JOURNEY
           </span>
         </div>
 
