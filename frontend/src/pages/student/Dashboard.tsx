@@ -14,6 +14,7 @@ import {
   MessageCircle,
   Play,
   Settings as SettingsIcon,
+  Sparkles,
   XCircle,
 } from "lucide-react";
 
@@ -142,6 +143,27 @@ const STATUS_STYLES: Record<Gap["status"], string> = {
   improving: "bg-mustard/20 text-forest-green",
   closed: "bg-secondary/20 text-forest-green",
 };
+
+const SUBJECT_TONES = [
+  "border-[#d97745] bg-[#fff0e8] text-[#9a3f1d]",
+  "border-[#4f7c73] bg-[#e8f5f0] text-[#245b50]",
+  "border-[#7164a8] bg-[#f0edff] text-[#493c7e]",
+  "border-[#a16a24] bg-[#fff6d9] text-[#765017]",
+];
+
+function subjectTone(subject?: MySubject | null) {
+  if (!subject) return SUBJECT_TONES[0];
+  return SUBJECT_TONES[subject.id % SUBJECT_TONES.length];
+}
+
+function SubjectBadge({ subject, className = "" }: { subject: MySubject | null; className?: string }) {
+  if (!subject) return null;
+  return (
+    <span className={`inline-flex items-center rounded-full border px-sm py-xs text-label-sm font-bold ${subjectTone(subject)} ${className}`}>
+      {subject.code} <span className="ml-xs hidden sm:inline">· {subject.title}</span>
+    </span>
+  );
+}
 
 /* ---------------------------------------------------------------------------
  * The answer card shared by Lessons and Ask Tutor. Renders ALL THREE
@@ -311,6 +333,8 @@ function HomeView({
             : "Loading your course…"}
         </p>
       </div>
+
+      <SubjectSwitcher location="dashboard" />
 
       {/* Every card is a door into the section it summarises. */}
       <div className="mb-md grid grid-cols-1 gap-sm md:grid-cols-2 lg:grid-cols-4">
@@ -565,7 +589,7 @@ function StatCard({
  * all scope by the active subject -- so the whole session cache is dropped
  * rather than a few keys: nothing on screen belongs to the new subject.
  */
-function SubjectSwitcher() {
+function SubjectSwitcher({ location = "course" }: { location?: "dashboard" | "course" }) {
   const [batch, setBatch] = useState<BatchDto | null>(null);
   const [items, setItems] = useState<MySubject[]>([]);
   const [busy, setBusy] = useState(false);
@@ -593,7 +617,10 @@ function SubjectSwitcher() {
   if (!batch || items.length <= 1) return null;
 
   return (
-    <section className="mb-lg rounded-xl border border-outline-variant bg-surface-container-lowest p-md">
+    <section className={`mb-lg rounded-xl border p-md shadow-sm ${location === "dashboard" ? "border-mustard/40 bg-mustard/5" : "border-outline-variant bg-surface-container-lowest"}`}>
+      {location === "dashboard" && (
+        <p className="mb-xs text-label-sm font-bold uppercase tracking-wider text-forest-green">Learning now · switch subject</p>
+      )}
       <p className="mb-sm text-label-sm font-bold uppercase tracking-wider text-on-surface-variant">
         {batch.major.toUpperCase()} · {batch.department.name} · {batch.start_year}–{batch.end_year}
       </p>
@@ -605,7 +632,7 @@ function SubjectSwitcher() {
             disabled={busy}
             className={`rounded-full px-sm py-xs text-label-md transition-colors disabled:opacity-50 ${
               s.is_current
-                ? "bg-forest-green text-white"
+                ? `${subjectTone(s)} ring-2 ring-current/20`
                 : "border border-outline-variant text-on-surface hover:border-forest-green"
             }`}
             title={s.title}
@@ -915,8 +942,9 @@ function DiagnosticView({ goto }: { goto: (s: Section) => void }) {
 /* ---------------------------------------------------------------------------
  * My Gaps
  * ------------------------------------------------------------------------- */
-function GapsView({ openLesson }: { openLesson: (g: Gap) => void }) {
+function GapsView({ openLesson, askTutor }: { openLesson: (g: Gap) => void; askTutor: (prompt: string) => void }) {
   const [gaps, setGaps] = useState<Gap[] | null>(null);
+  const [subject, setSubject] = useState<MySubject | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -925,9 +953,18 @@ function GapsView({ openLesson }: { openLesson: (g: Gap) => void }) {
       .catch((err) => setError(errorText(err)));
   }, []);
 
+  useEffect(() => {
+    cached("my-subjects", getMySubjects)
+      .then((r) => setSubject(r.items.find((item) => item.is_current) ?? null))
+      .catch(() => {});
+  }, []);
+
   return (
     <div className="p-lg">
-      <h1 className="mb-md text-headline-lg font-bold text-on-background">My Gaps</h1>
+      <div className="mb-md flex flex-wrap items-center justify-between gap-sm">
+        <h1 className="text-headline-lg font-bold text-on-background">My Gaps</h1>
+        <SubjectBadge subject={subject} />
+      </div>
       <States
         loading={gaps === null}
         error={error}
@@ -954,9 +991,17 @@ function GapsView({ openLesson }: { openLesson: (g: Gap) => void }) {
               </div>
 
               {g.suggested_prompts.length > 0 && (
-                <p className="mt-sm text-label-sm text-on-surface-variant">
-                  Try asking: “{g.suggested_prompts[0]}”
-                </p>
+                <button
+                  type="button"
+                  onClick={() => askTutor(g.suggested_prompts[0])}
+                  className="mt-sm flex w-full items-center gap-sm rounded-lg border border-mustard/40 bg-mustard/10 px-sm py-sm text-left transition-all hover:-translate-y-0.5 hover:border-mustard hover:bg-mustard/20"
+                >
+                  <Sparkles className="h-5 w-5 shrink-0 text-mustard" aria-hidden />
+                  <span>
+                    <span className="block text-label-sm font-bold uppercase tracking-wider text-forest-green">Try asking your tutor</span>
+                    <span className="mt-1 block text-body-sm font-semibold text-on-surface">{g.suggested_prompts[0]}</span>
+                  </span>
+                </button>
               )}
 
               {/* The gap's lesson, one click away -- this is the path the
@@ -988,6 +1033,7 @@ function LessonsView({
   onSelect: (g: Gap) => void;
 }) {
   const [gaps, setGaps] = useState<Gap[] | null>(null);
+  const [subject, setSubject] = useState<MySubject | null>(null);
   const [lesson, setLesson] = useState<TutorResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -996,6 +1042,12 @@ function LessonsView({
     cached("gaps", getGaps)
       .then((r) => setGaps(r.items))
       .catch((err) => setError(errorText(err)));
+  }, []);
+
+  useEffect(() => {
+    cached("my-subjects", getMySubjects)
+      .then((r) => setSubject(r.items.find((item) => item.is_current) ?? null))
+      .catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -1011,7 +1063,10 @@ function LessonsView({
 
   return (
     <div className="p-lg">
-      <h1 className="mb-md text-headline-lg font-bold text-on-background">Lessons</h1>
+      <div className="mb-md flex flex-wrap items-center justify-between gap-sm">
+        <h1 className="text-headline-lg font-bold text-on-background">Lessons</h1>
+        <SubjectBadge subject={subject} />
+      </div>
 
       <States
         loading={gaps === null}
@@ -1030,10 +1085,10 @@ function LessonsView({
                   <button
                     type="button"
                     onClick={() => onSelect(g)}
-                    className={`w-full rounded-lg border p-sm text-left text-body-sm transition-colors ${
+                    className={`w-full border-l-4 p-sm text-left text-body-sm transition-colors ${
                       selected?.id === g.id
-                        ? "border-forest-green bg-sage-light text-on-surface"
-                        : "border-outline-variant/30 bg-card text-on-surface hover:border-forest-green/50"
+                        ? `${subjectTone(subject)} bg-sage-light text-on-surface`
+                        : "border-outline-variant/30 border-l-mustard bg-card text-on-surface hover:border-forest-green/50"
                     }`}
                   >
                     <span className="font-semibold">{g.concept}</span>
@@ -1053,7 +1108,7 @@ function LessonsView({
                   {selected.concept}
                 </h2>
                 {loading && <p className="text-body-md text-on-surface-variant">Writing your lesson…</p>}
-                {lesson && <TutorCard response={lesson} />}
+                {lesson && <div className="lesson-answer"><TutorCard response={lesson} /></div>}
               </>
             )}
           </div>
@@ -1311,7 +1366,7 @@ function PracticeView({ initialGap }: { initialGap: Gap | null }) {
 /* ---------------------------------------------------------------------------
  * Ask Tutor -- free questions, all three outcomes rendered by TutorCard.
  * ------------------------------------------------------------------------- */
-function TutorView() {
+function TutorView({ initialQuestion = "" }: { initialQuestion?: string }) {
   // tutor-002: the transcript lives on the server now. The chat seeds from
   // GET /tutor/history on mount and new turns append; a reload no longer
   // wipes the conversation. Each turn renders as a full TutorCard -- badge,
@@ -1324,6 +1379,10 @@ function TutorView() {
   const [question, setQuestion] = useState("");
   const [busy, setBusy] = useState(false);
   const endRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (initialQuestion) setQuestion(initialQuestion);
+  }, [initialQuestion]);
 
   useEffect(() => {
     let alive = true;
@@ -1661,9 +1720,14 @@ export default function Dashboard() {
   // Shared so every "open this gap's lesson" click -- home card, gaps list,
   // Up Next -- lands in the Lessons section with that gap already selected.
   const [lessonGap, setLessonGap] = useState<Gap | null>(null);
+  const [tutorQuestion, setTutorQuestion] = useState("");
   const openLesson = (g: Gap) => {
     setLessonGap(g);
     setActiveSection("Lessons");
+  };
+  const openTutor = (prompt: string) => {
+    setTutorQuestion(prompt);
+    setActiveSection("Ask Tutor");
   };
 
   useEffect(() => {
@@ -1751,12 +1815,12 @@ export default function Dashboard() {
           )}
           {activeSection === "My Course" && <MyCourseView />}
           {activeSection === "Diagnostic" && <DiagnosticView goto={setActiveSection} />}
-          {activeSection === "My Gaps" && <GapsView openLesson={openLesson} />}
+          {activeSection === "My Gaps" && <GapsView openLesson={openLesson} askTutor={openTutor} />}
           {activeSection === "Lessons" && (
             <LessonsView selected={lessonGap} onSelect={setLessonGap} />
           )}
           {activeSection === "Practice" && <PracticeView initialGap={lessonGap} />}
-          {activeSection === "Ask Tutor" && <TutorView />}
+          {activeSection === "Ask Tutor" && <TutorView initialQuestion={tutorQuestion} />}
           {activeSection === "Assignments" && <AssignmentsView />}
           {activeSection === "Profile" && <ProfileView user={user} goto={setActiveSection} />}
           {activeSection === "Settings" && (

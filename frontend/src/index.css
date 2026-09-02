@@ -229,6 +229,29 @@
 }
 .md-body a { text-decoration: underline; }
 
+/* Lessons are read, rather than scanned. The answer body gets its own calm,
+ * highly legible text face and roomier rhythm while the surrounding dashboard
+ * keeps the compact Manrope UI type. */
+.lesson-answer .md-body {
+  font-family: "Inter", "Helvetica Neue", Arial, sans-serif;
+  font-size: 17px;
+  line-height: 1.78;
+  font-weight: 400;
+  letter-spacing: 0.002em;
+  color: var(--color-on-surface);
+}
+.lesson-answer .md-body h1,
+.lesson-answer .md-body h2,
+.lesson-answer .md-body h3,
+.lesson-answer .md-body h4 {
+  font-family: "Manrope", "Inter", sans-serif;
+  letter-spacing: -0.015em;
+}
+.lesson-answer .md-body li { margin: 0.45em 0; }
+@media (max-width: 640px) {
+  .lesson-answer .md-body { font-size: 16px; line-height: 1.68; }
+}
+
 /* WARNING: the named max-width utilities collide with this theme's
  * --spacing-xs..xl scale -- in this build `max-w-sm` resolves to
  * var(--spacing-sm) = 16px, not 24rem, squeezing the element to a sliver
